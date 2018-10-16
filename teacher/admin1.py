@@ -3,9 +3,11 @@ from django.contrib import admin
 # Register your models here.
 from django.contrib import admin
 from django.template.response import TemplateResponse
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from import_export import resources
-from import_export.admin import ImportExportActionModelAdmin
+from import_export import fields
+from import_export.admin import ImportExportActionModelAdmin, ImportExportMixinBase
 from import_export.forms import ConfirmImportForm, ImportForm
 from django.utils.translation import ugettext_lazy as _
 
@@ -20,8 +22,6 @@ import datetime
 from django.conf import settings
 from django.core.mail import send_mail
 from django.http import HttpResponse
-from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_POST
 ...
 
 # def send(request,):
@@ -83,10 +83,7 @@ class SampleInfoResource(resources.ModelResource):
         # instance = SampleInfo()
         for attr, value in row.items():
             setattr(instance, attr, value)
-        if SampleInfo.objects.all().count() == 0:
-            instance.id = "1"
-        else:
-            instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
+        instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
         instance.sample_name = row['样品名']
         instance.sample_receiver_name = row['实际收到样品名']
@@ -95,20 +92,23 @@ class SampleInfoResource(resources.ModelResource):
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
+        send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(instance.sampleinfoform.sampleinfoformid), settings.EMAIL_FROM,
+                  [instance.sampleinfoform.partner_email, ],
+                  fail_silently=False)
         return instance
 
     def get_diff_headers(self):
         return ["id","概要信息编号","样品名","实际收到样品名","样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))","管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求"]
 
-    # def after_import(self, dataset, result, using_transactions, dry_run, **kwargs):
-    #     # super(SampleInfoResource, self).after_import(dataset, result, using_transactions, dry_run, **kwargs)
-    #     sample = SampleInfoForm.objects.filter(sampleinfoformid=dataset[0][1])[0]
-    #     send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-    #               settings.EMAIL_FROM,
-    #               [sample.partner_email, ],
-    #               # ["love949872618@qq.com", ],
-    #               fail_silently=False)
-
+    # def before_import(self, dataset, using_transactions, dry_run, **kwargs):
+    #
+    # sample_name = fields.Field(column_name='样品名')
+    # sample_receiver_name = fields.Field(column_name='实际收到样品名')
+    # sample_type = fields.Field(column_name='样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))')
+    # tube_number = fields.Field(column_name='管数')
+    # is_extract =  fields.Field(column_name='是否需要提取(0-不需要，1-需要)')
+    # remarks = fields.Field(column_name='备注')
+    # data_request = fields.Field(column_name='数据量要求')
 
 #样品概要管理
 class SampleInfoFormAdmin(ImportExportActionModelAdmin):
@@ -123,26 +123,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
-    def process_result(self, result, request):
-        sample = SampleInfo.objects.latest("id").sampleinfoform
-        send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-                  settings.EMAIL_FROM,
-                  [sample.partner_email, ],
-                  # ["love949872618@qq.com", ],
-                      fail_silently=False)
-        return super(SampleInfoFormAdmin, self).process_result(result, request)
 
-    # @method_decorator(require_POST)
-    # def process_import(self, request, *args, **kwargs):
-    #
-    #     sample = SampleInfo.objects.latest("id").sampleinfoform
-    #
-    #     send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-    #               settings.EMAIL_FROM,
-    #               [sample.partner_email, ],
-    #               # ["love949872618@qq.com", ],
-    #               fail_silently=False)
-    #     return super(SampleInfoFormAdmin, self).process_import(request, *args, **kwargs)
+
 
     list_display = ('sampleinfoformid','time_to_upload','color_status','file_link','jindu_status')
     # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
@@ -152,14 +134,13 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     actions = ['make_sampleinfoform_submit','insure_sampleinfoform']
 
-
     def get_queryset(self, request):
         qs = super(SampleInfoFormAdmin, self).get_queryset(request)
         try:
             current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
+            if current_group_set.name == "实验员":
                 return qs
-            elif current_group_set.name == "合作伙伴":
+            elif current_group_set.name == "老师":
                 return qs.filter(partner=request.user)
         except:
             return qs
@@ -180,14 +161,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
     def import_action(self, request, *args, **kwargs):
 
         #只有超级用户和老师不能使用导入功能
-
-        # sample = SampleInfo.objects.latest("id").sampleinfoform
-        #
-        # send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-        #           settings.EMAIL_FROM,
-        #           [sample.partner_email, ],
-        #           # ["love949872618@qq.com", ],
-        #           fail_silently=False)
+        try:
+            current_group_set = Group.objects.get(user=request.user)
+        except:
+            return False
+        if current_group_set.name == "老师":
+            raise Exception("您不能使用导入功能")
 
         resource = self.get_import_resource_class()(**self.get_import_resource_kwargs(request, *args, **kwargs))
 
@@ -260,7 +239,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             current_group_set = Group.objects.get(user=request.user)
         except:
             return True
-        if current_group_set.name == "实验部":
+        if current_group_set.name == "实验员":
             return False
         else:
             return True
@@ -278,24 +257,27 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
 
     def save_model(self, request, obj, form, change):
-        if not obj.sampleinfoformid:
+        try:
+            current_group_set = Group.objects.get(user=request.user)
+            # if current_group_set.name == "实验员":
+            #     if not obj.sampleinfoformid:
+            #         raise Exception("实验员不能创建样本！")
+            #     else:
+            #         obj.man_to_upload = request.user
+            #         obj.time_to_upload = datetime.datetime.now()
+            #         super().save_model(request, obj, form, change)
+            if current_group_set.name == "老师":
+                if not obj.sampleinfoformid:
                     # print("**********************")
                     # print(str(int(SampleInfoForm.objects.latest("id").id)+1))
-            obj.partner = request.user.username
-            if SampleInfoForm.objects.all().count() == 0:
-                obj.sampleinfoformid = request.user.username + \
-                                               '-' + str(datetime.datetime.now().year) + \
-                                               str(datetime.datetime.now().month) + '-' + \
-                                                 "1"
+                    obj.partner = request.user.username
+                    obj.time_to_upload = datetime.datetime.now()
+                    obj.sampleinfoformid = request.user.username + '-' +str(datetime.datetime.now().year)+str(datetime.datetime.now().month) + '-'+str(int(SampleInfoForm.objects.latest("id").id)+1)
+                super().save_model(request, obj, form, change)
             else:
-                obj.sampleinfoformid = request.user.username +\
-                                           '-' +str(datetime.datetime.now().year)+\
-                                           str(datetime.datetime.now().month) + '-'+\
-                                           str(int(SampleInfoForm.objects.latest("id").id)+1)
+                super().save_model(request, obj, form, change)
+        except:
             super().save_model(request, obj, form, change)
-        else:
-            super().save_model(request, obj, form, change)
-
 
     def get_import_context_data(self, **kwargs):
         return self.get_context_data(**kwargs)
@@ -308,18 +290,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         Get the form type used to read the import format and file.
         '''
         return ImportForm
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "saler":
-            kwargs["queryset"] = User.objects.filter(groups__name="业务员(销售)")
-        if db_field.name == "transform_contact":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
-        if db_field.name == "sample_receiver":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
-        if db_field.name == "sample_checker":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
-        return super(SampleInfoFormAdmin,self).formfield_for_foreignkey(db_field, request, **kwargs)
-
     #根据身份获取动作
     def get_actions(self, request):
         actions = super().get_actions(request)
@@ -328,7 +298,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         except:
             # print(actions)
             return actions
-        if current_group_set.name == "实验部":
+        if current_group_set.name == "实验员":
             # print(actions)
             del actions['delete_selected']
             del actions['export_admin_action']
@@ -336,7 +306,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             del actions['insure_sampleinfoform']
             # del actions['test1']
             return actions
-        elif current_group_set.name == "合作伙伴":
+        elif current_group_set.name == "老师":
             del actions['delete_selected']
             del actions['export_admin_action']
             return actions
@@ -356,7 +326,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 obj.sample_status = 1
                 msg = "<h3>{0}客户的样品概要信息已上传，请核对</h3>".format(obj.partner)
                 send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
-                          [obj.partner_email, ],
+                          ['love949872618@qq.com', ],
                           fail_silently=False)
                 obj.save()
             else:
@@ -388,12 +358,13 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             return self.readonly_fields
         try:
             current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
-                self.readonly_fields = ('transform_company', 'transform_number','sample_diwenjiezhi',
+            if current_group_set.name == "实验员":
+                self.readonly_fields = ('transform_company', 'transform_number',
                                         'transform_contact', 'transform_phone',
                                         'transform_status', 'reciver_address', 'partner', 'partner_company',
                                         'partner_phone', 'partner_email', 'saler',
-                                        'project_type',
+                                        'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai', 'project_type',
+                                        'arrive_time', 'sample_diwenjiezhi',
                                         'sample_num', 'sample_species', 'extract_to_pollute_DNA',
                                         'management_to_rest', 'file_teacher',
                                         "sampleinfoformid", "time_to_upload")
@@ -414,6 +385,17 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         else:
             self.readonly_fields = []
             return self.readonly_fields
+        # elif hasattr(obj, 'sample_jindu'):
+        #     if obj.sample_jindu:
+        #         self.readonly_fields = ('transform_company','transform_number',
+        #                    'transform_contact','transform_phone',
+        #                    'transform_status','reciver_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
+        #                                 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai','project_type','arrive_time','sample_diwenzhuangtai',
+        #                    'sample_num','sample_species','extract_to_pollute_DNA',
+        #                     'management_to_rest','file_teacher',
+        #                     "sampleinfoformid","time_to_upload"
+        #                                 )
+        #         return self.readonly_fields
 
 
     # def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -425,7 +407,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         fieldsets = ()
         try:
             current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
+            if current_group_set.name == "实验员":
                 fieldsets = (
             ['物流信息', {
                 'fields': ('transform_company','transform_number',
@@ -434,17 +416,16 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             }],['客户信息',{
                 'fields': ('partner', 'partner_company', 'partner_phone','partner_email', 'saler'),
             }],['收货信息',{
-                'fields': ( "arrive_time",'sample_receiver','sample_checker','sample_diwenjiezhi',
-                            'sample_diwenzhuangtai'),
+                'fields': ( 'sample_receiver','sample_checker', 'sample_diwenzhuangtai'),
             }],['服务信息',{
-                'fields': ( 'project_type',
+                'fields': ( 'project_type','arrive_time','sample_diwenjiezhi',
                            'sample_num','sample_species','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
                             "sampleinfoformid",
                             "time_to_upload"),
                             }])
 
-            elif current_group_set.name == "合作伙伴":
+            elif current_group_set.name == "老师":
                 fieldsets = (
                 ['物流信息', {
                     'fields': ('transform_company', 'transform_number',
@@ -461,15 +442,14 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 }])
         except:
             fieldsets = (
-                ['物流信息', {
-                    'fields': (('transform_company','transform_number',
-                               'transform_contact','transform_phone'),
-                               'transform_status','reciver_address'),
-                }]
-                ,['客户信息',{
-                'fields': (('partner', 'partner_company'), ('partner_phone','partner_email'), 'saler'),
+            ['物流信息', {
+                'fields': ('transform_company','transform_number',
+                           'transform_contact','transform_phone',
+                           'transform_status','reciver_address'),
+            }],['客户信息',{
+                'fields': ('partner', 'partner_company', 'partner_phone','partner_email', 'saler'),
             }],['收货信息',{
-                'fields': ( ('man_to_upload','sample_receiver','sample_checker', 'sample_diwenzhuangtai'),),
+                'fields': ( 'man_to_upload','sample_receiver','sample_checker', 'sample_diwenzhuangtai'),
             }],['服务信息',{
                 'fields': ( 'project_type','arrive_time','sample_species','sample_diwenzhuangtai',
                            'sample_num','extract_to_pollute_DNA',
