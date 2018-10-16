@@ -1,29 +1,30 @@
 from django.contrib.auth.models import User
 from django.db import models
-
 from pm.models import ExtSubmit, LibSubmit, SeqSubmit
-from pm.models import Project
+
 
 
 #执行表
 
 
 #抽提执行
+
+
 class ExtExecute(models.Model):
     extSubmit = models.ForeignKey(
         ExtSubmit,
         verbose_name='子项目编号(抽提)',
         on_delete=models.CASCADE,
     )
-    ext_experimenter = models.ForeignKey(
+    ext_experimenter = models.ManyToManyField(
         User,
-        verbose_name='抽提实验员',
-        null=True
+        verbose_name='抽提实验员',blank= True,
+        # on_delete= models.DO_NOTHING,
     )
     ext_end_date = models.DateField('提取完成日期')
-    upload_file = models.FileField('抽提结果报告', upload_to='uploads/%Y/%m/%d/')
+    upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/')
     note = models.TextField('实验结果备注')
-    is_submit = models.BooleanField('提交')
+    is_submit = models.BooleanField('提交',default=False)
     # def save(self, *args, **kwargs):
     #     super(ExtSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -44,15 +45,16 @@ class LibExecute(models.Model):
         verbose_name='子项目编号(建库)',
         on_delete=models.CASCADE,
     )
-    ext_experimenter = models.ForeignKey(
+    lib_experimenter = models.ManyToManyField(
         User,
-        verbose_name='建库实验员',
-        null=True
+        # on_delete= models.DO_NOTHING,
+        verbose_name='建库实验员',blank= True,
+
     )
     lib_end_date = models.DateField('建库完成日期')
-    upload_file = models.FileField('建库结果报告', upload_to='uploads/%Y/%m/%d/')
+    upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/')
     note = models.TextField('实验结果备注')
-    is_submit = models.BooleanField('提交')
+    is_submit = models.BooleanField('提交',default=False)
     # def save(self, *args, **kwargs):
     #     super(LibSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -71,18 +73,18 @@ class LibExecute(models.Model):
 class SeqExecute(models.Model):
     seqSubmit = models.ForeignKey(
         SeqSubmit,
-        verbose_name='子项目编号(建库)',
+        verbose_name='子项目编号(测序)',
         on_delete=models.CASCADE,
     )
-    seq_experimenter =  models.ForeignKey(
+    seq_experimenter = models.ManyToManyField(
         User,
-        verbose_name='测序实验员',
-        null=True
+        verbose_name='测序实验员',blank= True,
+        # on_delete= models.DO_NOTHING,
     )
     seq_end_date = models.DateField('测序下机日期',blank=True)
-    upload_file = models.FileField('测序结果报告上传pooling表', upload_to='uploads/%Y/%m/%d/',blank=True)
+    upload_file = models.FileField('测序结果报告上传pooling表', upload_to='uploads/seq/%Y/%m/%d/',blank=True)
     note = models.TextField('实验结果备注',blank=True)
-    is_submit = models.BooleanField('提交')
+    is_submit = models.BooleanField('提交',default=False)
 
     # def save(self, *args, **kwargs):
     #     super(SeqSubmit, self).save(*args, **kwargs)
@@ -109,8 +111,7 @@ class AnaExecute(models.Model):
     )#里面包含合同编号，合同名称
     ana_experimenter =  models.ForeignKey(
         User,
-        verbose_name='分析员',
-        null=True
+        verbose_name='分析员',blank= True,null=True
     )
     ana_end_date = models.DateField('分析完成日期')
     upload_file = models.FileField('分析结果报告', upload_to='uploads/%Y/%m/%d/')
@@ -222,12 +223,12 @@ class SampleInfoSeq(models.Model):
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     ##以下质控结果
-    lib_code = models.CharField('文库号', max_length=20, null=True)##需要项目管理填写
-    index = models.CharField('Index', max_length=20, null=True)##需要项目管理填写
+    seq_code = models.CharField('文库号', max_length=20, null=True)##需要项目管理填写
+    seq_index = models.CharField('Index', max_length=20, null=True)##需要项目管理填写
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
     seq_data = models.CharField(max_length=200,verbose_name="测序数据量",blank=True,null=True)
     seq_result = models.IntegerField(choices=Seq_result,verbose_name='结论(测序)',default=1)
-    seq_note = models.TextField('备注(文库)', blank=True, null=True)
+    seq_note = models.TextField('备注(测序)', blank=True, null=True)
 
     def __str__(self):
         return self.sample_number

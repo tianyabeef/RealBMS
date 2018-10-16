@@ -25,12 +25,13 @@ def upload_to(instance, filename):
 def upload_to1(instance, filename):
     return '/'.join(['testers',str(datetime.datetime.now().year)+'-'+str(datetime.datetime.now().month),instance.man_to_upload,filename])
 
-class Employee(models.Model):
-    name = models.CharField(max_length=200,verbose_name="姓名")
-    department = models.CharField(max_length=200,verbose_name="姓名")
+# class Employee(models.Model):
+#     name = models.CharField(max_length=200,verbose_name="姓名")
+#     department = models.CharField(max_length=200,verbose_name="部门")
+#
+#     def __str__(self):
+#         return self.department +"----------"+ self.name
 
-    def __str__(self):
-        return self.name
 
 class SampleInfoForm(models.Model):
 
@@ -100,7 +101,7 @@ class SampleInfoForm(models.Model):
     #物流信息
     transform_company = models.CharField(max_length=200,verbose_name="运输公司")
     transform_number = models.CharField(max_length=200,verbose_name="快递单号")
-    transform_contact = models.ForeignKey(Employee,related_name="物流联系人",verbose_name="物流联系人",null=True,blank=True,
+    transform_contact = models.ForeignKey(User,related_name="物流联系人",verbose_name="物流联系人",null=True,blank=True,
                                           on_delete=models.SET_NULL)
     transform_phone = models.BigIntegerField(verbose_name="寄样联系人电话")
     transform_status = models.IntegerField(choices=TransForm_Status,verbose_name="运输状态",default=2)
@@ -112,7 +113,7 @@ class SampleInfoForm(models.Model):
     partner_phone = models.BigIntegerField(verbose_name="合作人联系电话")
     partner_email = models.EmailField(verbose_name="合作邮箱",default='')
     reciver_address = models.CharField(max_length=200,verbose_name="收件地址",default='')
-    saler = models.ForeignKey(Employee,related_name="销售联系人",verbose_name="销售代表",blank=True,null=True,on_delete=models.SET_NULL)
+    saler = models.ForeignKey(User,related_name="销售联系人",verbose_name="销售代表",blank=True,null=True,on_delete=models.SET_NULL)
 
     #服务类型
     project_type = models.IntegerField(choices=Project_choices,verbose_name="项目类型",default=1)
@@ -218,8 +219,17 @@ class SampleInfo(models.Model):
         (2, '否'),
     )
 
+    #状态
+    Sample_status = (
+        (0,"已核对"),
+        (1, "抽提失败"),
+        (2, "建库失败"),
+        (3, "测序失败"),
+    )
+
     #概要
     sampleinfoform = models.ForeignKey(SampleInfoForm,verbose_name="对应样品概要编号",blank=True,null=True,on_delete=models.CASCADE)
+    sample_number = models.CharField(max_length=50,verbose_name="样品编号", blank=True,null=True)
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")
     sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称") #*
     density = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3, blank=True,null=True)
@@ -228,6 +238,7 @@ class SampleInfo(models.Model):
     tube_number = models.IntegerField(verbose_name="管数量") #*
     is_extract = models.NullBooleanField(verbose_name="是否需要提取",default=False)
     remarks = models.TextField(verbose_name="备注",blank=True,null=True)
+    status = models.IntegerField(choices=Sample_status,verbose_name="样品可用状态",blank=True,default=0)
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
 
