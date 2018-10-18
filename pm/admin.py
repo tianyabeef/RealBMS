@@ -8,7 +8,7 @@
 # from fm.models import Bill
 # from mm.models import Contract
 # from crm.models import Customer
-# from teacher.models import SampleInfoForm
+# from sample.models import SampleInfoForm
 # from django.db.models import Sum
 # from django.utils.html import format_html
 # from django.contrib import messages
