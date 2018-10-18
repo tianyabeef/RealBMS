@@ -38,18 +38,18 @@ class SubProject(models.Model):
     # project_personnel = models.CharField('项目管理人员', max_length=40)
 
     sample_types = models.ForeignKey(
-        'teacher.SampleInfoForm',
+        'sample.SampleInfoForm',
         verbose_name='样品类型',
         on_delete=models.CASCADE,
     )
     # sample_types = models.ManyToManyField(
-    #     'teacher.SampleInfoForm',
+    #     'sample.SampleInfoForm',
     #     verbose_name='样品类型',
     #
     # )
     # # sample_type = models.CharField('样本类型', max_length=50)
     # sample_count = models.ForeignKey(
-    #     'teacher.SampleInfoForm',
+    #     'sample.SampleInfoForm',
     #     verbose_name='样品数量',
     #     on_delete=models.CASCADE,
     # )
@@ -135,7 +135,7 @@ class ExtSubmit(models.Model):
     slug = models.SlugField('提取任务号', allow_unicode=True)
 
     sample = models.ManyToManyField(
-        'teacher.SampleInfo',
+        'sample.SampleInfo',
         verbose_name='样品',
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -194,7 +194,7 @@ class LibSubmit(models.Model):
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'teacher.SampleInfo',
+        'sample.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -231,7 +231,7 @@ class SeqSubmit(models.Model):
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'teacher.SampleInfo',
+        'sample.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -268,7 +268,7 @@ class AnaSubmit(models.Model):
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'teacher.SampleInfo',
+        'sample.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)

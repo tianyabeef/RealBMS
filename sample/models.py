@@ -228,6 +228,7 @@ class SampleInfo(models.Model):
     )
 
     #概要
+    unique_code = models.CharField(max_length=60, verbose_name="对应样品池唯一编号",default='')
     sampleinfoform = models.ForeignKey(SampleInfoForm,verbose_name="对应样品概要编号",blank=True,null=True,on_delete=models.CASCADE)
     sample_number = models.CharField(max_length=50,verbose_name="样品编号", blank=True,null=True)
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")

@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'daterange_filter',
     'notification',
     'django_genericfilters',
-    'teacher',
+    'sample',
 ]
 
 MIDDLEWARE = [
@@ -149,4 +149,4 @@ EMAIL_FROM = '锐翌生物科技<pm@realbio.cn>'
 
 
 #自定义User
-# AUTH_USER_MODEL  = "teacher.Realbio_User"
+# AUTH_USER_MODEL  = "sample.Realbio_User"
