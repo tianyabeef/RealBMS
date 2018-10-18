@@ -17,7 +17,7 @@ try:
     from django.utils.encoding import force_text
 except ImportError:
     from django.utils.encoding import force_unicode as force_text
-from teacher.models import SampleInfoForm, SampleInfo
+from sample.models import SampleInfoForm, SampleInfo
 import datetime
 from django.conf import settings
 from django.core.mail import send_mail

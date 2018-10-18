@@ -9,7 +9,7 @@ try:
     from django.utils.encoding import force_text
 except ImportError:
     from django.utils.encoding import force_unicode as force_text
-from teacher.models import SampleInfoForm, SampleInfo
+from sample.models import SampleInfoForm, SampleInfo
 
 
 
@@ -150,7 +150,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     resource_class = SampleInfoLibResource
 
-    list_per_page = 40
+    list_per_page = 30
 
     save_as_continue = False
 

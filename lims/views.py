@@ -4,7 +4,7 @@ from pm.models import SubProject
 import operator
 from functools import partial, reduce, update_wrapper
 from django.db.models import Q
-from teacher.models import SampleInfoForm
+from sample.models import SampleInfoForm
 
 
 

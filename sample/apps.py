@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class A1Config(AppConfig):
-    name = 'teacher'
-    verbose_name = "样本系统"
+    name = 'sample'
+    verbose_name = "样本管理系统"
