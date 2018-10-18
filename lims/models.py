@@ -163,6 +163,7 @@ class SampleInfoExt(models.Model):
         (5, '粪便其他未提取（请描述）'),
     )
     #以下六个字段从SampleInfo表中获得
+    # samples =
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
