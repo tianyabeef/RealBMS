@@ -11,7 +11,7 @@ from pm.models import ExtSubmit, LibSubmit, SeqSubmit
 
 
 class ExtExecute(models.Model):
-    extSubmit = models.ForeignKey(
+    extSubmit = models.OneToOneField(
         ExtSubmit,
         verbose_name='子项目编号(抽提)',
         on_delete=models.CASCADE,
@@ -40,7 +40,7 @@ class ExtExecute(models.Model):
 
 #建库执行
 class LibExecute(models.Model):
-    libSubmit = models.ForeignKey(
+    libSubmit = models.OneToOneField(
         LibSubmit,
         verbose_name='子项目编号(建库)',
         on_delete=models.CASCADE,
@@ -71,7 +71,7 @@ class LibExecute(models.Model):
 
 #测序执行
 class SeqExecute(models.Model):
-    seqSubmit = models.ForeignKey(
+    seqSubmit = models.OneToOneField(
         SeqSubmit,
         verbose_name='子项目编号(测序)',
         on_delete=models.CASCADE,
@@ -102,34 +102,34 @@ class SeqExecute(models.Model):
 
 
 
-# 分析提交
-class AnaExecute(models.Model):
-    contract = models.ForeignKey(
-        'mm.Contract',
-        verbose_name='合同号',
-        on_delete=models.CASCADE,
-    )#里面包含合同编号，合同名称
-    ana_experimenter =  models.ForeignKey(
-        User,
-        verbose_name='分析员',blank= True,null=True
-    )
-    ana_end_date = models.DateField('分析完成日期')
-    upload_file = models.FileField('分析结果报告', upload_to='uploads/%Y/%m/%d/')
-    note = models.TextField('实验结果备注')
-    is_submit = models.BooleanField('提交')
+# # 分析提交
+# class AnaExecute(models.Model):
+#     contract = models.ForeignKey(
+#         'mm.Contract',
+#         verbose_name='合同号',
+#         on_delete=models.CASCADE,
+#     )#里面包含合同编号，合同名称
+#     ana_experimenter =  models.ForeignKey(
+#         User,
+#         verbose_name='分析员',blank= True,null=True
+#     )
+#     ana_end_date = models.DateField('分析完成日期')
+#     upload_file = models.FileField('分析结果报告', upload_to='uploads/%Y/%m/%d/')
+#     note = models.TextField('实验结果备注')
+#     is_submit = models.BooleanField('提交')
 
     # def save(self, *args, **kwargs):
     #     super(AnaSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
     #         self.slug = "分析任务 #" + str(self.id)
-    #         self.save()
-
-    class Meta:
-        verbose_name = '4分析任务执行'
-        verbose_name_plural = verbose_name
-
-    def __str__(self):
-        return '%s' % self.contract
+    # #         self.save()
+    #
+    # class Meta:
+    #     verbose_name = '4分析任务执行'
+    #     verbose_name_plural = verbose_name
+    #
+    # def __str__(self):
+    #     return '%s' % self.contract
 
 
 #样品
@@ -162,8 +162,15 @@ class SampleInfoExt(models.Model):
         (4, '土壤'),
         (5, '粪便其他未提取（请描述）'),
     )
+    #外键
+    extExecute = models.ForeignKey(
+        "lims.ExtExecute",
+        verbose_name="子项目(抽提)",
+        on_delete=models.CASCADE,
+    )
     #以下六个字段从SampleInfo表中获得
     # samples =
+    unique_code = models.CharField(max_length=60,verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
@@ -194,7 +201,14 @@ class SampleInfoLib(models.Model):
         (1, '合格'),
         (2, '不合格'),
     )
+    # 外键
+    libExecute = models.ForeignKey(
+        "lims.LibExecute",
+        verbose_name="子项目(建库)",
+        on_delete=models.CASCADE,
+    )
     ##以下两个字段重SampleInfo表中获得
+    unique_code = models.CharField(max_length=60, verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     ##以下质控结果
@@ -220,7 +234,14 @@ class SampleInfoSeq(models.Model):
         (1, '合格'),
         (2, '不合格'),
     )
+    #外键
+    seqExecute = models.ForeignKey(
+        "lims.SeqExecute",
+        verbose_name="子项目(测序)",
+        on_delete=models.CASCADE,
+    )
     ##以下两个字段重SampleInfo表中获得
+    unique_code = models.CharField(max_length=60, verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     ##以下质控结果
