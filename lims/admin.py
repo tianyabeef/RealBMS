@@ -139,13 +139,18 @@ class SampleInfoLibResource(resources.ModelResource):
 
     def get_diff_headers(self):
         return ["样品编号","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
+
+
             ,"总量ng(文库)","结论(文库)","备注(文库)"]
 
+
+
+#
 class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     resource_class = SampleInfoLibResource
 
-    list_per_page = 30
+    list_per_page = 40
 
     save_as_continue = False
 

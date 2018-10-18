@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 
 # 项目
-class Project(models.Model):
+class SubProject(models.Model):
     STATUS_CHOICES = (
         (0, '不能启动'),  # CNS(Could not started)
         (2, '正常启动'),  # NS(normal start)
@@ -128,14 +128,14 @@ class ExtSubmit(models.Model):
         on_delete=models.CASCADE,
     )
     ext_slug = models.ForeignKey(
-        'Project',
+        'SubProject',
         verbose_name='提取子项目编号',
         on_delete=models.CASCADE,
     )
     slug = models.SlugField('提取任务号', allow_unicode=True)
 
     sample = models.ManyToManyField(
-        'lims.SampleInfo',
+        'teacher.SampleInfo',
         verbose_name='样品',
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -188,13 +188,13 @@ class LibSubmit(models.Model):
         on_delete=models.CASCADE,
     )
     lib_slug = models.ForeignKey(
-        'Project',
+        'SubProject',
         verbose_name='建库子项目编号',
         on_delete=models.CASCADE,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'lims.SampleInfo',
+        'teacher.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -225,13 +225,13 @@ class SeqSubmit(models.Model):
         on_delete=models.CASCADE,
     )
     seq_slug = models.ForeignKey(
-        'Project',
+        'SubProject',
         verbose_name='测序子项目编号',
         on_delete=models.CASCADE,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'lims.SampleInfo',
+        'teacher.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)
@@ -262,13 +262,13 @@ class AnaSubmit(models.Model):
         on_delete=models.CASCADE,
     )
     ana_slug = models.ForeignKey(
-        'Project',
+        'SubProject',
         verbose_name='分析子项目编号',
         on_delete=models.CASCADE,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
-        'lims.SampleInfo',
+        'teacher.SampleInfo',
         verbose_name='样品'
     )
     date = models.DateField('提交时间', blank=True, null=True)

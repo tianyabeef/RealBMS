@@ -15,7 +15,7 @@ from import_export import fields
 from import_export.widgets import ForeignKeyWidget
 from mm.models import Contract
 from notification.signals import notify
-from pm.models import Project
+from pm.models import SubProject
 
 
 class InvoiceChangeList(ChangeList):
@@ -249,7 +249,7 @@ class InvoiceAdmin(ExportActionModelAdmin):
             invoice_in_contract = Invoice.objects.filter(invoice__contract__id = instances[-1].invoice.invoice.contract.id)
             obj_contract = Contract.objects.get(id=instances[-1].invoice.invoice.contract.id)
             try:
-                obj_project = Project.objects.get(contract__id=instances[-1].invoice.invoice.contract.id)
+                obj_project = SubProject.objects.get(contract__id=instances[-1].invoice.invoice.contract.id)
             except:
                 obj_project = False
             if sum_income <= invoice_amount:
