@@ -150,7 +150,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     resource_class = SampleInfoLibResource
 
-    list_per_page = 40
+    list_per_page = 30
 
     save_as_continue = False
 
