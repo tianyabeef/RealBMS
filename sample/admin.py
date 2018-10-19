@@ -58,7 +58,7 @@ class SampleInline(admin.TabularInline):
             current_group_set = Group.objects.get(user=request.user)
         except:
             return True
-        if current_group_set.name == "老师":
+        if current_group_set.name == "合作伙伴" or current_group_set.name == "实验部" :
             return False
         else:
             return True
@@ -447,11 +447,11 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             elif current_group_set.name == "合作伙伴":
                 fieldsets = (
                 ['物流信息', {
-                    'fields': ('transform_company', 'transform_number',
+                    'fields': (('transform_company', 'transform_number',
                                'transform_contact', 'transform_phone',
-                               'transform_status','reciver_address'),
+                               'transform_status','reciver_address'),),
                 }], ['客户信息', {
-                    'fields': ( 'partner_company', 'partner_phone','partner_email','saler'),
+                    'fields': ( ('partner_company', 'partner_phone','partner_email','saler'),),
                 }], ['服务信息', {
                     'fields': ('project_type','sample_species','sample_diwenjiezhi',
                                'sample_num', 'extract_to_pollute_DNA',
