@@ -25,17 +25,17 @@ class SubProject(models.Model):
         verbose_name='合同号',
         on_delete=models.CASCADE,
     )
-    customer = models.ForeignKey(
-        'crm.Customer',
-        verbose_name='客户姓名',
-        on_delete=models.CASCADE,
-    )
-    project_personnel = models.ForeignKey(
-        User,
-        verbose_name='项目人员',
-        on_delete=models.CASCADE,
-    )
-    # project_personnel = models.CharField('项目管理人员', max_length=40)
+    # customer = models.ForeignKey(
+    #     'crm.Customer',
+    #     verbose_name='客户姓名',
+    #     on_delete=models.CASCADE,
+    # )
+    # project_personnel = models.ForeignKey(
+    #     User,
+    #     verbose_name='项目人员',
+    #     on_delete=models.CASCADE,
+    # )
+    project_personnel = models.CharField('项目管理人员', max_length=40)
 
     sample_types = models.ForeignKey(
         'sample.SampleInfoForm',
@@ -262,7 +262,7 @@ class AnaSubmit(models.Model):
         on_delete=models.CASCADE,
     )
     ana_slug = models.ForeignKey(
-        'SubProject',
+        'mm.Contract',
         verbose_name='分析子项目编号',
         on_delete=models.CASCADE,
     )
