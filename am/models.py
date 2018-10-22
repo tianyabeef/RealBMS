@@ -39,3 +39,23 @@ class AnaExecute(models.Model):
 
     def __str__(self):
         return '%s' % self.ana_submit.ana_slug
+
+    
+class WeeklyReport(models.Model):
+    """
+    TODO: 周报管理
+    科技服务生信部门的周报管理;
+    初级目标：团队成员登陆BMS上传周报，然后主管登陆下载，具体字段    
+    高级目标：团队成员登陆BMS系统填写具体事项，然后主管登陆点击下载，生成具体周报
+    字段：填写人，记录时间，汇报周期（时间段），附件，子项，总体进度，负责人    
+    """
+    reporter = None
+    submit_date = None
+    report_interval = None
+    
+
+class SubWeeklyReport(models.Model):
+    """
+    TODO: 周报子项目管理
+    字段：项目，预计开始时间，预计完成时间，目前状态，是否完成，
+    """
