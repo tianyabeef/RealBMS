@@ -45,6 +45,7 @@ class SampleInfoExtResource(resources.ModelResource):
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def init_instance(self, row=None):
+        print("******************")
         if not row:
             row = {}
         instance = SampleInfoExt.objects.get(sample_number = row['样品编号'])

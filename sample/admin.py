@@ -161,6 +161,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
+    raw_id_fields = ("saler",)
+
+
+
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
         send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
@@ -182,7 +186,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
     #               fail_silently=False)
     #     return super(SampleInfoFormAdmin, self).process_import(request, *args, **kwargs)
 
-    list_display = ('sampleinfoformid','time_to_upload','color_status','file_link','jindu_status')
+    list_display = ('sampleinfoformid',"partner",'time_to_upload','color_status','file_link','jindu_status')
     # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
 
     list_display_links = ('sampleinfoformid',)
@@ -198,7 +202,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             if current_group_set.name == "实验部":
                 return qs
             elif current_group_set.name == "合作伙伴":
-                return qs.filter(partner=request.user)
+                return qs.filter(partner_email=request.user)
         except:
             return qs
 
@@ -329,6 +333,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                                            '-' +str(datetime.datetime.now().year)+\
                                            str(datetime.datetime.now().month) + '-'+\
                                            str(int(SampleInfoForm.objects.latest("id").id)+1)
+            obj.partner_email = request.user.username
             super().save_model(request, obj, form, change)
         else:
             super().save_model(request, obj, form, change)
@@ -348,7 +353,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "saler":
-            kwargs["queryset"] = User.objects.filter(groups__name="业务员(销售)")
+            kwargs["queryset"] = User.objects.filter(groups__name="业务员（销售）")
         if db_field.name == "transform_contact":
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         if db_field.name == "sample_receiver":
@@ -393,7 +398,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 obj.sample_status = 1
                 msg = "<h3>{0}客户的样品概要信息已上传，请核对</h3>".format(obj.partner)
                 send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
-                          [obj.information_email, ],
+                          ["love949872618@qq.com", ],
                           fail_silently=False)
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
@@ -473,8 +478,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 'fields': ('partner', 'partner_company', 'partner_phone',"information_email",'partner_email', 'saler'),
             }],['收货信息',{
                 'fields': ( "arrive_time",'sample_receiver','sample_checker','sample_diwenjiezhi',
-                            'sample_diwenzhuangtai'),
-            }],['服务信息',{
+                            'sample_diwenzhuangtai',"note_receive"),
+            }],['项目信息',{
                 'fields': ( 'project_type',
                            'sample_num','sample_species','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
@@ -489,8 +494,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                                'transform_contact', 'transform_phone',
                                'transform_status','reciver_address'),),
                 }], ['客户信息', {
-                    'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'partner_email','saler'),),
-                }], ['服务信息', {
+                    'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'saler'),),
+                }], ['项目信息', {
                     'fields': ('project_type','sample_species','sample_diwenjiezhi',
                                'sample_num', 'extract_to_pollute_DNA',
                                'management_to_rest', 'file_teacher',
@@ -508,7 +513,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 'fields': (('partner', 'partner_company'), ('partner_phone',"information_email",'partner_email'), 'saler'),
             }],['收货信息',{
                 'fields': ( ('man_to_upload','sample_receiver','sample_checker', 'sample_diwenzhuangtai'),),
-            }],['服务信息',{
+            }],['项目信息',{
                 'fields': ( 'project_type','arrive_time','sample_species','sample_diwenzhuangtai',
                            'sample_num','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
