@@ -85,15 +85,15 @@ class SampleInfoResource(resources.ModelResource):
         """
         instance = self.get_instance(instance_loader, row)
         if instance:
-            # instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
-            # instance.sample_name = row['样品名']
-            # instance.sample_receiver_name = row['实际收到样品名']
-            # instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
-            # instance.tube_number = row['管数']
-            # instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
-            # instance.remarks = row['备注']
-            # instance.data_request = row['数据量要求']
-            # instance.save()
+            instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
+            instance.sample_name = row['样品名']
+            instance.sample_receiver_name = row['实际收到样品名']
+            instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
+            instance.tube_number = row['管数']
+            instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
+            instance.remarks = row['备注']
+            instance.data_request = row['数据量要求']
+            instance.save()
             return (instance, False)
         else:
             return (self.init_instance(row), True)
