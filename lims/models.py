@@ -172,8 +172,9 @@ class SampleInfoExt(models.Model):
         "lims.ExtExecute",
         verbose_name="子项目(抽提)",
         on_delete=models.CASCADE,
+        blank = True, null = True
     )
-    #以下六个字段从SampleInfo表中获得
+    #以下七个字段从SampleInfo表中获得
     # samples =
     unique_code = models.CharField(max_length=60,verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
@@ -183,13 +184,13 @@ class SampleInfoExt(models.Model):
     species = models.CharField(max_length=200,verbose_name="物种")
     sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
     ##以下字段为抽提的的结果
-    sample_used = models.CharField(max_length=200,verbose_name="样品提取用量")
-    sample_rest = models.CharField(max_length=200,verbose_name="样品剩余用量")
-    density_checked = models.DecimalField('浓度ng/uL(公司检测)', max_digits=5, decimal_places=3, null=True)
-    volume_checked = models.DecimalField('体积uL(公司检测)', max_digits=5, decimal_places=3, null=True)
-    D260_280 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/280")
-    D260_230 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/230")
-    DNA_totel = models.CharField(max_length=200,verbose_name="DNA总量")
+    sample_used = models.CharField(max_length=200,verbose_name="样品提取用量",blank=True,null=True)
+    sample_rest = models.CharField(max_length=200,verbose_name="样品剩余用量",blank=True,null=True)
+    density_checked = models.DecimalField('浓度ng/uL(公司检测)', max_digits=5, decimal_places=3,blank=True,null=True)
+    volume_checked = models.DecimalField('体积uL(公司检测)', max_digits=5, decimal_places=3,blank=True,null=True)
+    D260_280 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/280",blank=True,null=True)
+    D260_230 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/230",blank=True,null=True)
+    DNA_totel = models.CharField(max_length=200,verbose_name="DNA总量",blank=True,null=True)
     note = models.TextField('备注', blank=True, null=True)
     quality_control_conclusion = models.IntegerField(choices=Quality_control_conclusion,verbose_name="质检结论",default=1)##ABC
     is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提",default=0)
@@ -211,6 +212,7 @@ class SampleInfoLib(models.Model):
         "lims.LibExecute",
         verbose_name="子项目(建库)",
         on_delete=models.CASCADE,
+        blank = True, null = True
     )
     Rebulid = (
         (0, '未重建库'),
@@ -221,11 +223,11 @@ class SampleInfoLib(models.Model):
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     ##以下质控结果
-    lib_code = models.CharField('文库号', max_length=20, null=True)##需要项目管理填写
-    index = models.CharField('Index', max_length=20, null=True)##需要项目管理填写
-    lib_volume = models.DecimalField('体积uL(文库)', max_digits=5, decimal_places=3, null=True)
-    lib_concentration = models.DecimalField('浓度ng/uL(文库)', max_digits=5, decimal_places=3, null=True)
-    lib_total = models.DecimalField('总量ng(文库)', max_digits=5, decimal_places=3, null=True)
+    lib_code = models.CharField('文库号', max_length=20,blank=True,null=True)##需要项目管理填写
+    index = models.CharField('Index', max_length=20,blank=True,null=True)##需要项目管理填写
+    lib_volume = models.DecimalField('体积uL(文库)', max_digits=5, decimal_places=3,blank=True,null=True)
+    lib_concentration = models.DecimalField('浓度ng/uL(文库)', max_digits=5, decimal_places=3,blank=True,null=True)
+    lib_total = models.DecimalField('总量ng(文库)', max_digits=5, decimal_places=3,blank=True,null=True)
     lib_result = models.IntegerField(choices=Lib_result,verbose_name='结论(文库)',default=1)
     lib_note = models.TextField('备注(文库)', blank=True, null=True)
     is_rebuild = models.IntegerField(choices=Rebulid, verbose_name="选择是否重建库", default=0)
@@ -248,6 +250,7 @@ class SampleInfoSeq(models.Model):
         "lims.SeqExecute",
         verbose_name="子项目(测序)",
         on_delete=models.CASCADE,
+        blank=True, null=True
     )
     Rebulid = (
         (0, '未重测序'),
@@ -259,8 +262,8 @@ class SampleInfoSeq(models.Model):
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
     ##以下质控结果
-    seq_code = models.CharField('文库号', max_length=20, null=True)##需要项目管理填写
-    seq_index = models.CharField('Index', max_length=20, null=True)##需要项目管理填写
+    seq_code = models.CharField('文库号', max_length=20,blank=True,null=True)##需要项目管理填写
+    seq_index = models.CharField('Index', max_length=20,blank=True,null=True)##需要项目管理填写
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
     seq_data = models.CharField(max_length=200,verbose_name="测序数据量",blank=True,null=True)
     seq_result = models.IntegerField(choices=Seq_result,verbose_name='结论(测序)',default=1)

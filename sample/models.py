@@ -109,6 +109,7 @@ class SampleInfoForm(models.Model):
 
     #客户信息
     partner = models.CharField(max_length=200,verbose_name="客户姓名",blank=True,null=True)
+    information_email = models.EmailField(verbose_name="消息接收邮箱",default='')
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位")
     partner_phone = models.BigIntegerField(verbose_name="合作人联系电话")
     partner_email = models.EmailField(verbose_name="合作邮箱",default='')
@@ -129,11 +130,11 @@ class SampleInfoForm(models.Model):
     #上传信息
     # download_model = models.CharField(max_length=200,verbose_name="点击下载表格",default="www.")
     # path_partner = models.CharField(max_length=200,verbose_name="客户上传路径",blank=True,null=True,default='')
-    file_teacher = models.FileField(upload_to=upload_to,verbose_name='客户上传文件',blank=True,null=True,default='')
+    file_teacher = models.FileField(upload_to=upload_to,verbose_name='客户上传文件',default='')
     # file_tester = models.FileField(upload_to=upload_to1,verbose_name='实验室上传文件',blank=True,null=True,default='')
     man_to_upload = models.ForeignKey(User,related_name="上传文件人", verbose_name="公司上传者",blank=True,null=True,
                                                         on_delete=models.SET_NULL)
-    time_to_upload = models.DateField(verbose_name="上传时间")
+    time_to_upload = models.DateField(verbose_name="上传时间",blank=True,null=True)
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
 
     #样品接收信息

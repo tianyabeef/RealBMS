@@ -52,6 +52,9 @@ class SampleInline(admin.TabularInline):
     fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','remarks','data_request']
     readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
 
+
+    # def get_readonly_fields(self, request, obj=None):
+
     #设置老师没有导入功能,没有用
     def has_add_permission(self, request):
         try:
@@ -76,9 +79,44 @@ class SampleInfoResource(resources.ModelResource):
     def get_export_headers(self):
         return ["id","概要信息编号","样品名","实际收到样品名","样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))","管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求"]
 
+    def get_or_init_instance(self, instance_loader, row):
+        """
+        Either fetches an already existing instance or initializes a new one.
+        """
+        instance = self.get_instance(instance_loader, row)
+        if instance:
+            # instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
+            # instance.sample_name = row['样品名']
+            # instance.sample_receiver_name = row['实际收到样品名']
+            # instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
+            # instance.tube_number = row['管数']
+            # instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
+            # instance.remarks = row['备注']
+            # instance.data_request = row['数据量要求']
+            # instance.save()
+            return (instance, False)
+        else:
+            return (self.init_instance(row), True)
+
+
     def init_instance(self, row=None):
         if not row:
             row = {}
+        # id = row["id"]
+        # if id:
+        #     print(type(row["******************************"]))
+        #     instance_ = SampleInfo.objects.filter(id=id).first()
+        #     instance_.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
+        #     instance_.sample_name = row['样品名']
+        #     instance_.sample_receiver_name = row['实际收到样品名']
+        #     instance_.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
+        #     instance_.tube_number = row['管数']
+        #     instance_.is_extract = row['是否需要提取(0-不需要，1-需要)']
+        #     instance_.remarks = row['备注']
+        #     instance_.data_request = row['数据量要求']
+        #     instance_.save()
+        #     return instance_
+        print("----------------------------------------------")
         instance = self._meta.model()
         # instance = SampleInfo()
         for attr, value in row.items():
@@ -281,7 +319,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         if not obj.sampleinfoformid:
                     # print("**********************")
                     # print(str(int(SampleInfoForm.objects.latest("id").id)+1))
-            obj.partner = request.user.username
             if SampleInfoForm.objects.all().count() == 0:
                 obj.sampleinfoformid = request.user.username + \
                                                '-' + str(datetime.datetime.now().year) + \
@@ -356,8 +393,9 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 obj.sample_status = 1
                 msg = "<h3>{0}客户的样品概要信息已上传，请核对</h3>".format(obj.partner)
                 send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
-                          [obj.partner_email, ],
+                          [obj.information_email, ],
                           fail_silently=False)
+                obj.time_to_upload = datetime.datetime.now()
                 obj.save()
             else:
                 n += 1
@@ -372,7 +410,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         i = ''
         n = 0
         for obj in queryset:
-            if obj.sample_status == 1 :
+            if obj.sample_status == 1 and obj.arrive_time:
                 obj.sample_status = 2
                 obj.save()
             else:
@@ -389,24 +427,24 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         try:
             current_group_set = Group.objects.get(user=request.user)
             if current_group_set.name == "实验部":
-                self.readonly_fields = ('transform_company', 'transform_number','sample_diwenjiezhi',
+                self.readonly_fields = ('transform_company',"partner", 'transform_number','sample_diwenjiezhi',
                                         'transform_contact', 'transform_phone',
                                         'transform_status', 'reciver_address', 'partner', 'partner_company',
                                         'partner_phone', 'partner_email', 'saler',
                                         'project_type',
                                         'sample_num', 'sample_species', 'extract_to_pollute_DNA',
                                         'management_to_rest', 'file_teacher',
-                                        "sampleinfoformid", "time_to_upload")
+                                        "sampleinfoformid", "time_to_upload","information_email")
                 return self.readonly_fields
 
             if obj.sample_status:
-                self.readonly_fields = ('transform_company','transform_number',
+                self.readonly_fields = ('transform_company','transform_number',"partner",
                            'transform_contact','transform_phone',
                            'transform_status','reciver_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
                                         'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai','project_type','arrive_time','sample_diwenjiezhi',
                            'sample_num','sample_species','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
-                            "sampleinfoformid","time_to_upload")
+                            "sampleinfoformid","time_to_upload","information_email")
                 return self.readonly_fields
         except:
             self.readonly_fields = []
@@ -432,7 +470,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                            'transform_contact','transform_phone',
                            'transform_status','reciver_address'),
             }],['客户信息',{
-                'fields': ('partner', 'partner_company', 'partner_phone','partner_email', 'saler'),
+                'fields': ('partner', 'partner_company', 'partner_phone',"information_email",'partner_email', 'saler'),
             }],['收货信息',{
                 'fields': ( "arrive_time",'sample_receiver','sample_checker','sample_diwenjiezhi',
                             'sample_diwenzhuangtai'),
@@ -451,13 +489,13 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                                'transform_contact', 'transform_phone',
                                'transform_status','reciver_address'),),
                 }], ['客户信息', {
-                    'fields': ( ('partner_company', 'partner_phone','partner_email','saler'),),
+                    'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'partner_email','saler'),),
                 }], ['服务信息', {
                     'fields': ('project_type','sample_species','sample_diwenjiezhi',
                                'sample_num', 'extract_to_pollute_DNA',
                                'management_to_rest', 'file_teacher',
                                # "sampleinfoformid",
-                               'time_to_upload'),
+                               ),
                 }])
         except:
             fieldsets = (
@@ -467,7 +505,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                                'transform_status','reciver_address'),
                 }]
                 ,['客户信息',{
-                'fields': (('partner', 'partner_company'), ('partner_phone','partner_email'), 'saler'),
+                'fields': (('partner', 'partner_company'), ('partner_phone',"information_email",'partner_email'), 'saler'),
             }],['收货信息',{
                 'fields': ( ('man_to_upload','sample_receiver','sample_checker', 'sample_diwenzhuangtai'),),
             }],['服务信息',{
