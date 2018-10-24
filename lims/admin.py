@@ -1,3 +1,7 @@
+import datetime
+import gc
+
+from django.contrib import admin
 from django.contrib.auth.models import Group
 from import_export import resources
 from import_export import fields
@@ -11,6 +15,19 @@ except ImportError:
     from django.utils.encoding import force_unicode as force_text
 from sample.models import SampleInfoForm, SampleInfo
 
+#外键样品
+class SampleInfoExtInline(admin.StackedInline):
+    model = SampleInfoExt
+    fieldsets = (
+        ['抽提样品信息', {
+            'fields': (( 'sample_number',
+                        'sample_name','species',
+                        ),("is_RNase_processing",'preservation_medium', 'sample_type','sample_used' ),
+                       ('sample_rest','density_checked',"volume_checked"),("D260_280","D260_230","DNA_totel","quality_control_conclusion"),"note","is_rebuild"
+                       ),
+        }]
+        ,)
+    # fieldsets = [("unique_code","sample_number","sample_name"),"preservation_medium","is_RNase_processing"]
 
 
 #抽提的导入
@@ -19,45 +36,89 @@ class SampleInfoExtResource(resources.ModelResource):
         model = SampleInfoExt
         skip_unchanged = True
         fields = ('sample_number','sample_used',
-        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion')
+        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
         export_order = ('sample_number','sample_used',
-        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion')
+        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
 
     def get_export_headers(self):
         return ["样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
-            ,"D260/280","D260/230","DNA总量","备注","质检结论"]
+            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def init_instance(self, row=None):
+        print("******************")
         if not row:
             row = {}
         instance = SampleInfoExt.objects.get(sample_number = row['样品编号'])
         if instance:
-            # instance = SampleInfo()
+            is_rebuild = row["选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+
+            if type(is_rebuild) != int:
+                try:
+                    is_rebuild = int(is_rebuild)
+                except:
+                    raise Exception("是否重抽提信息填写错误")
             for attr, value in row.items():
                 setattr(instance, attr, value)
-            # instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
-            instance.sample_used = row['样品提取用量']
-            instance.sample_rest = row['样品剩余用量']
-            instance.density_checked = row['浓度ng/uL(公司检测)']
-            instance.volume_checked = row['体积uL(公司检测)']
-            instance.D260_280 = row['D260/280']
-            instance.D260_230 = row['D260/230']
-            instance.DNA_totel = row['DNA总量']
-            instance.note = row['备注']
-            instance.quality_control_conclusion = row['质检结论']
-            return instance
+            if not is_rebuild:
+                # instance = SampleInfo()
+                # instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
+                instance.sample_used = row['样品提取用量']
+                instance.sample_rest = row['样品剩余用量']
+                instance.density_checked = row['浓度ng/uL(公司检测)']
+                instance.volume_checked = row['体积uL(公司检测)']
+                instance.D260_280 = row['D260/280']
+                instance.D260_230 = row['D260/230']
+                instance.DNA_totel = row['DNA总量']
+                instance.note = row['备注']
+                instance.quality_control_conclusion = row['质检结论']
+                return instance
+            #重抽提
+            else:
+                rebuild = SampleInfoExt()
+                rebuild.unique_code = instance.unique_code
+                rebuild.sample_name = instance.sample_name
+                rebuild.preservation_medium = instance.preservation_medium
+                rebuild.is_RNase_processing = instance.is_RNase_processing
+                rebuild.species = instance.species
+                rebuild.sample_type = instance.sample_type
+                b = list(instance.sample_number)
+                c = ""
+                if 65 <= ord(b[-1]) <= 90:
+                    print(ord(b[-1]))
+                    b[-1] = chr(ord(b[-1]) + 1)
+                    for i in b:
+                        c += i
+                    rebuild.sample_number = c
+                elif 48 <= ord(b[-1]) <= 57:
+                    print("************")
+                    rebuild.sample_number = instance.sample_number + "A"
+                rebuild.save()
+                del b,c
+                gc.collect()
+                instance.sample_used = row['样品提取用量']
+                instance.sample_rest = row['样品剩余用量']
+                instance.density_checked = row['浓度ng/uL(公司检测)']
+                instance.volume_checked = row['体积uL(公司检测)']
+                instance.D260_280 = row['D260/280']
+                instance.D260_230 = row['D260/230']
+                instance.DNA_totel = row['DNA总量']
+                instance.note = row['备注']
+                instance.quality_control_conclusion = row['质检结论']
+                return instance
         else:
             raise Exception("你上传的样品编号有误")
 
     def get_diff_headers(self):
         return ["样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
-            ,"D260/280","D260/230","DNA总量","备注","质检结论"]
+            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin):
 
     resource_class = SampleInfoExtResource
 
     list_per_page = 30
+
+    inlines = [SampleInfoExtInline]
 
     save_as_continue = False
 
@@ -67,25 +128,30 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
     # list_display = ('extSubmit', 'ext_experimenter', 'ext_end_date', 'note')
     list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
 
-    exclude = ("is_submit",)
+    exclude = ("ext_end_date",)
 
     list_display_links = ('extSubmit',)
 
-    actions = ["submit_result",]
+    # actions = ["submit_result",]
 
-    def submit_result(self,request,queryset):
-        i = ''
-        n = 0
-        for obj in queryset:
-            if not obj.is_submit:
-                obj.is_submit = True
-                #钉钉
+    # def save_model(self, request, obj, form, change):
+    #     if obj.is_submit:
 
-            else:
-                n +=1
-
-    submit_result.short_description = '提交'
-
+    def get_readonly_fields(self, request, obj=None):
+        self.readonly_fields = []
+        try:
+            if obj.is_submit:
+                self.readonly_fields = ('extSubmit','ext_experimenter','upload_file','ext_end_date', 'note',"is_submit",)
+                return self.readonly_fields
+        except:
+            return self.readonly_fields
+        return self.readonly_fields
+    def save_model(self, request, obj, form, change):
+        if obj.is_submit:
+            #钉钉
+            obj.ext_end_date = datetime.datetime.now()
+            pass
+        super().save_model(request, obj, form, change)
     #设置实验员不能增加执行任务
     def has_add_permission(self, request):
         try:
@@ -109,13 +175,13 @@ class SampleInfoLibResource(resources.ModelResource):
         model = SampleInfoLib
         skip_unchanged = True
         fields = ('sample_number','lib_code',
-        'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note')
+        'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
         export_order = ('sample_number','lib_code',
-        'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note')
+        'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
 
     def get_export_headers(self):
         return ["样品编号","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
-            ,"总量ng(文库)","结论(文库)","备注(文库)"]
+            ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
     def init_instance(self, row=None):
         if not row:
@@ -139,9 +205,7 @@ class SampleInfoLibResource(resources.ModelResource):
 
     def get_diff_headers(self):
         return ["样品编号","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
-
-
-            ,"总量ng(文库)","结论(文库)","备注(文库)"]
+                ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
 
 
@@ -159,24 +223,28 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
     # list_display = ('libSubmit', 'lib_experimenter', 'lib_end_date', 'note')
     list_display = ('libSubmit', 'lib_end_date', 'note',"is_submit")
 
-    exclude = ("is_submit",)
+    exclude = ("lib_end_date",)
 
     list_display_links = ('libSubmit',)
 
-    actions = ["submit_result", ]
+    # actions = ["submit_result", ]
 
-    def submit_result(self, request, queryset):
-        i = ''
-        n = 0
-        for obj in queryset:
-            if not obj.is_submit:
-                obj.is_submit = True
-                # 钉钉
+    def get_readonly_fields(self, request, obj=None):
+        self.readonly_fields = []
+        try:
+            if obj.is_submit:
+                self.readonly_fields = ('libSubmit','lib_experimenter','upload_file','lib_end_date', 'note',"is_submit",)
+                return self.readonly_fields
+        except:
+            return self.readonly_fields
+        return self.readonly_fields
 
-            else:
-                n += 1
-
-    submit_result.short_description = '提交'
+    def save_model(self, request, obj, form, change):
+        if obj.is_submit:
+            #钉钉
+            obj.lib_end_date = datetime.datetime.now()
+            pass
+        super().save_model(request, obj, form, change)
 
     # 设置实验员不能增加执行任务
     def has_add_permission(self, request):
@@ -202,13 +270,13 @@ class SampleInfoSeqResource(resources.ModelResource):
         model = SampleInfoSeq
         skip_unchanged = True
         fields = ('sample_number','seq_code',
-        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note')
+        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
         export_order = ('sample_number','seq_code',
-        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note')
+        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
 
     def get_export_headers(self):
         return ["样品编号","文库号","Index","数据量要求","测序数据量"
-            ,"结论(测序)","备注(测序)"]
+            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def init_instance(self, row=None):
         if not row:
@@ -231,7 +299,7 @@ class SampleInfoSeqResource(resources.ModelResource):
 
     def get_diff_headers(self):
         return ["样品编号","文库号","Index","数据量要求","测序数据量"
-            ,"结论(测序)","备注(测序)"]
+            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
 class SeqExecuteAdmin(ImportExportActionModelAdmin):
 
@@ -246,24 +314,28 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
     list_display = ('seqSubmit', 'seq_end_date', 'note',"is_submit")
 
-    exclude = ("is_submit",)
+    exclude = ("seq_end_date",)
 
     list_display_links = ('seqSubmit',)
 
-    actions = ["submit_result", ]
+    # actions = ["submit_result", ]
 
-    def submit_result(self, request, queryset):
-        i = ''
-        n = 0
-        for obj in queryset:
-            if not obj.is_submit:
-                obj.is_submit = True
-                # 钉钉
+    def get_readonly_fields(self, request, obj=None):
+        self.readonly_fields = []
+        try:
+            if obj.is_submit:
+                self.readonly_fields = ('seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
+                return self.readonly_fields
+        except:
+            return self.readonly_fields
+        return self.readonly_fields
 
-            else:
-                n += 1
-
-    submit_result.short_description = '提交'
+    def save_model(self, request, obj, form, change):
+        if obj.is_submit:
+            #钉钉
+            obj.seq_end_date = datetime.datetime.now()
+            pass
+        super().save_model(request, obj, form, change)
 
     # 设置实验员不能增加执行任务
     def has_add_permission(self, request):

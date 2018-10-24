@@ -101,18 +101,19 @@ class SampleInfoForm(models.Model):
     #物流信息
     transform_company = models.CharField(max_length=200,verbose_name="运输公司")
     transform_number = models.CharField(max_length=200,verbose_name="快递单号")
-    transform_contact = models.ForeignKey(User,related_name="物流联系人",verbose_name="物流联系人",null=True,blank=True,
-                                          on_delete=models.SET_NULL)
+    transform_contact = models.CharField(max_length=200,verbose_name="寄样人姓名",default="")
     transform_phone = models.BigIntegerField(verbose_name="寄样联系人电话")
     transform_status = models.IntegerField(choices=TransForm_Status,verbose_name="运输状态",default=2)
+    sender_address = models.CharField(max_length=200, verbose_name="寄件人联系地址", default='')
 
 
     #客户信息
     partner = models.CharField(max_length=200,verbose_name="客户姓名",blank=True,null=True)
+    information_email = models.EmailField(verbose_name="消息接收邮箱",default='')
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位")
     partner_phone = models.BigIntegerField(verbose_name="合作人联系电话")
     partner_email = models.EmailField(verbose_name="合作邮箱",default='')
-    reciver_address = models.CharField(max_length=200,verbose_name="收件地址",default='')
+
     saler = models.ForeignKey(User,related_name="销售联系人",verbose_name="销售代表",blank=True,null=True,on_delete=models.SET_NULL)
 
     #服务类型
@@ -129,21 +130,21 @@ class SampleInfoForm(models.Model):
     #上传信息
     # download_model = models.CharField(max_length=200,verbose_name="点击下载表格",default="www.")
     # path_partner = models.CharField(max_length=200,verbose_name="客户上传路径",blank=True,null=True,default='')
-    file_teacher = models.FileField(upload_to=upload_to,verbose_name='客户上传文件',blank=True,null=True,default='')
+    file_teacher = models.FileField(upload_to=upload_to,verbose_name='客户上传文件',default='')
     # file_tester = models.FileField(upload_to=upload_to1,verbose_name='实验室上传文件',blank=True,null=True,default='')
     man_to_upload = models.ForeignKey(User,related_name="上传文件人", verbose_name="公司上传者",blank=True,null=True,
                                                         on_delete=models.SET_NULL)
-    time_to_upload = models.DateField(verbose_name="上传时间")
+    time_to_upload = models.DateField(verbose_name="上传时间",blank=True,null=True)
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
 
     #样品接收信息
     arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
     sample_checker = models.ForeignKey(User,related_name="物流接收人",verbose_name="样品核对人",blank=True,null=True,on_delete=models.SET_NULL)
-    sample_status = models.IntegerField(choices=TransForm_Status,verbose_name="样品状态",default=0)
+    sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)
     sample_jindu = models.IntegerField(choices=Sample_jindu,verbose_name="样品进度",default=0)
     sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=0)
-
+    note_receive = models.TextField(verbose_name="样品接收备注",default="")
     #颜色显示
     color_code = models.CharField(max_length=6,default='')
     color_code1 = models.CharField(max_length=6, default='')
@@ -159,7 +160,9 @@ class SampleInfoForm(models.Model):
     def file_link(self):
         if self.file_teacher:
             print(self.file_teacher.url)
-            return "<a href='{0}'>下载</a>" .format(self.file_teacher.url)
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.file_teacher.url))
+
         else:
             return "未上传"
 
