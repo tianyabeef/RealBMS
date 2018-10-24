@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from decimal import Decimal
+from django.contrib import admin
+from django.utils.html import format_html
 
 
 # 项目
@@ -23,24 +26,28 @@ class SubProject(models.Model):
     contract = models.ForeignKey(
         'mm.Contract',
         verbose_name='合同号',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     # customer = models.ForeignKey(
     #     'crm.Customer',
     #     verbose_name='客户姓名',
-    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     on_delete=models.SET_NULL,
     # )
     # project_personnel = models.ForeignKey(
     #     User,
     #     verbose_name='项目人员',
-    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     on_delete=models.SET_NULL,
     # )
     project_personnel = models.CharField('项目管理人员', max_length=40)
 
     sample_types = models.ForeignKey(
         'sample.SampleInfoForm',
         verbose_name='样品类型',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     # sample_types = models.ManyToManyField(
     #     'sample.SampleInfoForm',
@@ -51,7 +58,8 @@ class SubProject(models.Model):
     # sample_count = models.ForeignKey(
     #     'sample.SampleInfoForm',
     #     verbose_name='样品数量',
-    #     on_delete=models.CASCADE,
+    #     null=True,
+    #     on_delete=models.SET_NULL,
     # )
     # sample_count = models.IntegerField('样品数量', )
     # customer = models.CharField('客户', max_length=20, blank=True)
@@ -106,7 +114,26 @@ class SubProject(models.Model):
     due_date = models.DateField('合同节点', blank=True, null=True)
     is_confirm = models.BooleanField('确认', default=False)
     # status = models.IntegerField('状态', max_length=3, choices=STATUS_CHOICES, default=1)
-    status = models.IntegerField('状态', choices=STATUS_CHOICES, default=2)
+    status = models.IntegerField('状态', choices=STATUS_CHOICES, default=0)
+    # save_statuss = models.CharField(max_length=6)
+    #
+    # def colored_name(self):
+    #     return format_html(
+    #         '<span style="color: #{};">{} {}</span>',
+    #         self.save_statuss,
+    #     )
+    # save_status = models.CharField(choices=((0,u'不能'),(1,u'提前'),(2,u'正常')),default=1,max_length=3,verbose_name=u'启动状态')
+
+    # def save_status(self,):
+    #     if self.contract.fin_amount_in >= (self.contract.all_amount*Decimal(0.7)):
+    #         self.status = '2'
+    #     elif (self.contract.fis_amount_in > 0) and self.contract.fis_amount_in < (self.contract.all_amount*Decimal(0.7)):
+    #
+    #         self.status = '1'
+    #     else:
+    #         self.status = '0'
+    #     self.save()
+    # save_status.short_description = '启动状态2'
 
     class Meta:
         unique_together = ('contract', 'name')
@@ -117,20 +144,26 @@ class SubProject(models.Model):
         return '%s' % self.sub_number
 
 
+# class ProjectAdmin(admin.ModelAdmin):
+#     list_display = ('colored_name',)
+
+
 # 提取
 class ExtSubmit(models.Model):
-    # is_exts = models.ForeignKey('Project', verbose_name="提取的信息集", on_delete=models.CASCADE)
+    # is_exts = models.ForeignKey('Project', verbose_name="提取的信息集", null=True,on_delete=models.SET_NULL,)
     ext_cycle = models.PositiveIntegerField('项目提取周期')
     ext_date = models.DateField('提取完成日', blank=True, null=True)
     ext_man = models.ForeignKey(
         User,
         verbose_name='提取实验员',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     ext_slug = models.ForeignKey(
         'SubProject',
         verbose_name='提取子项目编号',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     slug = models.SlugField('提取任务号', allow_unicode=True)
 
@@ -185,12 +218,14 @@ class LibSubmit(models.Model):
     lib_man = models.ForeignKey(
         User,
         verbose_name='建库实验员',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     lib_slug = models.ForeignKey(
         'SubProject',
         verbose_name='建库子项目编号',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
@@ -222,12 +257,14 @@ class SeqSubmit(models.Model):
     seq_man = models.ForeignKey(
         User,
         verbose_name='测序实验员',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     seq_slug = models.ForeignKey(
         'SubProject',
         verbose_name='测序子项目编号',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
@@ -259,12 +296,14 @@ class AnaSubmit(models.Model):
     ana_man = models.ForeignKey(
         User,
         verbose_name='分析实验员',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     ana_slug = models.ForeignKey(
         'mm.Contract',
         verbose_name='分析子项目编号',
-        on_delete=models.CASCADE,
+        null=True,
+        on_delete=models.SET_NULL,
     )
     slug = models.SlugField('任务号', allow_unicode=True)
     sample = models.ManyToManyField(
