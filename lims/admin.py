@@ -1,4 +1,6 @@
 import datetime
+import gc
+
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from import_export import resources
@@ -27,6 +29,7 @@ class SampleInfoExtInline(admin.StackedInline):
         ,)
     # fieldsets = [("unique_code","sample_number","sample_name"),"preservation_medium","is_RNase_processing"]
 
+
 #抽提的导入
 class SampleInfoExtResource(resources.ModelResource):
     class Meta:
@@ -42,24 +45,66 @@ class SampleInfoExtResource(resources.ModelResource):
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def init_instance(self, row=None):
+        print("******************")
         if not row:
             row = {}
         instance = SampleInfoExt.objects.get(sample_number = row['样品编号'])
         if instance:
-            # instance = SampleInfo()
+            is_rebuild = row["选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+
+            if type(is_rebuild) != int:
+                try:
+                    is_rebuild = int(is_rebuild)
+                except:
+                    raise Exception("是否重抽提信息填写错误")
             for attr, value in row.items():
                 setattr(instance, attr, value)
-            # instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
-            instance.sample_used = row['样品提取用量']
-            instance.sample_rest = row['样品剩余用量']
-            instance.density_checked = row['浓度ng/uL(公司检测)']
-            instance.volume_checked = row['体积uL(公司检测)']
-            instance.D260_280 = row['D260/280']
-            instance.D260_230 = row['D260/230']
-            instance.DNA_totel = row['DNA总量']
-            instance.note = row['备注']
-            instance.quality_control_conclusion = row['质检结论']
-            return instance
+            if not is_rebuild:
+                # instance = SampleInfo()
+                # instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
+                instance.sample_used = row['样品提取用量']
+                instance.sample_rest = row['样品剩余用量']
+                instance.density_checked = row['浓度ng/uL(公司检测)']
+                instance.volume_checked = row['体积uL(公司检测)']
+                instance.D260_280 = row['D260/280']
+                instance.D260_230 = row['D260/230']
+                instance.DNA_totel = row['DNA总量']
+                instance.note = row['备注']
+                instance.quality_control_conclusion = row['质检结论']
+                return instance
+            #重抽提
+            else:
+                rebuild = SampleInfoExt()
+                rebuild.unique_code = instance.unique_code
+                rebuild.sample_name = instance.sample_name
+                rebuild.preservation_medium = instance.preservation_medium
+                rebuild.is_RNase_processing = instance.is_RNase_processing
+                rebuild.species = instance.species
+                rebuild.sample_type = instance.sample_type
+                b = list(instance.sample_number)
+                c = ""
+                if 65 <= ord(b[-1]) <= 90:
+                    print(ord(b[-1]))
+                    b[-1] = chr(ord(b[-1]) + 1)
+                    for i in b:
+                        c += i
+                    rebuild.sample_number = c
+                elif 48 <= ord(b[-1]) <= 57:
+                    print("************")
+                    rebuild.sample_number = instance.sample_number + "A"
+                rebuild.save()
+                del b,c
+                gc.collect()
+                instance.sample_used = row['样品提取用量']
+                instance.sample_rest = row['样品剩余用量']
+                instance.density_checked = row['浓度ng/uL(公司检测)']
+                instance.volume_checked = row['体积uL(公司检测)']
+                instance.D260_280 = row['D260/280']
+                instance.D260_230 = row['D260/230']
+                instance.DNA_totel = row['DNA总量']
+                instance.note = row['备注']
+                instance.quality_control_conclusion = row['质检结论']
+                return instance
         else:
             raise Exception("你上传的样品编号有误")
 
