@@ -141,7 +141,7 @@ class SampleInfoForm(models.Model):
     arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
     sample_checker = models.ForeignKey(User,related_name="物流接收人",verbose_name="样品核对人",blank=True,null=True,on_delete=models.SET_NULL)
-    sample_status = models.IntegerField(choices=TransForm_Status,verbose_name="样品状态",default=0)
+    sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)
     sample_jindu = models.IntegerField(choices=Sample_jindu,verbose_name="样品进度",default=0)
     sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=0)
     note_receive = models.TextField(verbose_name="样品接收备注",default="")
@@ -160,7 +160,9 @@ class SampleInfoForm(models.Model):
     def file_link(self):
         if self.file_teacher:
             print(self.file_teacher.url)
-            return "<a href='{0}'>下载</a>" .format(self.file_teacher.url)
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.file_teacher.url))
+
         else:
             return "未上传"
 
