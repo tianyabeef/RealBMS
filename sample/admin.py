@@ -155,15 +155,22 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     inlines = [SampleInline]
 
-    list_per_page = 30
+    list_per_page = 100
+
+    search_fields = ("sample_status","partner")
 
     save_as_continue = False
 
     save_on_top = False
 
-    raw_id_fields = ("saler",)
+    # raw_id_fields = ("saler",)
 
+    ordering = ('sample_status',)
 
+    list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link', 'jindu_status')
+    # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
+
+    list_display_links = ('sampleinfoformid',)
 
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
@@ -186,10 +193,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
     #               fail_silently=False)
     #     return super(SampleInfoFormAdmin, self).process_import(request, *args, **kwargs)
 
-    list_display = ('sampleinfoformid',"partner",'time_to_upload','color_status','file_link','jindu_status')
-    # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
 
-    list_display_links = ('sampleinfoformid',)
 
 
     actions = ['make_sampleinfoform_submit','insure_sampleinfoform']
@@ -372,14 +376,14 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             return actions
         if current_group_set.name == "实验部":
             # print(actions)
-            del actions['delete_selected']
+            # del actions['delete_selected']
             del actions['export_admin_action']
             del actions['make_sampleinfoform_submit']
             del actions['insure_sampleinfoform']
             # del actions['test1']
             return actions
         elif current_group_set.name == "合作伙伴":
-            del actions['delete_selected']
+            # del actions['delete_selected']
             del actions['export_admin_action']
             return actions
 
@@ -434,7 +438,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             if current_group_set.name == "实验部":
                 self.readonly_fields = ('transform_company',"partner", 'transform_number','sample_diwenjiezhi',
                                         'transform_contact', 'transform_phone',
-                                        'transform_status', 'reciver_address', 'partner', 'partner_company',
+                                        'transform_status', 'sender_address', 'partner', 'partner_company',
                                         'partner_phone', 'partner_email', 'saler',
                                         'project_type',
                                         'sample_num', 'sample_species', 'extract_to_pollute_DNA',
@@ -445,7 +449,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             if obj.sample_status:
                 self.readonly_fields = ('transform_company','transform_number',"partner",
                            'transform_contact','transform_phone',
-                           'transform_status','reciver_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
+                           'transform_status','sender_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
                                         'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai','project_type','arrive_time','sample_diwenjiezhi',
                            'sample_num','sample_species','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
@@ -473,7 +477,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             ['物流信息', {
                 'fields': ('transform_company','transform_number',
                            'transform_contact','transform_phone',
-                           'transform_status','reciver_address'),
+                           'transform_status','sender_address'),
             }],['客户信息',{
                 'fields': ('partner', 'partner_company', 'partner_phone',"information_email",'partner_email', 'saler'),
             }],['收货信息',{
@@ -492,7 +496,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 ['物流信息', {
                     'fields': (('transform_company', 'transform_number',
                                'transform_contact', 'transform_phone',
-                               'transform_status','reciver_address'),),
+                               'transform_status','sender_address'),),
                 }], ['客户信息', {
                     'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'saler'),),
                 }], ['项目信息', {
@@ -507,7 +511,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 ['物流信息', {
                     'fields': (('transform_company','transform_number',
                                'transform_contact','transform_phone'),
-                               'transform_status','reciver_address'),
+                               'transform_status','sender_address'),
                 }]
                 ,['客户信息',{
                 'fields': (('partner', 'partner_company'), ('partner_phone',"information_email",'partner_email'), 'saler'),
