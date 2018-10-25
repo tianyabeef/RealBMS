@@ -72,12 +72,16 @@ class SampleInfoResource(resources.ModelResource):
         model = SampleInfo
         skip_unchanged = True
         fields = ('id','sampleinfoform',
-        'sample_name', 'sample_receiver_name','sample_type', 'tube_number', 'is_extract', 'remarks','data_request')
+        'sample_name', 'sample_receiver_name','sample_type', 'tube_number', 'is_extract', 'remarks','data_request',"sample_species")
         export_order = ('id','sampleinfoform',
-        'sample_name', 'sample_receiver_name','sample_type', 'tube_number', 'is_extract', 'remarks','data_request')
+        'sample_name', 'sample_receiver_name','sample_type', 'tube_number', 'is_extract', 'remarks','data_request',"sample_species")
 
     def get_export_headers(self):
-        return ["id","概要信息编号","样品名","实际收到样品名","样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))","管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求"]
+        return ["id","概要信息编号","样品名","实际收到样品名"
+            ,"样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))","管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求","物种"]
+    def get_diff_headers(self):
+        return ["id","概要信息编号","样品名","实际收到样品名","样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))",
+                "管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求","物种"]
 
     def get_or_init_instance(self, instance_loader, row):
         """
@@ -93,6 +97,7 @@ class SampleInfoResource(resources.ModelResource):
             instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
             instance.remarks = row['备注']
             instance.data_request = row['数据量要求']
+            instance.sample_species = row["物种"]
             instance.save()
             return (instance, False)
         else:
@@ -116,7 +121,7 @@ class SampleInfoResource(resources.ModelResource):
         #     instance_.data_request = row['数据量要求']
         #     instance_.save()
         #     return instance_
-        print("----------------------------------------------")
+        # print("----------------------------------------------")
         instance = self._meta.model()
         # instance = SampleInfo()
         for attr, value in row.items():
@@ -133,10 +138,9 @@ class SampleInfoResource(resources.ModelResource):
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
+        instance.sample_species = row["物种"]
         return instance
 
-    def get_diff_headers(self):
-        return ["id","概要信息编号","样品名","实际收到样品名","样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))","管数","是否需要提取(0-不需要，1-需要)","备注","数据量要求"]
 
     # def after_import(self, dataset, result, using_transactions, dry_run, **kwargs):
     #     # super(SampleInfoResource, self).after_import(dataset, result, using_transactions, dry_run, **kwargs)
@@ -441,7 +445,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                                         'transform_status', 'sender_address', 'partner', 'partner_company',
                                         'partner_phone', 'partner_email', 'saler',
                                         'project_type',
-                                        'sample_num', 'sample_species', 'extract_to_pollute_DNA',
+                                        'sample_num', 'extract_to_pollute_DNA',
                                         'management_to_rest', 'file_teacher',
                                         "sampleinfoformid", "time_to_upload","information_email")
                 return self.readonly_fields
@@ -451,7 +455,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                            'transform_contact','transform_phone',
                            'transform_status','sender_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
                                         'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai','project_type','arrive_time','sample_diwenjiezhi',
-                           'sample_num','sample_species','extract_to_pollute_DNA',
+                           'sample_num','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
                             "sampleinfoformid","time_to_upload","information_email")
                 return self.readonly_fields
@@ -485,7 +489,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                             'sample_diwenzhuangtai',"note_receive"),
             }],['项目信息',{
                 'fields': ( 'project_type',
-                           'sample_num','sample_species','extract_to_pollute_DNA',
+                           'sample_num','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
                             "sampleinfoformid",
                             "time_to_upload"),
@@ -500,7 +504,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 }], ['客户信息', {
                     'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'saler'),),
                 }], ['项目信息', {
-                    'fields': ('project_type','sample_species','sample_diwenjiezhi',
+                    'fields': ('project_type','sample_diwenjiezhi',
                                'sample_num', 'extract_to_pollute_DNA',
                                'management_to_rest', 'file_teacher',
                                # "sampleinfoformid",
@@ -518,7 +522,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             }],['收货信息',{
                 'fields': ( ('man_to_upload','sample_receiver','sample_checker', 'sample_diwenzhuangtai'),),
             }],['项目信息',{
-                'fields': ( 'project_type','arrive_time','sample_species','sample_diwenzhuangtai',
+                'fields': ( 'project_type','arrive_time','sample_diwenzhuangtai',
                            'sample_num','extract_to_pollute_DNA',
                             'management_to_rest','file_teacher',
                             "sampleinfoformid","time_to_upload"),
