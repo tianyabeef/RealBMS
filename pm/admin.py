@@ -17,6 +17,7 @@ from notification.signals import notify
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from import_export import fields
+from decimal import Decimal
 
 
 # 添加工作日
@@ -85,11 +86,11 @@ class StatusListFilter(admin.SimpleListFilter):
         if self.value() == 'CNS':
             return queryset.filter(contract__contract_number=None)
         # 提前启动（低于70%的总金额）
-        # if self.value() == 'ES':
-        #     return queryset.filter(contract__fis_amount < (0.7*contract__all_amount))
+        if self.value() == 'ES':
+            return queryset.filter(contract__fis_amount_in=None)
         # 正常启动（70%-100%的总金额）
         # if self.value() == 'NS':
-        #     return queryset.filter((contract__fis_amount > (0.7*contract__all_amount)) and (contract__fis_amount < contract__all_amount))
+        #     return queryset.filter(contract__fis_amount > (Decimal(0.7)*contract__all_amount))
         if self.value() == 'FIS':
             return queryset.filter(contract__fis_date=None)
         # if self.value() == 'ENS':
@@ -243,7 +244,9 @@ class ProjectAdmin(admin.ModelAdmin):
                     # 'sample_type',
                     # 'sample_count',
                     # 'service_type',
-                    'is_confirm', 'status',
+                    'is_confirm',
+                    # 'save_statuss',
+                    'status',
                     'contract_node', 'ext_status',  'lib_status', 'seq_status', 'ana_status',
                     'report_sub', 'result_sub', 'data_sub',)
     # list_editable = ['is_confirm']
@@ -266,7 +269,8 @@ class ProjectAdmin(admin.ModelAdmin):
                        ('name',),
                        # ('service_type',),
                        ('is_ext', 'is_lib', 'is_seq', 'is_ana',),
-                       ('data_amount', 'status',
+                       ('data_amount',
+                        # 'status',
                         'pic',
                         'is_confirm',),)
         }),
@@ -627,13 +631,34 @@ class ProjectAdmin(admin.ModelAdmin):
         return actions
 
     def save_model(self, request, obj, form, change):
+
+        super(ProjectAdmin, self).save_model(request, obj, form, change)
         if request.user.is_authenticated():
             obj.project_personnel = request.user.username
-        # if Contract.fis_amount_in>=(0.7*Contract.all_amount):
-        #     obj.status =
+            obj.save()
+        if obj.contract.fis_amount >= (obj.contract.all_amount*Decimal(0.7)):
+            SubProject.objects.filter(status=0).update(status=2)
+        elif (obj.contract.fis_amount > 0) and obj.contract.fis_amount < (obj.contract.all_amount*Decimal(0.7)):
+            SubProject.objects.filter(status=0).update(status=1)
+        else:
+            SubProject.objects.filter(status=0).update(status=0)
 
-        obj.save()
 
+    # def save_statuss(self, obj):
+    #     if obj.contract.fis_amount >= (obj.contract.all_amount*Decimal(0.7)):
+    #         # obj.status = request.subproject.STATUS_CHOICES('2')
+    #         # SubProject.objects.filter(status=1).update(status=2)
+    #         return SubProject.objects.filter(status=1).update(status=2)
+    #     elif (obj.contract.fis_amount > 0) and obj.contract.fis_amount < (obj.contract.all_amount*Decimal(0.7)):
+    #         # obj.status = request.subproject.STATUS_CHOICES('1')
+    #         # SubProject.objects.filter(status=1).update(status=1)
+    #         return SubProject.objects.filter(status=1).update(status=1)
+    #     else:
+    #         # obj.status = request.subproject.STATUS_CHOICES('0')
+    #         # SubProject.objects.filter(status=1).update(status=0)
+    #         return SubProject.objects.filter(status=1).update(status=0)
+    #     # obj.save()
+    # save_statuss.short_description = '启动状态1'
 
 # 提取提交表
 class ExtSubmitForm(forms.ModelForm):
@@ -693,7 +718,16 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     cycle = i.ext_cycle + i.lib_cycle + i.seq_cycle + i.ana_cycle
                     i.due_date = add_business_days(date.today(), cycle)
                     i.save()
-        obj.save()
+        # # 已经选定需提取的，并且提交确认的立项放在提取任务下单里
+        # if request.SubProject.is_ext and request.SubProject.is_confirm:
+        #     self.list_display =['contract','ext_slug', 'slug', 'ext_man', 'ext_cycle', 'contract_count', 'project_count', 'sample_count',
+        #             'date', 'is_submit']
+        #     # obj.sub_number = request.SubProject.sub_number
+        # obj.save()
+
+                # return ProjectAdmin.contract_number, ProjectAdmin.customer_name
+                # contract_number=ProjectAdmin.contract_number()
+
 
 
 # class QcSubmitForm(forms.ModelForm):
