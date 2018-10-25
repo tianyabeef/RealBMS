@@ -123,7 +123,8 @@ class SubProject(models.Model):
     #         self.save_statuss,
     #     )
     # save_status = models.CharField(choices=((0,u'不能'),(1,u'提前'),(2,u'正常')),default=1,max_length=3,verbose_name=u'启动状态')
-
+    # def pro_type(self):
+    #     return self.sample_types.project_type
     # def save_status(self,):
     #     if self.contract.fin_amount_in >= (self.contract.all_amount*Decimal(0.7)):
     #         self.status = '2'
