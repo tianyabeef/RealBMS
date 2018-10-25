@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.html import format_html
+
 
 class InvoiceTitle(models.Model):
     title = models.CharField("发票抬头",max_length=100)
@@ -57,7 +59,7 @@ class Contract(models.Model):
 
     def file_link(self):
         if self.contract_file:
-            return "<a href='%s'>下载</a>" % (self.contract_file.url,)
+            return format_html("<a href='%s'>下载</a>" % (self.contract_file.url,))
         else:
             return "未上传"
     file_link.short_description = "附件"

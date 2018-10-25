@@ -26,14 +26,14 @@
             <a href="{{ app.app_url }}" class="section" title="{% blocktrans with name=app.name %}Models in the {{ name }} application{% endblocktrans %}">{{ app.name }}</a>
         </caption>
 
-                <!-- 为实验添加项目列表 -->
-        {% if app.app_label == "lims" and app.models.0.perms.delete == True %}
-                <tr class="model-sampleinfo"><th scope="row"><a href="lims/project/">项目信息</a></th></tr>
-        {% endif %}
-        <!-- 为实验添加样品确认单列表 -->
-         {% if app.app_label == "lims" and app.models.0.perms.delete == True %}
-                <tr class="model-sampleinfo"><th scope="row"><a href="lims/sampleinfoform/">样品确认单信息</a></th></tr>
-        {% endif %}
+{#                <!-- 为实验添加项目列表 -->#}
+{#        {% if app.app_label == "lims" and app.models.0.perms.delete == True %}#}
+{#                <tr class="model-sampleinfo"><th scope="row"><a href="lims/project/">项目信息</a></th></tr>#}
+{#        {% endif %}#}
+{#        <!-- 为实验添加样品确认单列表 -->#}
+{#         {% if app.app_label == "lims" and app.models.0.perms.delete == True %}#}
+{#                <tr class="model-sampleinfo"><th scope="row"><a href="lims/sampleinfoform/">样品确认单信息</a></th></tr>#}
+{#        {% endif %}#}
 
         {% for model in app.models %}
             <tr class="model-{{ model.object_name|lower }}">

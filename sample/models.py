@@ -124,7 +124,7 @@ class SampleInfoForm(models.Model):
     extract_to_pollute_DNA = models.NullBooleanField("DNA提取是否可能有大量非目标DNA污染",default='')
     management_to_rest = models.IntegerField(choices=Management_to_the_rest,
                                              verbose_name="剩余样品处理方式",default=2)
-    sample_species = models.CharField(max_length=200, verbose_name="物种",default='')
+
     sample_diwenjiezhi = models.IntegerField(choices=TransForm_Status,verbose_name="低温保存介质",default=2)
 
     #上传信息
@@ -243,6 +243,7 @@ class SampleInfo(models.Model):
     is_extract = models.NullBooleanField(verbose_name="是否需要提取",default=False)
     remarks = models.TextField(verbose_name="备注",blank=True,null=True)
     status = models.IntegerField(choices=Sample_status,verbose_name="样品可用状态",blank=True,default=0)
+    sample_species = models.CharField(max_length=200, verbose_name="物种", default='')
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
 
