@@ -1,328 +1,213 @@
 from django.db import models
 from django.contrib.auth.models import User
-from decimal import Decimal
-from django.contrib import admin
-from django.utils.html import format_html
-
-
-# 项目
+# 子项目
+# class SampleInfoFormManager(models.Manager):
+#     def all(self):
+#         all_data = super().all()
+#         return all_data.filter(sample_status=2)
 class SubProject(models.Model):
+    # 项目选项
     STATUS_CHOICES = (
-        (0, '不能启动'),  # CNS(Could not started)
-        (2, '正常启动'),  # NS(normal start)
-        (1, '提前启动'),  # ES(Early start)
-        (3, '立项处理'),  # PA(Project approval)
-        (4, '待首款'),  # 'FIS'
-        # (5, '待处理'),  # 'ENS'
-        (5, '提取中'),  # 'EXT'
-        # (7, '质检中'),  # 'QC'
-        (6, '建库中'),  # 'LIB'
-        (7, '测序中'),  # 'SEQ'
-        (8, '分析中'),  # 'ANA'
-        (9, '待尾款'),  # 'FIN'
-        (10, '尾款已到'),  # 'FINE'
-        (11, '完成'),  # 'END'
+        # (1, '正常启动'),  # NS(normal start)
+        # (2, '提前启动'),  # ES(Early start)
+        # (3, '立项处理'),  # PA(Project approval)
+        (1, '已立项'),  # QC(Quality Control)
+        (2, '待抽提'),  # SE(Stay extraction)#项目管理在抽提任务下单表中把每一个子项目的样品都添加好，并提交。
+        (3, '抽提中'),  # EXT(Extraction)    #实验管理添加了实验员之后，并通过钉钉通知了实验员
+        (4, '抽提完成：待客户反馈建库'),  # WFCFTD(Wait for customer feedback to build the database) #实验管理导入了样品的抽提结果，并提交
+        (5, '待建库'),  # TBL(To build libraries)#项目管理在建库任务下单表中把每一个子项目的样品都添加好，并提交。
+        (6, '建库中'),  # LIB(libraries) #实验管理添加了建库实验员之后，并通过钉钉通知了实验员
+        (7, '建库完成：待客户反馈测序'),  # WFCFS(Waiting for customer feedback sequencing)#实验管理导入了样品的建库结果，并提交
+        (8, '待测序'),  # TBS(To build sequencing)#项目管理在测序任务下单表中把每一个子项目的样品都添加好，并提交。
+        (9, '测序中'),  # SEQ(sequencing)#实验管理添加了实验员之后，并通过钉钉通知了实验员
+        (10, '测序完成：待客户反馈分析'),  # WFCFA(Waiting for Customer feedback analysis)#项目管理把测序的结果导入到样品表中
+        (11, '待分析'),  # TBA(To build analysis)#项目管理新建一个分析项目
+        (12, '分析中'),  # ANA(analysis)#生信管理添加了分析员
+        (13, "完成")
     )
     contract = models.ForeignKey(
         'mm.Contract',
         verbose_name='合同号',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    # customer = models.ForeignKey(
-    #     'crm.Customer',
-    #     verbose_name='客户姓名',
-    #     null=True,
-    #     on_delete=models.SET_NULL,
-    # )
-    # project_personnel = models.ForeignKey(
-    #     User,
-    #     verbose_name='项目人员',
-    #     null=True,
-    #     on_delete=models.SET_NULL,
-    # )
-    project_personnel = models.CharField('项目管理人员', max_length=40)
-
-    sample_types = models.ForeignKey(
+        on_delete=models.SET_NULL,null=True
+    )#里面包含合同编号，合同名称
+    # sampleInfoForm = SampleInfoFormManager()
+    sampleInfoForm = models.ForeignKey(
         'sample.SampleInfoForm',
-        verbose_name='样品类型',
-        null=True,
-        on_delete=models.SET_NULL,
+        verbose_name='样品概要表',
+        on_delete=models.SET_NULL,null=True
     )
-    # sample_types = models.ManyToManyField(
-    #     'sample.SampleInfoForm',
-    #     verbose_name='样品类型',
-    #
-    # )
-    # # sample_type = models.CharField('样本类型', max_length=50)
-    # sample_count = models.ForeignKey(
-    #     'sample.SampleInfoForm',
-    #     verbose_name='样品数量',
-    #     null=True,
-    #     on_delete=models.SET_NULL,
-    # )
-    # sample_count = models.IntegerField('样品数量', )
-    # customer = models.CharField('客户', max_length=20, blank=True)
-    # customer_phone = models.CharField('电话', max_length=30, blank=True)
+    project_manager = models.OneToOneField(User,verbose_name="项目管理员"
+                                           ,on_delete=models.SET_NULL,null=True)
+    #里面包含合同编号，合同名称
+    # contract_name = models.CharField('合同名称', max_length=40)
+    # customer = models.CharField('合同联系人姓名', max_length=40)
+    # customer_phone = models.CharField('合同联系人电话', max_length=11)
     # saleman = models.CharField('销售人员', max_length=40)
+    #company = models.CharField('合作伙伴单位', max_length=100)
+    # project_type = models.IntegerField(choices=Project_choices, verbose_name="项目类型", default=1)
+    #发票里有
     # income_notes = models.CharField('到款记录', max_length=20)
-    # sample_customer = models.CharField('样品联系人姓名', max_length=40)
-    # sample_customer_phone = models.CharField('样品联系人电话', max_length=11)
-    # company = models.CharField('地址', max_length=100)
+    # invoice = models.OneToOneField(
+    #     'fm.Invoice',
+    #     verbose_name='发票',on_delete=models.SET_NULL,null=True
+    # )##里面包含了全部的发票到账情况
+    #概要表里有里
+    # sample_receiver = models.CharField('样品接收人姓名', max_length=40)
+    # receive_date = models.DateField('样品接收时间')
+    #项目信息
     sub_number = models.CharField('子项目编号', max_length=100)
     sub_project = models.CharField('子项目的名称', max_length=40)
     project_start_time = models.DateField('立项时间', max_length=20)
-    receive_date = models.DateField('收到样品日期')
-    name = models.TextField('项目注解', max_length=100, blank=True)
-    # IS_CHOICE =(
-    #     (1, "需提取"),
-    #     (2,"需建库"),
-    #     (3, "需测序"),
-    #     (4, "需分析"),
-    #
-    # )
-    is_ext = models.BooleanField('需提取')
-    # is_qc = models.BooleanField('需质检')
+    # note = models.TextField('项目注解', max_length=100, blank=True)
+    # project_personnel = models.ForeignKey(User, verbose_name='项目管理人员',on_delete=models.SET_NULL,null=True)
+
+    is_ext = models.BooleanField('需抽提')
     is_lib = models.BooleanField('需建库')
     is_seq = models.BooleanField("需测序")
     is_ana = models.BooleanField("需分析")
-    # service_type = models.IntegerField(verbose_name='服务类型',
-    #                                    choices=(('is_ext', '需测序'), ('is_lib', '需建库'), ('is_seq', '需测序'),
-    #                                             ('is_ana', '需分析'),), default='is_ext')
-    # service_type = models.CharField('服务类型', max_length=50)
-    data_amount = models.CharField('数据要求', max_length=10)
-    pic = models.ImageField('提前启动图片', upload_to='pm/', null=True, blank=True)
+    sub_project_note = models.TextField('备注',blank=True)
+    is_submit = models.BooleanField('确认', default=False)
+    status = models.BooleanField('项目是否提前启动', default=False)
+    # data_amount = models.CharField('数据量要求', max_length=10)
+    file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
+    is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
 
-    # ext_cycle = models.PositiveIntegerField('提取周期')
-    # ext_task_cycle = models.PositiveIntegerField('提取周期')
-    # ext_date = models.DateField('提取完成日', blank=True, null=True)
-    # qc_cycle = models.PositiveIntegerField('质检周期')
-    # qc_task_cycle = models.PositiveIntegerField('质检周期')
-    # qc_date = models.DateField('质检完成日', blank=True, null=True)
-    # lib_cycle = models.PositiveIntegerField('建库周期')
-    # lib_task_cycle = models.PositiveIntegerField('建库周期')
-    # lib_date = models.DateField('建库完成日', blank=True, null=True)
-    # seq_cycle = models.PositiveIntegerField('测序周期')
-    # seq_start_date = models.DateField('测序开始日', blank=True, null=True)
-    # seq_end_date = models.DateField('测序完成日', blank=True, null=True)
-    # ana_cycle = models.PositiveIntegerField('分析周期')
-    # ana_start_date = models.DateField('分析开始日', blank=True, null=True)
-    # ana_end_date = models.DateField('分析完成日', blank=True, null=True)
-    report_date = models.DateField('释放报告日', blank=True, null=True)
-    result_date = models.DateField('释放结果日', blank=True, null=True)
-    data_date = models.DateField('释放数据日', blank=True, null=True)
-    due_date = models.DateField('合同节点', blank=True, null=True)
-    is_confirm = models.BooleanField('确认', default=False)
-    # status = models.IntegerField('状态', max_length=3, choices=STATUS_CHOICES, default=1)
-    status = models.IntegerField('状态', choices=STATUS_CHOICES, default=0)
-    # save_statuss = models.CharField(max_length=6)
-    #
-    # def colored_name(self):
-    #     return format_html(
-    #         '<span style="color: #{};">{} {}</span>',
-    #         self.save_statuss,
-    #     )
-    # save_status = models.CharField(choices=((0,u'不能'),(1,u'提前'),(2,u'正常')),default=1,max_length=3,verbose_name=u'启动状态')
-    # def pro_type(self):
-    #     return self.sample_types.project_type
-    # def save_status(self,):
-    #     if self.contract.fin_amount_in >= (self.contract.all_amount*Decimal(0.7)):
-    #         self.status = '2'
-    #     elif (self.contract.fis_amount_in > 0) and self.contract.fis_amount_in < (self.contract.all_amount*Decimal(0.7)):
-    #
-    #         self.status = '1'
-    #     else:
-    #         self.status = '0'
-    #     self.save()
-    # save_status.short_description = '启动状态2'
+    #流程时间节点
+    time_ext = models.DateField("抽提完成时间")
+    time_lib = models.DateField("建库完成时间")
+    # time_seq = models.DateField("测序完成时间")
+    time_ana = models.DateField("分析完成时间")
 
     class Meta:
-        unique_together = ('contract', 'name')
-        verbose_name = '0项目管理'
-        verbose_name_plural = '0项目管理'
+        unique_together = ('sub_number',)
+        verbose_name = '0立项管理'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+            return '%s' % self.sub_number
+
+
+
+# 抽提提交
+class ExtSubmit(models.Model):
+    subProject = models.ForeignKey(
+        'SubProject',
+        verbose_name='子项目(抽提)',
+        on_delete=models.SET_NULL,null=True
+    )
+    sample = models.ManyToManyField("sample.SampleInfo",verbose_name="选择抽提样品",blank=True,null=True)
+    ext_number = models.CharField('抽提号', max_length=100)
+    ext_start_date = models.DateField("提取开始日期")
+    sample_count = models.IntegerField('样品数量',blank=True,null=True)
+    #ext_result = models.FileField('抽提结果')外键一张抽提样品表
+    note = models.TextField('实验任务备注',blank=True,null=True)
+    is_submit = models.BooleanField('提交',default=False)
+    # def save(self, *args, **kwargs):
+    #     super(ExtSubmit, self).save(*args, **kwargs)
+    #     if not self.slug:
+    #         self.slug = "提取任务 #" + str(self.id)
+    #         self.save()
+
+    class Meta:
+        verbose_name = '1提取任务下单'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return '%s' % self.ext_number
+
+
+
+
+# 建库提交
+class LibSubmit(models.Model):
+    subProject = models.ForeignKey(
+        'SubProject',
+        verbose_name='子项目(建库)',
+        on_delete=models.SET_NULL,null=True
+    )
+    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品",blank=True,null=True)
+    lib_number = models.CharField('建库号', max_length=100)
+    lib_start_date = models.DateField("建库开始日期")
+    customer_confirmation_time = models.DateField('客户确认时间',blank=True,null=True)
+    customer_sample_count = models.IntegerField('客户确认样品数量',blank=True,null=True)
+    #加文库类型、测序类型、建库类型
+
+
+    #lib_info = models.FileField('建库样品明细')外键一张建库样品表
+    note = models.TextField('备注',blank=True,null=True)
+    is_submit = models.BooleanField('提交',default=False)
+    # def save(self, *args, **kwargs):
+    #     super(LibSubmit, self).save(*args, **kwargs)
+    #     if not self.slug:
+    #         self.slug = "建库任务 #" + str(self.id)
+    #         self.save()
+
+    class Meta:
+        verbose_name = '2建库任务下单'
+        verbose_name_plural = verbose_name
 
     def __str__(self):
         return '%s' % self.sub_number
 
 
-# class ProjectAdmin(admin.ModelAdmin):
-#     list_display = ('colored_name',)
-
-
-# 提取
-class ExtSubmit(models.Model):
-    # is_exts = models.ForeignKey('Project', verbose_name="提取的信息集", null=True,on_delete=models.SET_NULL,)
-    ext_cycle = models.PositiveIntegerField('项目提取周期')
-    ext_date = models.DateField('提取完成日', blank=True, null=True)
-    ext_man = models.ForeignKey(
-        User,
-        verbose_name='提取实验员',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    ext_slug = models.ForeignKey(
-        'SubProject',
-        verbose_name='提取子项目编号',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    slug = models.SlugField('提取任务号', allow_unicode=True)
-
-    sample = models.ManyToManyField(
-        'sample.SampleInfo',
-        verbose_name='样品',
-    )
-    date = models.DateField('提交时间', blank=True, null=True)
-    is_submit = models.BooleanField('提交')
-
-    def save(self, *args, **kwargs):
-        super(ExtSubmit, self).save(*args, **kwargs)
-        if not self.slug:
-            self.slug = "提取任务 #" + str(self.id)
-            self.save()
-
-    class Meta:
-        verbose_name = '1提取任务下单'
-        verbose_name_plural = '1提取任务下单'
-
-    def __str__(self):
-        return '%s' % self.slug
-
-
-# class QcSubmit(models.Model):
-#     slug = models.SlugField('任务号', allow_unicode=True)
-#     sample = models.ManyToManyField(
-#         'lims.SampleInfo',
-#         verbose_name='样品',
-#     )
-#     date = models.DateField('提交时间', blank=True, null=True)
-#     is_submit = models.BooleanField('提交')
-#
-#     def save(self, *args, **kwargs):
-#         super(QcSubmit, self).save(*args, **kwargs)
-#         if not self.slug:
-#             self.slug = "质检任务 #" + str(self.id)
-#             self.save()
-#
-#     class Meta:
-#         verbose_name = '2质检任务下单'
-#         verbose_name_plural = '2质检任务下单'
-#
-#     def __str__(self):
-#         return '%s' % self.slug
-
-
-# 建库
-class LibSubmit(models.Model):
-    lib_cycle = models.PositiveIntegerField('项目建库周期')
-    lib_date = models.DateField('建库完成日', blank=True, null=True)
-    lib_man = models.ForeignKey(
-        User,
-        verbose_name='建库实验员',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    lib_slug = models.ForeignKey(
-        'SubProject',
-        verbose_name='建库子项目编号',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    slug = models.SlugField('任务号', allow_unicode=True)
-    sample = models.ManyToManyField(
-        'sample.SampleInfo',
-        verbose_name='样品'
-    )
-    date = models.DateField('提交时间', blank=True, null=True)
-    is_submit = models.BooleanField('提交')
-
-    def save(self, *args, **kwargs):
-        super(LibSubmit, self).save(*args, **kwargs)
-        if not self.slug:
-            self.slug = "建库任务 #" + str(self.id)
-            self.save()
-
-    class Meta:
-        verbose_name = '3建库任务下单'
-        verbose_name_plural = '3建库任务下单'
-
-    def __str__(self):
-        return '%s' % self.slug
-
-
-# 测序
+# 测序提交
 class SeqSubmit(models.Model):
-    seq_cycle = models.PositiveIntegerField('项目测序周期')
-    seq_start_date = models.DateField('测序开始日', blank=True, null=True)
-    seq_end_date = models.DateField('测序完成日', blank=True, null=True)
-    seq_man = models.ForeignKey(
-        User,
-        verbose_name='测序实验员',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    seq_slug = models.ForeignKey(
+    subProject = models.ForeignKey(
         'SubProject',
-        verbose_name='测序子项目编号',
-        null=True,
-        on_delete=models.SET_NULL,
+        verbose_name='子项目编号',
+        on_delete=models.SET_NULL,null=True
     )
-    slug = models.SlugField('任务号', allow_unicode=True)
-    sample = models.ManyToManyField(
-        'sample.SampleInfo',
-        verbose_name='样品'
-    )
-    date = models.DateField('提交时间', blank=True, null=True)
-    is_submit = models.BooleanField('提交')
+    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品",blank=True,null=True)
+    seq_number = models.CharField('测序号', max_length=100)
+    seq_start_date = models.DateField('测序上机日期')
+    customer_confirmation_time = models.DateField('客户确认上机时间',blank=True,null=True)
+    customer_sample_count = models.IntegerField('客户确认上机样品数量',blank=True,null=True)
+    #customer_sample_info = models.FileField('客上机样本明细')
+    pooling_excel = models.FileField(verbose_name="Pooling表格",upload_to="uploads/pooling/%Y/%m/%d/",blank=True)
+	##外键一张测序样品表
+    note = models.TextField('备注',blank=True,null=True)
+    is_submit = models.BooleanField('提交',default=False)
 
     def save(self, *args, **kwargs):
         super(SeqSubmit, self).save(*args, **kwargs)
-        if not self.slug:
-            self.slug = "测序任务 #" + str(self.id)
+        if not self.sub_number:
+            self.sub_number = "测序任务 #" + str(self.id)
             self.save()
 
     class Meta:
-        verbose_name = '4测序任务下单'
-        verbose_name_plural = '4测序任务下单'
+        verbose_name = '3测序任务下单'
+        verbose_name_plural = verbose_name
 
     def __str__(self):
-        return '%s' % self.slug
+        return '%s' % self.sub_number
 
 
-# 分析
+# 分析提交
 class AnaSubmit(models.Model):
-    ana_cycle = models.PositiveIntegerField('项目分析周期')
-    ana_start_date = models.DateField('分析开始日', blank=True, null=True)
-    ana_end_date = models.DateField('分析完成日', blank=True, null=True)
-    ana_man = models.ForeignKey(
-        User,
-        verbose_name='分析实验员',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    ana_slug = models.ForeignKey(
+    contract = models.ForeignKey(
         'mm.Contract',
-        verbose_name='分析子项目编号',
-        null=True,
-        on_delete=models.SET_NULL,
-    )
-    slug = models.SlugField('任务号', allow_unicode=True)
-    sample = models.ManyToManyField(
-        'sample.SampleInfo',
-        verbose_name='样品'
-    )
-    date = models.DateField('提交时间', blank=True, null=True)
+        verbose_name='合同号',
+        on_delete=models.SET_NULL,null=True
+    )#里面包含合同编号，合同名称
+    invoice_code = models.CharField('发票号码', max_length=12, unique=True)
+    ana_start_date = models.DateField('分析开始日期')
+    note = models.TextField('备注')
+    sample_count = models.IntegerField('样品数量')
     is_submit = models.BooleanField('提交')
+    depart_data_path = models.CharField(verbose_name="数据拆分路径",max_length=50)
+    data_analysis = models.FileField(verbose_name="数据分析单",upload_to="uploads/ana/%Y/%m/%d/",blank=True)
 
-    def save(self, *args, **kwargs):
-        super(AnaSubmit, self).save(*args, **kwargs)
-        if not self.slug:
-            self.slug = "分析任务 #" + str(self.id)
-            self.save()
+    # def save(self, *args, **kwargs):
+    #     super(AnaSubmit, self).save(*args, **kwargs)
+    #     if not self.slug:
+    #         self.slug = "分析任务 #" + str(self.id)
+    #         self.save()
 
     class Meta:
-        verbose_name = '5分析任务下单'
-        verbose_name_plural = '5分析任务下单'
+        verbose_name = '4分析任务下单'
+        verbose_name_plural = verbose_name
 
     def __str__(self):
-        return '%s' % self.slug
+        return '%s' % self.invoice_code
+
+
