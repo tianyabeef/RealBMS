@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.html import format_html
+
 
 class InvoiceTitle(models.Model):
     title = models.CharField("发票抬头",max_length=100)
@@ -29,7 +31,7 @@ class Contract(models.Model):
         '类型',
         choices=TYPE_CHOICES
     )
-    salesman = models.ForeignKey(User, verbose_name='业务员')
+    salesman = models.ForeignKey(User, verbose_name='业务员',on_delete=models.SET_NULL,null=True)
     price = models.DecimalField('单价', max_digits=7, decimal_places=2, blank=True)
     range = models.IntegerField(
         '价格区间',
@@ -57,7 +59,7 @@ class Contract(models.Model):
 
     def file_link(self):
         if self.contract_file:
-            return "<a href='%s'>下载</a>" % (self.contract_file.url,)
+            return format_html("<a href='%s'>下载</a>" % (self.contract_file.url,))
         else:
             return "未上传"
     file_link.short_description = "附件"
@@ -87,7 +89,7 @@ class Invoice(models.Model):
         verbose_name='合同',
         on_delete=models.CASCADE,
     )
-    title = models.ForeignKey(InvoiceTitle,verbose_name='发票抬头')
+    title = models.ForeignKey(InvoiceTitle,verbose_name='发票抬头',on_delete=models.SET_NULL,null=True)
     issuingUnit = models.CharField('开票单位',choices=ISSUING_UNIT_CHOICES, max_length=25,default='sh')
     period = models.CharField('款期', max_length=3, choices=PERIOD_CHOICES, default='FIS')
     amount = models.DecimalField('发票金额', max_digits=9, decimal_places=2)

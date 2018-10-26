@@ -4,7 +4,7 @@ from django.db import models
 class Invoice(models.Model):
     invoice = models.OneToOneField(
         'mm.Invoice',
-        verbose_name='发票',
+        verbose_name='发票',on_delete=models.SET_NULL,null=True
     )
     invoice_code = models.CharField('发票号码', max_length=12, unique=True)
     date = models.DateField('开票日期', null=True)
@@ -32,7 +32,7 @@ class Invoice(models.Model):
 
 
 class Bill(models.Model):
-    invoice = models.ForeignKey(Invoice, verbose_name='发票')
+    invoice = models.ForeignKey(Invoice, verbose_name='发票',on_delete=models.SET_NULL,null=True)
     income = models.DecimalField('到账金额', max_digits=9, decimal_places=2)
     date = models.DateField('到账日期')
 

@@ -25,7 +25,7 @@ class Customer(models.Model):
         choices=LEVEL_CHOICES,
         default=1,
     )
-    linker = models.ForeignKey(User, verbose_name='联络人')
+    linker = models.ForeignKey(User, verbose_name='联络人',on_delete=models.SET_NULL,null=True)
 
     class Meta:
         verbose_name = "客户管理"
@@ -73,7 +73,7 @@ class Intention(models.Model):
 class IntentionRecord(models.Model):
     intention = models.ForeignKey(
         Intention,
-        verbose_name='意向项目'
+        verbose_name='意向项目',on_delete=models.SET_NULL,null=True
     )
     status = models.CharField('进展/状态', max_length=15)
     #record_date = models.DateField('跟进时间', default=date.today())
