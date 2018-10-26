@@ -21,6 +21,8 @@ class ExtExecute(models.Model):
         verbose_name='抽提实验员',blank= True,
         # on_delete= models.DO_NOTHING,
     )
+    extract_method = models.CharField(verbose_name="提取方法",max_length=50)
+    test_method = models.CharField(verbose_name="检测方法",max_length=50)
     ext_end_date = models.DateField('提取完成日期',blank=True,null=True)
     upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/')
     note = models.TextField('实验结果备注')
@@ -40,6 +42,7 @@ class ExtExecute(models.Model):
 
 #建库执行
 class LibExecute(models.Model):
+
     libSubmit = models.OneToOneField(
         LibSubmit,
         verbose_name='子项目编号(建库)',
@@ -55,6 +58,17 @@ class LibExecute(models.Model):
     upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/')
     note = models.TextField('实验结果备注')
     is_submit = models.BooleanField('提交',default=False)
+
+    #非必填
+    reaction_times = models.IntegerField(verbose_name="反应次数（选填）")
+    pcr_system = models.CharField(verbose_name="PCR体系（选填）",max_length=200)
+    dna_polymerase = models.CharField(verbose_name="DNA聚合酶（选填）",max_length=50)
+    model_initiation_mass = models.CharField(verbose_name="模板起始量（选填）",max_length=50)
+    enzyme_number = models.CharField(verbose_name="酶批号（选填）",max_length=50)
+    pcr_process = models.IntegerField(choices=((0,"KAPA酶程序"),(1,"唯赞酶程序"),(2,"降落PCR程序"),(3,"其它程序（见备注）")))
+    annealing_temperature = models.CharField(verbose_name="退货问题（选填）",max_length=50)
+    loop_number = models.IntegerField(verbose_name="循环数")
+    gel_recovery_kit = models.CharField(verbose_name="胶回收试剂盒（选填）",max_length=200)
     # def save(self, *args, **kwargs):
     #     super(LibSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -76,6 +90,7 @@ class SeqExecute(models.Model):
         verbose_name='子项目编号(测序)',
         on_delete=models.CASCADE,blank=True,null=True
     )
+    # subproject = models.ForeignKey()
     seq_experimenter = models.ManyToManyField(
         User,
         verbose_name='测序实验员',blank= True,
@@ -179,8 +194,8 @@ class SampleInfoExt(models.Model):
     unique_code = models.CharField(max_length=60,verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")##就是样品编号
-    preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
-    is_RNase_processing = models.IntegerField(choices=Is_RNase_processing,verbose_name="是否经过RNase处理",default=1)
+    # preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
+    # is_RNase_processing = models.IntegerField(choices=Is_RNase_processing,verbose_name="是否经过RNase处理",default=1)
     species = models.CharField(max_length=200,verbose_name="物种")
     sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
     ##以下字段为抽提的的结果

@@ -114,6 +114,8 @@ class SampleInfoExtResource(resources.ModelResource):
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin):
 
+    filter_horizontal = ("ext_experimenter",)
+
     resource_class = SampleInfoExtResource
 
     list_per_page = 30
@@ -227,6 +229,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     list_display_links = ('libSubmit',)
 
+    filter_horizontal = ("lib_experimenter",)
     # actions = ["submit_result", ]
 
     def get_readonly_fields(self, request, obj=None):
@@ -311,6 +314,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
+    filter_horizontal = ("seq_experimenter",)
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
     list_display = ('seqSubmit', 'seq_end_date', 'note',"is_submit")
 
