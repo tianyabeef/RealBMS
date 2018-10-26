@@ -14,14 +14,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 
-from django.conf.urls import url, include
+from django.conf.urls import url,include
+from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import path
 from BMS.admin_bms import BMS_admin_site
 
 urlpatterns = [
-    url(r'', BMS_admin_site.urls),
-    url(r'notification/inbox/', include('notification.urls', namespace='notifications')),
+    path(r'', BMS_admin_site.urls),
+    path(r'notification/inbox/', include('notification.urls', namespace='notifications')),
     # path(r'^lims/',include('lims.urls',namespace='lims')),
 ]
 
