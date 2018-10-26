@@ -48,9 +48,14 @@
     </p>
     {{ adminform.form.non_field_errors }}
 {% endif %}
+{% if group_id == "合作伙伴" %}
     <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
-    <br>
+{% endif %}
+
+{% if group_id == "实验部" %}
     <a href="{% static 'modelform/实验室上传样品详情.xlsx' %}" style="color: #c9302c">实验室信息模板下载</a>
+{% endif %}
+
 {% block field_sets %}
 {% for fieldset in adminform %}
   {% include "admin/includes/fieldset.html" %}

@@ -1,15 +1,16 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+
 from pm.models import AnaSubmit
 
 
 class AnaExecute(models.Model):
     """执行生信分析步骤"""
     ana_submit = models.OneToOneField(
-        AnaSubmit, verbose_name="子项目编号（分析）"
+        AnaSubmit, verbose_name="子项目编号（分析）", on_delete=models.CASCADE
     )
     analyst = models.ForeignKey(
-        User, verbose_name="生信分析员"
+        User, verbose_name="生信分析员", on_delete=models.CASCADE
     )
     submit_date = models.DateField(
         verbose_name="分析提交日期", auto_now_add=True
@@ -37,24 +38,16 @@ class AnaExecute(models.Model):
         verbose_name = '4分析任务执行'
         verbose_name_plural = verbose_name
 
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        self.is_submit = True
-        return super(AnaExecute, self).save(
-            force_insert=False, force_update=False, using=None,
-            update_fields=None
-        )
-
     def __str__(self):
         return '%s' % self.ana_submit.ana_slug
 
-    
+
 class WeeklyReport(models.Model):
     """
     科技服务生信部门的周报管理
     """
     reporter = models.OneToOneField(
-        User, verbose_name="汇报人"
+        User, verbose_name="汇报人", on_delete=models.CASCADE
     )
     submit_date = models.DateField(
         verbose_name="提交日期", auto_now_add=True
@@ -79,6 +72,6 @@ class WeeklyReport(models.Model):
     class Meta:
         verbose_name = "周报"
         verbose_name_plural = verbose_name
-        
+    
     def __str__(self):
         return "%s的周报" % self.reporter.username

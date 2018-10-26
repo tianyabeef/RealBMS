@@ -1,20 +1,20 @@
-from am.models import AnaSubmit, WeeklyReport
+from am.models import AnaExecute, WeeklyReport
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 
 
-class AnaSubmitResource(resources.ModelResource):
+class AnaExecuteResource(resources.ModelResource):
     """The import_export resource class for model AnaSubmit"""
     class Meta:
-        model = AnaSubmit
+        model = AnaExecute
         skip_unchanged = True
         fields = (
-            "ana_submit", "analyst", "note", "end_date", "confirmation_sheet",
+            "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
             "ana_result_path", "baidu_link", "is_submit"
         )
         export_order = (
-            "ana_submit", "analyst", "note", "end_date", "confirmation_sheet",
+            "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
             "ana_result_path", "baidu_link", "is_submit"
         )
 
@@ -25,13 +25,13 @@ class AnaSubmitResource(resources.ModelResource):
         ]
 
 
-class AnaSubmitAdmin(ImportExportModelAdmin):
-    resource_class = AnaSubmitResource
+class AnaExecuteAdmin(ImportExportModelAdmin):
+    resource_class = AnaExecuteResource
     list_per_page = 30
     save_as_continue = False
     save_on_top = False
     list_display = (
-        "ana_submit", "analyst", "note", "end_date", "confirmation_sheet",
+        "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
         "ana_result_path", "baidu_link", "is_submit"
     )
     list_display_links = ('ana_submit',)
@@ -40,11 +40,11 @@ class AnaSubmitAdmin(ImportExportModelAdmin):
         self.readonly_fields = (
             "ana_submit", "analyst", "end_date", "confirmation_sheet",
             "ana_result_path", "baidu_link", "is_submit"
-        ) if obj.is_submit else ()
+        ) if obj and obj.is_submit else ()
         return self.readonly_fields
     
     def save_model(self, request, obj, form, change):
-        super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
+        super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
         if obj.is_submit:
             # TODO: dingtalk request
             self.save_as = False
@@ -78,7 +78,7 @@ class WeeklyReportAdmin(ImportExportModelAdmin):
         self.readonly_fields = (
             "reporter", "start_date", "end_date", "content", "attachment",
             "is_submit"
-        ) if obj.is_submit else ()
+        ) if obj and obj.is_submit else ()
         return self.readonly_fields
     
     def save_model(self, request, obj, form, change):
@@ -88,5 +88,5 @@ class WeeklyReportAdmin(ImportExportModelAdmin):
             pass
 
 
-BMS_admin_site.register(AnaSubmit, AnaSubmitAdmin)
+BMS_admin_site.register(AnaExecute, AnaExecuteAdmin)
 BMS_admin_site.register(WeeklyReport, WeeklyReportAdmin)
