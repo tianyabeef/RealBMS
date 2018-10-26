@@ -12,6 +12,7 @@ class DingtalkChat(models.Model):
     )
     chat_owner = models.ForeignKey(
         Employees, related_name="chat_owner", verbose_name="群主",
+        on_delete=models.CASCADE
     )
     members = models.ManyToManyField(
         Employees, related_name="chat_members", verbose_name="群聊成员"

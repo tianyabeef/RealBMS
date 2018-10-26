@@ -12,7 +12,7 @@ class Departments(models.Model):
         verbose_name="记录时间", auto_now_add=True,
     )
     manager = models.ForeignKey(
-        User, verbose_name="部门主管"
+        User, verbose_name="部门主管", on_delete=models.CASCADE
     )
     is_valid = models.BooleanField(
         verbose_name="是否有效", default=True,
@@ -34,7 +34,9 @@ class Lv1Departments(Departments):
 
 class Lv2Departments(Departments):
     """子部门管理"""
-    superior = models.ForeignKey(Lv1Departments, verbose_name="上级部门")
+    superior = models.ForeignKey(
+        Lv1Departments, verbose_name="上级部门", on_delete=models.CASCADE
+    )
     
     class Meta:
         verbose_name_plural = verbose_name = "二级部门"
@@ -46,10 +48,11 @@ class Lv2Departments(Departments):
 class Employees(models.Model):
     """公司在职员工管理"""
     user = models.OneToOneField(
-        User, verbose_name="登陆名"
+        User, verbose_name="登陆名", on_delete=models.CASCADE
     )
     department = models.ForeignKey(
         Lv2Departments, verbose_name="所属部门", null=True, blank=True,
+        on_delete=models.CASCADE
     )
     dingtalk_id = models.CharField(
         verbose_name="钉钉编号", max_length=32,
