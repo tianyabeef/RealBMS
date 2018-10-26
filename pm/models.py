@@ -95,7 +95,7 @@ class ExtSubmit(models.Model):
         verbose_name='子项目(抽提)',
         on_delete=models.SET_NULL,null=True
     )
-    sample = models.ManyToManyField("sample.SampleInfo",verbose_name="选择抽提样品",blank=True,null=True)
+    sample = models.ManyToManyField("sample.SampleInfo",verbose_name="选择抽提样品",blank=True)
     ext_number = models.CharField('抽提号', max_length=100)
     ext_start_date = models.DateField("提取开始日期")
     sample_count = models.IntegerField('样品数量',blank=True,null=True)
@@ -125,7 +125,7 @@ class LibSubmit(models.Model):
         verbose_name='子项目(建库)',
         on_delete=models.SET_NULL,null=True
     )
-    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品",blank=True,null=True)
+    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品",blank=True)
     lib_number = models.CharField('建库号', max_length=100)
     lib_start_date = models.DateField("建库开始日期")
     customer_confirmation_time = models.DateField('客户确认时间',blank=True,null=True)
@@ -157,16 +157,16 @@ class SeqSubmit(models.Model):
         verbose_name='子项目编号',
         on_delete=models.SET_NULL,null=True
     )
-    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品",blank=True,null=True)
+    sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品",blank=True)
     seq_number = models.CharField('测序号', max_length=100)
     seq_start_date = models.DateField('测序上机日期')
     customer_confirmation_time = models.DateField('客户确认上机时间',blank=True,null=True)
     customer_sample_count = models.IntegerField('客户确认上机样品数量',blank=True,null=True)
     #customer_sample_info = models.FileField('客上机样本明细')
-    pooling_excel = models.FileField(verbose_name="Pooling表格",upload_to="uploads/pooling/%Y/%m/%d/",blank=True)
-	##外键一张测序样品表
-    note = models.TextField('备注',blank=True,null=True)
-    is_submit = models.BooleanField('提交',default=False)
+    pooling_excel = models.FileField(verbose_name="Pooling表格", upload_to="uploads/pooling/%Y/%m/%d/", blank=True)
+    ##外键一张测序样品表
+    note = models.TextField('备注', blank=True, null=True)
+    is_submit = models.BooleanField('提交', default=False)
 
     def save(self, *args, **kwargs):
         super(SeqSubmit, self).save(*args, **kwargs)

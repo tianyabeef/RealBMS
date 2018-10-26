@@ -1,10 +1,8 @@
 import datetime
 import gc
-
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from import_export import resources
-from import_export import fields
 from import_export.admin import ImportExportActionModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from lims.models import SampleInfoExt, ExtExecute, LibExecute,  SampleInfoLib, SampleInfoSeq, SeqExecute
@@ -18,16 +16,10 @@ from sample.models import SampleInfoForm, SampleInfo
 #外键样品
 class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
-    fieldsets = (
-        ['抽提样品信息', {
-            'fields': (( 'sample_number',
-                        'sample_name','species',
-                        ),("is_RNase_processing",'preservation_medium', 'sample_type','sample_used' ),
-                       ('sample_rest','density_checked',"volume_checked"),("D260_280","D260_230","DNA_totel","quality_control_conclusion"),"note","is_rebuild"
-                       ),
-        }]
-        ,)
-    # fieldsets = [("unique_code","sample_number","sample_name"),"preservation_medium","is_RNase_processing"]
+class SampleInfoLibInline(admin.StackedInline):
+    model = SampleInfoLib
+class SampleInfoSeqInline(admin.StackedInline):
+    model = SampleInfoSeq
 
 
 #抽提的导入
@@ -143,31 +135,22 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
         self.readonly_fields = []
         try:
             if obj.is_submit:
-                self.readonly_fields = ('extSubmit','ext_experimenter','upload_file','ext_end_date', 'note',"is_submit",)
+                self.readonly_fields = ('extSubmit','ext_experimenter',"extract_method","test_method",'upload_file','ext_end_date', 'note',"is_submit",)
                 return self.readonly_fields
         except:
             return self.readonly_fields
         return self.readonly_fields
+
     def save_model(self, request, obj, form, change):
         if obj.is_submit:
             #钉钉
             obj.ext_end_date = datetime.datetime.now()
             pass
         super().save_model(request, obj, form, change)
-    #设置实验员不能增加执行任务
-    def has_add_permission(self, request):
-        try:
-            current_group_set = Group.objects.get(user=request.user)
-        except:
-            return True
-        if current_group_set.name == "实验员":
-            return False
-        else:
-            return True
+
 
     def get_actions(self, request):
         actions = super().get_actions(request)
-        del actions['delete_selected']
         del actions['export_admin_action']
         return actions
 
@@ -220,6 +203,8 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     save_as_continue = False
 
+    inlines = [SampleInfoLibInline]
+
     save_on_top = False
 
     # list_display = ('libSubmit', 'lib_experimenter', 'lib_end_date', 'note')
@@ -236,7 +221,9 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
         self.readonly_fields = []
         try:
             if obj.is_submit:
-                self.readonly_fields = ('libSubmit','lib_experimenter','upload_file','lib_end_date', 'note',"is_submit",)
+                self.readonly_fields = ('libSubmit','lib_experimenter','upload_file','lib_end_date', 'note',"is_submit",
+                                        "reaction_times","pcr_system","dna_polymerase","model_initiation_mass","enzyme_number",
+                                        "pcr_process","annealing_temperature","loop_number","gel_recovery_kit")
                 return self.readonly_fields
         except:
             return self.readonly_fields
@@ -249,20 +236,8 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
             pass
         super().save_model(request, obj, form, change)
 
-    # 设置实验员不能增加执行任务
-    def has_add_permission(self, request):
-        try:
-            current_group_set = Group.objects.get(user=request.user)
-        except:
-            return True
-        if current_group_set.name == "实验员":
-            return False
-        else:
-            return True
-
     def get_actions(self, request):
         actions = super().get_actions(request)
-        del actions['delete_selected']
         del actions['export_admin_action']
         return actions
 
@@ -312,6 +287,8 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
 
     save_as_continue = False
 
+    inlines = [SampleInfoSeqInline]
+
     save_on_top = False
 
     filter_horizontal = ("seq_experimenter",)
@@ -341,20 +318,8 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
             pass
         super().save_model(request, obj, form, change)
 
-    # 设置实验员不能增加执行任务
-    def has_add_permission(self, request):
-        try:
-            current_group_set = Group.objects.get(user=request.user)
-        except:
-            return True
-        if current_group_set.name == "实验员":
-            return False
-        else:
-            return True
-
     def get_actions(self, request):
         actions = super().get_actions(request)
-        del actions['delete_selected']
         del actions['export_admin_action']
         return actions
 
