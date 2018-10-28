@@ -144,7 +144,7 @@ class SampleInfoForm(models.Model):
     sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)
     sample_jindu = models.IntegerField(choices=Sample_jindu,verbose_name="样品进度",default=0)
     sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=0)
-    note_receive = models.TextField(verbose_name="样品接收备注",default="")
+    note_receive = models.TextField(verbose_name="样品接收备注",blank=True,null=True)
     #颜色显示
     color_code = models.CharField(max_length=6,default='')
     color_code1 = models.CharField(max_length=6, default='')
