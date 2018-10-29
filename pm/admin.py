@@ -182,21 +182,17 @@ class ProjectAdmin(admin.ModelAdmin):
     # list_filter = [StatusListFilter]
     fieldsets = (
         ('合同信息', {
-             'fields': (('contract', 'contract_name', 'income_notes', 'saleman',),),
+            'fields': (('contract', 'contract_name', 'income_notes', 'saleman',),),
         }),
         ('项目信息', {
-            'fields': (
-                       ('sampleInfoForm', 'customer_name', 'customer_phone', 'service_types',),
+            'fields': (('sampleInfoForm', 'customer_name', 'customer_phone', 'service_types',),
                        ('sub_number', 'sub_project',),
-                       ('project_start_time',),
                        ('sub_project_note',),
                        ('is_ext', 'is_lib', 'is_seq', 'is_ana',),
                        ('file_to_start', 'is_submit',),),
         }),
     )
-    readonly_fields = ['contract_name', 'income_notes', 'saleman',
-                       'customer_name', 'customer_phone', 'service_types',
-                       ]
+    readonly_fields = ['contract_name', 'income_notes', 'saleman', 'customer_name', 'customer_phone', 'service_types', ]
     raw_id_fields = ['contract', 'sampleInfoForm', 'project_manager', ]
     actions = ['make_confirm']
     search_fields = ['id', 'contract__contract_number', ]
@@ -229,7 +225,8 @@ class ProjectAdmin(admin.ModelAdmin):
     customer_phone.short_description = '寄样联系人电话'
 
     def service_types(self, obj):
-        return obj.sampleInfoForm.project_type
+        # return obj.sampleInfoForm.project_type
+        return obj.sampleInfoForm.get_project_type_display()
     service_types.short_description = '项目类型'
 
     def get_list_display_links(self, request, list_display):
@@ -237,230 +234,215 @@ class ProjectAdmin(admin.ModelAdmin):
             return
         return ['contract_name']
 
-    def get_queryset(self, request):
-        # 只允许管理员和拥有该模型新增权限的人员才能查看所有样品
-        qs = super(ProjectAdmin, self).get_queryset(request)
-        if request.user.is_superuser or request.user.has_perm('pm.add_project'):
-            return qs
-        return qs.filter(contract__salesman=request.user)
-
-    def get_actions(self, request):
-        # 无权限人员取消actions
-        actions = super(ProjectAdmin, self).get_actions(request)
-        if not request.user.has_perm('pm.add_project'):
-            actions = None
-        return actions
+    # def get_queryset(self, request):
+    #     # 只允许管理员和拥有该模型新增权限的人员才能查看所有样品
+    #     qs = super(ProjectAdmin, self).get_queryset(request)
+    #     if request.user.is_superuser or request.user.has_perm('pm.add_project'):
+    #         return qs
+    #     return qs.filter(contract__salesman=request.user)
+    #
+    # def get_actions(self, request):
+    #     # 无权限人员取消actions
+    #     actions = super(ProjectAdmin, self).get_actions(request)
+    #     if not request.user.has_perm('pm.add_project'):
+    #         actions = None
+    #     return actions
 
     def save_model(self, request, obj, form, change):
-        super(ProjectAdmin, self).save_model(request, obj, form, change)
+
         if obj.contract.fis_amount < (obj.contract.all_amount * Decimal(0.7)):
             SubProject.objects.filter(status=False).update(status=True)
         else:
-            pass
+            SubProject.objects.filter(status=False).update(status=False)
+        super(ProjectAdmin, self).save_model(request, obj, form, change)
         if request.user.is_authenticated:
             SubProject.project_manager = request.user.username
         obj.save()
 
 
-# # 提取提交表
-# class ExtSubmitForm(forms.ModelForm):
-#     pass
-#
-#
-# # 提取提交管理
-# class ExtSubmitAdmin(admin.ModelAdmin):
-#     # form = ExtSubmitForm
-#     list_display = ['subProject', 'ext_number', 'ext_start_date', 'sample_count', 'note', 'is_submit',
-#                     'contract_count', 'project_count', 'sample_count']
-#     filter_horizontal = ('sample',)
-#     fields = ('slug', 'ext_slug', 'ext_man', 'date', 'sample', 'is_submit', 'ext_cycle',)
-#     raw_id_fields = ['subProject', ]
-#
-#     # def is_exts(self, obj):
-#     #     if Project.is_ext:
-#     #         # return [obj.is_ext.value,
-#     #         #         # obj.id, obj.contract_number,  obj.contract_name, obj.sub_number, obj.sub_project,
-#     #         #         # obj.customer_name, obj.saleman,
-#     #         #         # obj.project_personnel,
-#     #         #         ]
-#     #         return obj.is_exts is True
-#     # is_exts.short_description = '已经提取'
-#
-#     def contract_count(self, obj):
-#         return len(set(i.project.contract.contract_number for i in obj.sample.all()))
-#     contract_count.short_description = '合同数'
-#
-#     def project_count(self, obj):
-#         return len(set([i.project.name for i in obj.sample.all()]))
-#     project_count.short_description = '项目数'
-#
-#     def sample_count(self, obj):
-#         return obj.sample.all().count()
-#     sample_count.short_description = '样品数'
-#
-#     def get_readonly_fields(self, request, obj=None):
-#         if obj and obj.is_submit:
-#             return ['slug', 'date', 'sample', 'is_submit']
-#         return ['slug', 'date', ]
-#
-#     # def save_model(self, request, obj, form, change):
-#     #     # 选中提交复选框时自动记录提交时间
-#     #     if obj.is_submit and not obj.date:
-#     #         obj.date = date.today()
-#     #         projects = []
-#     #         for i in set(projects):
-#     #             if not i.due_date:
-#     #                 cycle = i.ext_cycle + i.lib_cycle + i.seq_cycle + i.ana_cycle
-#     #                 i.due_date = add_business_days(date.today(), cycle)
-#     #                 i.save()
-#         # # 已经选定需提取的，并且提交确认的立项放在提取任务下单里
-#         # if request.SubProject.is_ext and request.SubProject.is_confirm:
-#         #     self.list_display =['contract','ext_slug', 'slug', 'ext_man', 'ext_cycle',
-#         #                         'contract_count', 'project_count', 'sample_count',
-#         #             'date', 'is_submit']
-#         #     # obj.sub_number = request.SubProject.sub_number
-#         # obj.save()
-#
-#                 # return ProjectAdmin.contract_number, ProjectAdmin.customer_name
-#                 # contract_number=ProjectAdmin.contract_number()
-#
-#
-# # 建库提交表
-# class LibSubmitForm(forms.ModelForm):
-#     pass
-#
-#
-# # 建库提交管理
-# class LibSubmitAdmin(admin.ModelAdmin):
-#     # form = LibSubmitForm
-#     list_display = ['subProject', 'lib_number', 'lib_start_date', 'customer_confirmation_time', 'customer_sample_count',
-#                     'note', 'is_submit', 'contract_count', 'project_count', 'sample_count']
-#     filter_horizontal = ('sample',)
-#     fields = ('slug', 'lib_slug', 'lib_man', 'date', 'sample', 'is_submit', 'lib_cycle',)
-#     raw_id_fields = ['subProject', ]
-#
-#     def contract_count(self, obj):
-#         return len(set(i.project.contract.contract_number for i in obj.sample.all()))
-#     contract_count.short_description = '合同数'
-#
-#     def project_count(self, obj):
-#         return len(set([i.project.name for i in obj.sample.all()]))
-#     project_count.short_description = '项目数'
-#
-#     def sample_count(self, obj):
-#         return obj.sample.all().count()
-#     sample_count.short_description = '样品数'
-#
-#     def get_readonly_fields(self, request, obj=None):
-#         if obj and obj.is_submit:
-#             return ['slug', 'date', 'sample', 'is_submit']
-#         return ['slug', 'date']
-#
-#     # def save_model(self, request, obj, form, change):
-#     #     # 选中提交复选框时自动记录提交时间
-#     #     if obj.is_submit and not obj.date:
-#     #         obj.date = date.today()
-#     #         projects = []
-#     #         for i in set(projects):
-#     #             if not i.due_date:
-#     #                 cycle = i.lib_cycle + i.seq_cycle + i.ana_cycle
-#     #                 i.due_date = add_business_days(date.today(), cycle)
-#     #                 i.save()
-#     #     obj.save()
-#
-#
-# # 测序提交表
-# class SeqSubmitForm(forms.ModelForm):
-#     pass
-#
-#
-# # 测序提交管理
-# class SeqSubmitAdmin(admin.ModelAdmin):
-#     # form = SeqSubmitForm
-#     list_display = ['subProject', 'seq_number', 'seq_start_date',
-#                     'customer_sample_count', 'pooling_excel', 'is_submit',
-#                     'contract_count', 'project_count', 'sample_count',
-#                     ]
-#     filter_horizontal = ('sample',)
-#     fields = ('slug', 'seq_slug', 'seq_man', 'date', 'sample', 'is_submit', 'seq_cycle')
-#     raw_id_fields = ['subProject', 'sample', ]
-#
-#     def contract_count(self, obj):
-#         return len(set(i.project.contract.contract_number for i in obj.sample.all()))
-#     contract_count.short_description = '合同数'
-#
-#     def project_count(self, obj):
-#         return len(set([i.project.name for i in obj.sample.all()]))
-#     project_count.short_description = '项目数'
-#
-#     def sample_count(self, obj):
-#         return obj.sample.all().count()
-#     sample_count.short_description = '样品数'
-#
-#     def get_readonly_fields(self, request, obj=None):
-#         if obj and obj.is_submit:
-#             return ['slug', 'date', 'sample', 'is_submit']
-#         return ['slug', 'date']
-#
-#     # def save_model(self, request, obj, form, change):
-#     #     # 选中提交复选框时自动记录提交时间
-#     #     if obj.is_submit and not obj.date:
-#     #         obj.date = date.today()
-#     #         projects = []
-#     #         for i in set(projects):
-#     #             if not i.due_date:
-#     #                 cycle = i.lib_cycle + i.seq_cycle + i.ana_cycle
-#     #                 i.due_date = add_business_days(date.today(), cycle)
-#     #                 i.save()
-#     #     obj.save()
-#
-#
-# # 分析提交表
-# class AnaSubmitForm(forms.ModelForm):
-#     pass
-#
-#
-# # 分析提交管理
-# class AnaSubmitAdmin(admin.ModelAdmin):
-#     # form = AnaSubmitForm
-#     list_display = ['contract', 'invoice_code', 'ana_start_date', 'note', 'sample_count', 'is_submit',
-#                     'depart_data_path', 'data_analysis',
-#                     'contract_count', 'project_count', 'sample_count']
-#     fields = ('slug', 'ana_slug', 'ana_man', 'date', 'sample', 'is_submit', 'ana_cycle',)
-#     raw_id_fields = ['contract', ]
-#
-#     def contract_count(self, obj):
-#         return len(set(i.project.contract.contract_number for i in obj.sample.all()))
-#     contract_count.short_description = '合同数'
-#
-#     def project_count(self, obj):
-#         return len(set([i.project.name for i in obj.sample.all()]))
-#     project_count.short_description = '项目数'
-#
-#     def sample_count(self, obj):
-#         return obj.sample.all().count()
-#     sample_count.short_description = '样品数'
-#
-#     def get_readonly_fields(self, request, obj=None):
-#         if obj and obj.is_submit:
-#             return ['slug', 'date', 'sample', 'is_submit']
-#         return ['slug', 'date']
-#
-#     # def save_model(self, request, obj, form, change):
-#     #     # 选中提交复选框时自动记录提交时间
-#     #     if obj.is_submit and not obj.date:
-#     #         obj.date = date.today()
-#     #         projects = []
-#     #         for i in set(projects):
-#     #             if not i.due_date:
-#     #                 cycle = i.lib_cycle + i.seq_cycle + i.ana_cycle
-#     #                 i.due_date = add_business_days(date.today(), cycle)
-#     #                 i.save()
-#     #     obj.save()
+# 提取提交表
+class ExtSubmitForm(forms.ModelForm):
+    pass
+
+
+# 提取提交管理
+class ExtSubmitAdmin(admin.ModelAdmin):
+    # form = ExtSubmitForm
+    list_display = [
+                    'subProject',
+                    # 'save_number',
+                    'ext_number', 'sample_count', 'ext_start_date',
+                    # 'contract_count', 'project_count',
+                    'is_submit', 'note', ]
+    filter_horizontal = ('sample',)
+    fields = (
+              'subProject',
+              # 'save_number',
+              'ext_number', 'sample', 'sample_count', 'is_submit', 'note')
+    raw_id_fields = [
+                     'subProject',
+                    ]
+
+    # def save_number(self, obj):
+    #     return obj.SubProject.get_sub_number_display()
+    # save_number.short_description = '子项目号码'
+    # def is_exts(self, obj):
+    #     if Project.is_ext:
+    #         # return [obj.is_ext.value,
+    #         #         # obj.id, obj.contract_number,  obj.contract_name, obj.sub_number, obj.sub_project,
+    #         #         # obj.customer_name, obj.saleman,
+    #         #         # obj.project_personnel,
+    #         #         ]
+    #         return obj.is_exts is True
+    # is_exts.short_description = '已经提取'
+
+    # def contract_count(self, obj):
+    #     pass
+    #     # return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    # contract_count.short_description = '合同数'
+
+    # def project_count(self, obj):
+    #     pass
+    #     # return len(set([i.project.name for i in obj.sample.all()]))
+    # project_count.short_description = '项目数'
+
+    # def sample_count(self, obj):
+    #     return obj.sample.all().count()
+    # sample_count.short_description = '样品数'
+
+    # def get_readonly_fields(self, request, obj=None):
+    #     if obj and obj.is_submit:
+    #         return ['slug', 'date', 'sample', 'is_submit']
+    #     return ['slug', 'date', ]
+
+    #  已经选定需提取的，并且提交确认的立项放在提取任务下单里
+    # if request.SubProject.is_ext and request.SubProject.is_confirm:
+    #     self.list_display =['contract','ext_slug', 'slug', 'ext_man', 'ext_cycle',
+    #                         'contract_count', 'project_count', 'sample_count',
+    #             'date', 'is_submit']
+    #     # obj.sub_number = request.SubProject.sub_number
+    # obj.save()
+
+    # return ProjectAdmin.contract_number, ProjectAdmin.customer_name
+    # contract_number=ProjectAdmin.contract_number()
+    # def save_model(self, request, obj, form, change):
+    #     if request.SubProject.is_ext and request.SubProject.is_submit:
+    #         self.list_display = ['subProject', 'ext_number', 'sample_count', 'ext_start_date',
+    #                              'contract_count', 'project_count', 'is_submit', 'note', ]
+    #         obj.sub_number = request.SubProject.sub_number
+    #     obj.save()
+    # list_display = ['save_model', ]
+    # filter_horizontal = []
+    # fields = []
+    # raw_id_fields = []
+    #
+    # def save_model(self, request, obj, form, change):
+    #     super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+    #     # print(SubProject.is_ext())
+    #     # print(SubProject.is_submit())
+    #     if SubProject.is_ext and SubProject.is_submit:
+    #         return obj.SubProject.get_sub_number_display()
+    #     # obj.save()
+
+
+# 建库提交表
+class LibSubmitForm(forms.ModelForm):
+    pass
+
+
+# 建库提交管理
+class LibSubmitAdmin(admin.ModelAdmin):
+    # form = LibSubmitForm
+    list_display = ['subProject', 'lib_number', 'customer_sample_count', 'lib_start_date', 'customer_confirmation_time',
+                    # 'contract_count', 'project_count',
+                    'sample_count', 'is_submit', 'note', ]
+    filter_horizontal = ('sample',)
+    fields = ('subProject', 'lib_number', 'sample',
+              'customer_confirmation_time', 'customer_sample_count', 'is_submit', 'note',)
+    raw_id_fields = ['subProject', ]
+
+    # def contract_count(self, obj):
+    #     pass
+    #     # return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    # contract_count.short_description = '合同数'
+    #
+    # def project_count(self, obj):
+    #     pass
+    #     # return len(set([i.project.name for i in obj.sample.all()]))
+    # project_count.short_description = '项目数'
+
+    def sample_count(self, obj):
+        pass
+        # return obj.sample.all().count()
+    sample_count.short_description = '样品数'
+
+
+# 测序提交表
+class SeqSubmitForm(forms.ModelForm):
+    pass
+
+
+# 测序提交管理
+class SeqSubmitAdmin(admin.ModelAdmin):
+    # form = SeqSubmitForm
+    list_display = ['subProject', 'seq_number', 'customer_sample_count', 'seq_start_date', 'customer_confirmation_time',
+                    'pooling_excel',
+                    # 'contract_count',  'project_count',
+                    'sample_count', 'is_submit', 'note',
+                    ]
+    filter_horizontal = ('sample',)
+    fields = ('subProject', 'sample', 'seq_number', 'customer_confirmation_time',
+              'customer_sample_count', 'pooling_excel', 'is_submit', 'note', )
+    raw_id_fields = ['subProject', ]
+
+    # def contract_count(self, obj):
+    #     pass
+    #     # return len(set(i.project.contract.contract_number for i in obj.sample.all()))
+    # contract_count.short_description = '合同数'
+    #
+    # def project_count(self, obj):
+    #     pass
+    #     # return len(set([i.project.name for i in obj.sample.all()]))
+    # project_count.short_description = '项目数'
+
+    def sample_count(self, obj):
+        pass
+        # return obj.sample.all().count()
+    sample_count.short_description = '样品数'
+
+
+# 分析提交表
+class AnaSubmitForm(forms.ModelForm):
+    pass
+
+
+# 分析提交管理
+class AnaSubmitAdmin(admin.ModelAdmin):
+    # form = AnaSubmitForm
+    list_display = ['invoice_code', 'sample_count', 'ana_start_date', 'depart_data_path', 'data_analysis',
+                    'contract_count', 'project_count',  'is_submit', 'note', ]
+    fields = ('contract', 'invoice_code', 'note', 'sample_count', 'is_submit',
+              'depart_data_path', 'data_analysis')
+    # raw_id_fields = ['contract', ]
+    filter_horizontal = ('contract',)
+
+    def contract_count(self, obj):
+        pass
+        # return len(set(i.project.contract.contract_number for i in obj.contract.all()))
+    contract_count.short_description = '合同数'
+
+    def project_count(self, obj):
+        pass
+        # return len(set([i.project.name for i in obj.contract.all()]))
+    project_count.short_description = '项目数'
+
+    # def sample_count(self, obj):
+    #     return obj.sample.all().count()
+    # sample_count.short_description = '样品数'
 
 
 BMS_admin_site.register(SubProject, ProjectAdmin)
-# BMS_admin_site.register(ExtSubmit, ExtSubmitAdmin)
-# BMS_admin_site.register(LibSubmit, LibSubmitAdmin)
-# BMS_admin_site.register(SeqSubmit, SeqSubmitAdmin)
-# BMS_admin_site.register(AnaSubmit, AnaSubmitAdmin)
+BMS_admin_site.register(ExtSubmit, ExtSubmitAdmin)
+BMS_admin_site.register(LibSubmit, LibSubmitAdmin)
+BMS_admin_site.register(SeqSubmit, SeqSubmitAdmin)
+BMS_admin_site.register(AnaSubmit, AnaSubmitAdmin)
