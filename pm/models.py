@@ -50,6 +50,7 @@ class SubProject(models.Model):
     sub_project_note = models.TextField('备注', blank=True)
     is_submit = models.BooleanField('确认', default=False)
     status = models.BooleanField('项目是否提前启动', default=False)
+    sample_count = models.IntegerField('样品数量')
     # data_amount = models.CharField('数据量要求', max_length=10)
     file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
@@ -153,9 +154,10 @@ class AnaSubmit(models.Model):
     #     verbose_name='合同号',
     #     on_delete=models.SET_NULL, null=True
     # )
-    contract = models.ManyToManyField('mm.Contract', verbose_name='合同号', blank=True,)
+    subProject = models.ManyToManyField('SubProject', verbose_name='子项目编号', blank=True,)
     # 里面包含合同编号，合同名称
-    invoice_code = models.CharField('发票号码', max_length=12, unique=True)
+    ana_number = models.CharField('分析号', max_length=100)
+    # invoice_code = models.CharField('发票号码', max_length=12, unique=True)
     ana_start_date = models.DateField('分析开始日期', auto_now=True)
     note = models.TextField('备注')
     sample_count = models.IntegerField('样品数量')
@@ -174,4 +176,4 @@ class AnaSubmit(models.Model):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return '%s' % self.invoice_code
+        return '%s' % self.ana_number
