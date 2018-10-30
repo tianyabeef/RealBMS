@@ -172,10 +172,10 @@ from decimal import Decimal
 
 # 项目管理
 # class ProjectAdmin(ImportExportModelAdmin):
-class ProjectAdmin(admin.ModelAdmin):
+class SubProjectAdmin(admin.ModelAdmin):
     # resource_class = ProjectResource
     # form = ProjectForm
-    list_display = ('id', 'contract_number', 'contract_name', 'sub_number', 'sub_project', 'project_manager', 'saleman',
+    list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'project_manager', 'saleman',
                     'project_start_time', 'is_status', 'time_ext', 'time_lib', 'time_ana', 'income_notes',
                     'status', 'is_submit', 'file_to_start', 'sub_project_note', )
     # list_editable = ['is_confirm']
@@ -197,6 +197,9 @@ class ProjectAdmin(admin.ModelAdmin):
     actions = ['make_confirm']
     search_fields = ['id', 'contract__contract_number', ]
     # change_list_template = "pm/chang_list_custom.html"
+
+    def get_list_display_links(self, request, list_display):
+        return ['sub_number']
 
 # 合同相关信息（合同号，合同名，到款，销售）
     def contract_number(self, obj):
@@ -229,10 +232,10 @@ class ProjectAdmin(admin.ModelAdmin):
         return obj.sampleInfoForm.get_project_type_display()
     service_types.short_description = '项目类型'
 
-    def get_list_display_links(self, request, list_display):
-        if not request.user.has_perm('pm.add_project'):
-            return
-        return ['contract_name']
+    # def get_list_display_links(self, request, list_display):
+    #     if not request.user.has_perm('pm.add_project'):
+    #         return
+    #     return ['contract_name']
 
     # def get_queryset(self, request):
     #     # 只允许管理员和拥有该模型新增权限的人员才能查看所有样品
@@ -249,12 +252,14 @@ class ProjectAdmin(admin.ModelAdmin):
     #     return actions
 
     def save_model(self, request, obj, form, change):
-
+        print(obj.contract.fis_amount)
+        print(obj.contract.all_amount)
+        print((obj.contract.all_amount * Decimal(0.7)))
         if obj.contract.fis_amount < (obj.contract.all_amount * Decimal(0.7)):
-            SubProject.objects.filter(status=False).update(status=True)
+            obj.status = True
         else:
-            SubProject.objects.filter(status=False).update(status=False)
-        super(ProjectAdmin, self).save_model(request, obj, form, change)
+            obj.status = False
+        super(SubProjectAdmin, self).save_model(request, obj, form, change)
         if request.user.is_authenticated:
             SubProject.project_manager = request.user.username
         obj.save()
@@ -283,6 +288,8 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                      'subProject',
                     ]
 
+    def get_list_display_links(self, request, list_display):
+        return ['ext_number']
     # def save_number(self, obj):
     #     return obj.SubProject.get_sub_number_display()
     # save_number.short_description = '子项目号码'
@@ -371,6 +378,9 @@ class LibSubmitAdmin(admin.ModelAdmin):
     #     # return len(set([i.project.name for i in obj.sample.all()]))
     # project_count.short_description = '项目数'
 
+    def get_list_display_links(self, request, list_display):
+        return ['lib_number']
+
     def sample_count(self, obj):
         pass
         # return obj.sample.all().count()
@@ -391,10 +401,12 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                     'sample_count', 'is_submit', 'note',
                     ]
     filter_horizontal = ('sample',)
-    fields = ('subProject', 'sample', 'seq_number', 'customer_confirmation_time',
+    fields = ('subProject', 'seq_number', 'sample', 'customer_confirmation_time',
               'customer_sample_count', 'pooling_excel', 'is_submit', 'note', )
     raw_id_fields = ['subProject', ]
 
+    def get_list_display_links(self, request, list_display):
+        return ['seq_number']
     # def contract_count(self, obj):
     #     pass
     #     # return len(set(i.project.contract.contract_number for i in obj.sample.all()))
@@ -419,12 +431,15 @@ class AnaSubmitForm(forms.ModelForm):
 # 分析提交管理
 class AnaSubmitAdmin(admin.ModelAdmin):
     # form = AnaSubmitForm
-    list_display = ['invoice_code', 'sample_count', 'ana_start_date', 'depart_data_path', 'data_analysis',
+    list_display = ['ana_number', 'sample_count', 'ana_start_date', 'depart_data_path', 'data_analysis',
                     'contract_count', 'project_count',  'is_submit', 'note', ]
-    fields = ('contract', 'invoice_code', 'note', 'sample_count', 'is_submit',
+    fields = ('subProject','note', 'sample_count', 'is_submit',
               'depart_data_path', 'data_analysis')
-    # raw_id_fields = ['contract', ]
-    filter_horizontal = ('contract',)
+    raw_id_fields = ['subProject', ]
+    # filter_horizontal = ('contract',)
+
+    def get_list_display_links(self, request, list_display):
+        return ['ana_number']
 
     def contract_count(self, obj):
         pass
@@ -441,7 +456,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
     # sample_count.short_description = '样品数'
 
 
-BMS_admin_site.register(SubProject, ProjectAdmin)
+BMS_admin_site.register(SubProject, SubProjectAdmin)
 BMS_admin_site.register(ExtSubmit, ExtSubmitAdmin)
 BMS_admin_site.register(LibSubmit, LibSubmitAdmin)
 BMS_admin_site.register(SeqSubmit, SeqSubmitAdmin)

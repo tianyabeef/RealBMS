@@ -17,7 +17,8 @@ class SubProject(models.Model):
         (10, '测序完成：待客户反馈分析'),  # WFCFA(Waiting for Customer feedback analysis)#项目管理把测序的结果导入到样品表中
         (11, '待分析'),  # TBA(To build analysis)#项目管理新建一个分析项目
         (12, '分析中'),  # ANA(analysis)#生信管理添加了分析员
-        (13, "完成")
+        (13, "完成"),
+        (14, "中止"),
     )
     contract = models.ForeignKey('mm.Contract', verbose_name='合同号', on_delete=models.SET_NULL, null=True)
     sampleInfoForm = models.ForeignKey('sample.SampleInfoForm', verbose_name='样品概要表',
@@ -50,6 +51,7 @@ class SubProject(models.Model):
     sub_project_note = models.TextField('备注', blank=True)
     is_submit = models.BooleanField('确认', default=False)
     status = models.BooleanField('项目是否提前启动', default=False)
+    sample_count = models.IntegerField('样品数量')
     # data_amount = models.CharField('数据量要求', max_length=10)
     file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
@@ -153,9 +155,10 @@ class AnaSubmit(models.Model):
     #     verbose_name='合同号',
     #     on_delete=models.SET_NULL, null=True
     # )
-    contract = models.ManyToManyField('mm.Contract', verbose_name='合同号', blank=True,)
+    subProject = models.ManyToManyField('SubProject', verbose_name='子项目编号', blank=True,)
     # 里面包含合同编号，合同名称
-    invoice_code = models.CharField('发票号码', max_length=12, unique=True)
+    ana_number = models.CharField('分析号', max_length=100)
+    # invoice_code = models.CharField('发票号码', max_length=12, unique=True)
     ana_start_date = models.DateField('分析开始日期', auto_now=True)
     note = models.TextField('备注')
     sample_count = models.IntegerField('样品数量')
@@ -174,4 +177,4 @@ class AnaSubmit(models.Model):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return '%s' % self.invoice_code
+        return '%s' % self.ana_number
