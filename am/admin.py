@@ -1,4 +1,5 @@
 from am.models import AnaExecute, WeeklyReport
+from pm.models import AnaSubmit
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
@@ -11,11 +12,11 @@ class AnaExecuteResource(resources.ModelResource):
         skip_unchanged = True
         fields = (
             "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-            "ana_result_path", "baidu_link", "is_submit"
+            "depart_data_path", "baidu_link", "is_submit"
         )
         export_order = (
             "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-            "ana_result_path", "baidu_link", "is_submit"
+            "depart_data_path", "baidu_link", "is_submit"
         )
 
     def get_export_headers(self):
@@ -32,23 +33,23 @@ class AnaExecuteAdmin(ImportExportModelAdmin):
     save_on_top = False
     list_display = (
         "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-        "ana_result_path", "baidu_link", "is_submit"
+        "depart_data_path", "baidu_link", "is_submit"
     )
-    list_display_links = ('ana_submit',)
+    list_display_links = ('ana_submit', )
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
             "ana_submit", "analyst", "end_date", "confirmation_sheet",
-            "ana_result_path", "baidu_link", "is_submit"
+            "depart_data_path", "baidu_link", "is_submit"
         ) if obj and obj.is_submit else ()
         return self.readonly_fields
     
     def save_model(self, request, obj, form, change):
         super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
         if obj.is_submit:
-            # TODO: dingtalk request
-            self.save_as = False
-            pass
+            ana_number = obj.ana_submit.ana_number
+            ana_submit = AnaSubmit.objects.get(ana_number=ana_number)
+            ana_submit.subProject.all().update(is_status=12)
 
 
 class WeeklyReportResource(resources.ModelResource):
@@ -84,7 +85,6 @@ class WeeklyReportAdmin(ImportExportModelAdmin):
     def save_model(self, request, obj, form, change):
         super(WeeklyReportAdmin, self).save_model(request, obj, form, change)
         if obj.is_submit:
-            # TODO: dingtalk request
             pass
 
 
