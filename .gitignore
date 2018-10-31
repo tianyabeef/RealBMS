@@ -2,6 +2,7 @@
 db.sqlite3
 */__pycache__/
 */migrations/
+*/notifications/
 BMS/settings.py
 media/
 dev.db

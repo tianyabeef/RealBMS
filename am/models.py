@@ -1,6 +1,5 @@
 from django.contrib.auth.models import User
 from django.db import models
-
 from pm.models import AnaSubmit
 
 
@@ -21,8 +20,8 @@ class AnaExecute(models.Model):
     confirmation_sheet = models.URLField(
         verbose_name="分析确认单", max_length=512, blank=True, null=True
     )
-    ana_result_path = models.CharField(
-        verbose_name="分析结果路径", max_length=512, blank=True, null=True
+    depart_data_path = models.CharField(
+        verbose_name="数据拆分路径", max_length=512, blank=True, null=True
     )
     baidu_link = models.CharField(
         verbose_name="结果百度链接", max_length=512, blank=True, null=True
@@ -35,11 +34,10 @@ class AnaExecute(models.Model):
     )
     
     class Meta:
-        verbose_name = '4分析任务执行'
-        verbose_name_plural = verbose_name
+        verbose_name_plural = verbose_name = '4分析任务执行'
 
     def __str__(self):
-        return '%s' % self.ana_submit.ana_slug
+        return '%s' % self.ana_submit.ana_number
 
 
 class WeeklyReport(models.Model):
@@ -70,8 +68,7 @@ class WeeklyReport(models.Model):
     )
     
     class Meta:
-        verbose_name = "周报"
-        verbose_name_plural = verbose_name
+        verbose_name_plural = verbose_name = "周报"
     
     def __str__(self):
         return "%s的周报" % self.reporter.username
