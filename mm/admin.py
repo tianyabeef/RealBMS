@@ -1,5 +1,8 @@
 from django.contrib import admin
-
+from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from sample.models import SampleInfoForm
 from BMS.admin_bms import BMS_admin_site
 from .models import Invoice, Contract,InvoiceTitle
 from fm.models import Invoice as fm_Invoice
@@ -12,7 +15,7 @@ from django.forms.models import BaseInlineFormSet
 from daterange_filter.filter import DateRangeFilter
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User,Group
 from import_export import resources
 from import_export.admin import ImportExportActionModelAdmin,ExportActionModelAdmin
 from import_export import fields
@@ -21,6 +24,11 @@ from notification.signals import notify
 from operator import is_not
 from functools import partial
 from django.utils import formats
+from BMS import dingding
+from BMS import settings
+from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
+
+
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
     """
     Admin class for InvoiceTitle
@@ -205,7 +213,7 @@ class ContractAdmin(ExportActionModelAdmin):
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone'), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
+            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone','contacts_email','contact_address'), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
         }),
         ('邮寄信息', {
             'fields': ('tracking_number','send_date','receive_date')
@@ -289,10 +297,10 @@ class ContractAdmin(ExportActionModelAdmin):
     def get_changelist(self, request):
         return ContractChangeList
 
-    def get_list_display_links(self, request, list_display):
-        if not request.user.has_perm('mm.add_contract'):
-            return
-        return ['contract_number']
+    # def get_list_display_links(self, request, list_display):
+    #     if not request.user.has_perm('mm.add_contract'):
+    #         return
+    #     return ['contract_number']
 
     def get_actions(self, request):
         actions = super(ContractAdmin, self).get_actions(request)
@@ -315,13 +323,13 @@ class ContractAdmin(ExportActionModelAdmin):
             yield inline.get_formset(request, obj), inline
 
     def get_queryset(self, request):
-        # 只允许管理员,拥有该模型新增权限的人员，销售总监才能查看所有
+        # 只允许管理员,拥有该模型新增权限的人员，销售总监才能查看所有#TODO 给财务开通查询所有合同的权限，暂时先用
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7:
+            if group.name == "销售总监" or group.name == "项目管理":
                 haved_perm=True
         qs = super(ContractAdmin, self).get_queryset(request)
-        #TODO 给财务开通查询所有合同的权限，暂时先用
+
         if request.user.is_superuser or request.user.has_perm('mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
             return qs
         return qs.filter(salesman=request.user)
@@ -371,6 +379,41 @@ class ContractAdmin(ExportActionModelAdmin):
             #     self.message_user(request, '开票申请总额超过对应款期可开额度,未成功添加开票', level=messages.ERROR)
 
     def save_model(self, request, obj, form, change):
+        # 新增合同的时候，合作伙伴的email就在用户表中同步新增好了，客户提交样品信息单的时候，登入系统使用 发钉钉通知
+        if change:
+            pass
+        else:# 新增的时候,同时初始化账号和密码一样
+            tt = User.objects.create(username=obj.contacts_email,password=make_password(obj.contacts_email),email=obj.contacts_email,is_staff=True)
+            content_type = ContentType.objects.get_for_model(SampleInfoForm)
+            ##group分组
+            group_info = Group.objects.get(name="合作伙伴")
+            tt.groups.add(group_info)
+            ##发送钉钉通知，给销售员
+            user_id = False
+            for u in dingding.sub_dept_users:
+                if u["name"]==obj.salesman.username:
+                    user_id = u["userid"]
+                    break
+            params = {"access_token": dingding.access_token}
+            if user_id:
+                data = {
+                    "agent_id": settings.agent_id,
+                    "userid_list": user_id,
+                    "msg": {
+                        "msgtype": "text",
+                        "text": {
+                            "content": "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息"+obj.contract_number
+                        }
+                    }
+                }
+                request = WorkNoticeRequest(params=params, json=data)
+                request.request_method = "post"
+                request.get_json_response()
+                response = request.json_response
+            else:
+                messages.set_level(request, messages.ERROR)
+                self.message_user(request, "没有这个人的钉钉ID号，信息没有发送成功",
+                                  level=messages.ERROR)
         """
         1、新增快递单号时自动记录时间戳
         """
