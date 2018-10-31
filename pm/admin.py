@@ -1,5 +1,5 @@
 from BMS.admin_bms import BMS_admin_site
-from .models import SubProject, ExtSubmit, LibSubmit, AnaSubmit
+from .models import SubProject, ExtSubmit, LibSubmit, SeqSubmit,AnaSubmit
 from django.contrib import admin
 from sample.models import SampleInfoForm
 from mm.models import Contract
@@ -7,7 +7,44 @@ from mm.models import Invoice as mm_Invoice
 from fm.models import Invoice as fm_Invoice
 from decimal import Decimal
 from django.contrib import messages
+from sample.models import SampleInfo
 
+
+def create_submit_table(obj, states):
+    ##新建执行表
+    for i, v in enumerate(states):
+        if v == True:
+            if i == 0:
+                sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
+                extSubmit = ExtSubmit.objects.create(subProject=obj, sample_count=obj.sample_count)
+                for sampleInfoForm in sampleInfoForms:
+                    sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
+                    for sampleInfo in sampleInfos:
+                        extSubmit.sample.add(sampleInfo)
+            elif i == 1:
+                sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
+                libSubmit = LibSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count)
+                for sampleInfoForm in sampleInfoForms:
+                    sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
+                    for sampleInfo in sampleInfos:
+                        libSubmit.sample.add(sampleInfo)
+            elif i == 2:
+                sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
+                seqSubmit = SeqSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count)
+                for sampleInfoForm in sampleInfoForms:
+                    sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
+                    for sampleInfo in sampleInfos:
+                        seqSubmit.sample.add(sampleInfo)
+            elif i == 3:
+                sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
+                anaSubmit = AnaSubmit.objects.create(subProject=obj, sample_count=obj.sample_count)
+                for sampleInfoForm in sampleInfoForms:
+                    sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
+                    for sampleInfo in sampleInfos:
+                        anaSubmit.sample.add(sampleInfo)
+            else:
+                pass
+            break
 class SubProjectAdmin(admin.ModelAdmin):
     # resource_class = ProjectResource
     # form = ProjectForm
@@ -141,7 +178,7 @@ class SubProjectAdmin(admin.ModelAdmin):
         return super(SubProjectAdmin,self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
-        dict = {'a': 1, 'b': 2, 'b': '3'};
+        states =[obj.is_ext , obj.is_lib ,obj.is_seq, obj.is_ana]
         project_amount = obj.sample_count * obj.contract.price
         contract_income = 0
         mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
@@ -160,15 +197,19 @@ class SubProjectAdmin(admin.ModelAdmin):
                     contract = Contract.objects.get(id=obj.contract.id)
                     contract.use_amount = contract.use_amount + project_amount
                     contract.save()
-                    ##
+                    #新建执行表单
+                    create_submit_table(obj, states)
                 obj.save()
             else:
+                obj
                 self.message_user(request, '提取启动，必须上传审批文件',level=messages.ERROR)
         else:
             if obj.is_submit:
                 contract = Contract.objects.get(id=obj.contract.id)
                 contract.use_amount = contract.use_amount + project_amount
                 contract.save()
+                # 新建执行表单
+                create_submit_table(obj, states)
             obj.save()
 
 
