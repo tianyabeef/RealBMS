@@ -21,9 +21,9 @@ class SubProject(models.Model):
         (14, "中止"),
     )
     contract = models.ForeignKey('mm.Contract', verbose_name='合同号', on_delete=models.SET_NULL, null=True)
-    sampleInfoForm = models.ForeignKey('sample.SampleInfoForm', verbose_name='样品概要表',
-                                       on_delete=models.SET_NULL, null=True)
-    project_manager = models.OneToOneField(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
+    sampleInfoForm = models.ManyToManyField('sample.SampleInfoForm', verbose_name='样品概要表',
+                                       blank=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     # 里面包含合同编号，合同名称
     # contract_name = models.CharField('合同名称', max_length=40)
     # customer = models.CharField('合同联系人姓名', max_length=40)
@@ -43,7 +43,7 @@ class SubProject(models.Model):
     # 项目信息
     sub_number = models.CharField('子项目编号', max_length=100)
     sub_project = models.CharField('子项目的名称', max_length=40)
-    project_start_time = models.DateField('立项时间', auto_now=True)
+    project_start_time = models.DateField('立项时间')
     is_ext = models.BooleanField('需抽提')
     is_lib = models.BooleanField('需建库')
     is_seq = models.BooleanField("需测序")
@@ -51,7 +51,7 @@ class SubProject(models.Model):
     sub_project_note = models.TextField('备注', blank=True)
     is_submit = models.BooleanField('确认', default=False)
     status = models.BooleanField('项目是否提前启动', default=False)
-    sample_count = models.IntegerField('样品数量')
+    sample_count = models.IntegerField('样品数量',default=0)
     # data_amount = models.CharField('数据量要求', max_length=10)
     file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
@@ -74,7 +74,7 @@ class ExtSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(抽提)', on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择抽提样品", blank=True,)
     ext_number = models.CharField('抽提号', max_length=100)
-    ext_start_date = models.DateField("提取开始日期", auto_now=True)
+    ext_start_date = models.DateField("提取开始日期")
     sample_count = models.IntegerField('样品数量', blank=True, null=True)
     # ext_result = models.FileField('抽提结果')外键一张抽提样品表
     note = models.TextField('实验任务备注', blank=True, null=True)
@@ -98,7 +98,7 @@ class LibSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(建库)', on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品", blank=True,)
     lib_number = models.CharField('建库号', max_length=100)
-    lib_start_date = models.DateField("建库开始日期", auto_now=True)
+    lib_start_date = models.DateField("建库开始日期")
     customer_confirmation_time = models.DateField('客户确认时间', blank=True, null=True)
     customer_sample_count = models.IntegerField('客户确认样品数量', blank=True, null=True)
     # 加文库类型、测序类型、建库类型
@@ -125,7 +125,7 @@ class SeqSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目编号', on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品", blank=True,)
     seq_number = models.CharField('测序号', max_length=100)
-    seq_start_date = models.DateField('测序上机日期', auto_now=True)
+    seq_start_date = models.DateField('测序上机日期')
     customer_confirmation_time = models.DateField('客户确认上机时间', blank=True, null=True)
     customer_sample_count = models.IntegerField('客户确认上机样品数量', blank=True, null=True)
     # customer_sample_info = models.FileField('客上机样本明细')
@@ -157,11 +157,11 @@ class AnaSubmit(models.Model):
     # )
     subProject = models.ManyToManyField('SubProject', verbose_name='子项目编号', blank=True,)
     # 里面包含合同编号，合同名称
-    ana_number = models.CharField('分析号', max_length=100)
+    ana_number = models.CharField('分析号', max_length=100,default="")
     # invoice_code = models.CharField('发票号码', max_length=12, unique=True)
-    ana_start_date = models.DateField('分析开始日期', auto_now=True)
+    ana_start_date = models.DateField('分析开始日期')
     note = models.TextField('备注')
-    sample_count = models.IntegerField('样品数量')
+    sample_count = models.IntegerField('样品数量',default=0)
     is_submit = models.BooleanField('提交')
     depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
     data_analysis = models.FileField(verbose_name="数据分析单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
