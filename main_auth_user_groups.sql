@@ -1,0 +1,84 @@
+CREATE TABLE auth_user_groups
+(
+    id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+    user_id integer NOT NULL,
+    group_id integer NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES auth_user (id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (group_id) REFERENCES auth_group (id) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE UNIQUE INDEX auth_user_groups_user_id_group_id_94350c0c_uniq ON auth_user_groups (user_id, group_id);
+CREATE INDEX auth_user_groups_user_id_6a12ed8b ON auth_user_groups (user_id);
+CREATE INDEX auth_user_groups_group_id_97559544 ON auth_user_groups (group_id);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (68, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (3, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (2, 2);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (5, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (6, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (8, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (11, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (10, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (14, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (16, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (12, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (13, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (17, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (15, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (9, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (19, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (18, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (7, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (20, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (21, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (22, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (23, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (24, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (25, 1);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (28, 2);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (29, 2);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (26, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (28, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (30, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (29, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (31, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (27, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (32, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (33, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (34, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (35, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (36, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (37, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (38, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (39, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (40, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (41, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (42, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (43, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (4, 7);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (44, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (44, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (45, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (46, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (47, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (48, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (49, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (50, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (52, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (53, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (54, 5);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (55, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (54, 6);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (56, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (58, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (59, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (60, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (61, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (62, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (63, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (64, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (65, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (66, 4);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (67, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (69, 8);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (70, 8);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (71, 3);
+INSERT INTO auth_user_groups (user_id, group_id) VALUES (72, 8);
