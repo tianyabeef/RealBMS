@@ -8,6 +8,32 @@ from fm.models import Invoice as fm_Invoice
 from decimal import Decimal
 from django.contrib import messages
 from sample.models import SampleInfo
+from django.contrib.auth.models import Group,User
+from django import forms
+
+class SubProjectForm(forms.ModelForm):
+    def clean_sample_count(self):
+        sample_count = self.cleaned_data['sample_count']
+        if sample_count == 0:
+            raise forms.ValidationError('样品数量不能为0，请留空')
+        return self.cleaned_data['sample_count']
+
+class StatusListFilter(admin.SimpleListFilter):
+    title = '项目管理员'
+    parameter_name = 'project_manager'
+    def lookups(self, request, model_admin):
+        qs_sale = User.objects.filter(groups__name="项目管理")
+        value = ['project_manager'] + list(qs_sale.values_list('username', flat=True))
+        label = ['项目管理员'] + ['——' + i.last_name + i.first_name for i in qs_sale]
+        return tuple(zip(value, label))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'project_manager':
+            return queryset.filter(project_manager__in = list(User.objects.filter(groups__name="项目管理")))
+        qs = User.objects.filter(groups__name="项目管理")
+        for i in qs:
+            if self.value() == i.username:
+                return queryset.filter(project_manager=i)
 
 
 def create_submit_table(obj, states):
@@ -47,12 +73,12 @@ def create_submit_table(obj, states):
             break
 class SubProjectAdmin(admin.ModelAdmin):
     # resource_class = ProjectResource
-    # form = ProjectForm
+    form = SubProjectForm
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
-                    'project_manager', 'is_submit', 'status','file_to_start',)
+                    'project_manager', 'is_submit', 'status','file_link','is_status')
     list_display_links = ['sub_number', ]
     # list_editable = ['is_confirm']
-    # list_filter = [StatusListFilter]
+    # list_filter = ['is_status',StatusListFilter]
     fieldsets = (
         ('合同信息', {
            'fields': (('contract','contract_number', 'contract_name',),
@@ -83,7 +109,7 @@ class SubProjectAdmin(admin.ModelAdmin):
     raw_id_fields = ['contract', ]
     filter_horizontal = ['sampleInfoForm', ]
     # actions = ['make_confirm']
-    # search_fields = ['contract__contract_number','id']
+    search_fields = ['contract__contract_number','sub_number']
     # change_list_template = "pm/chang_list_custom.html"
 
     def contract_number(self, obj):
@@ -160,12 +186,37 @@ class SubProjectAdmin(admin.ModelAdmin):
                                 'sub_project', 'sample_count','is_ext', 'is_lib', 'is_seq', 'is_ana','sub_project_note','is_submit']
         return readonly_fields
 
+    def get_queryset(self, request):
+        qs = super(SubProjectAdmin, self).get_queryset(request)
+        # 普通项目管理只能看到自己的管理的子项目,其他的有权限的人可以看到所有的
+        groups = Group.objects.filter(user__id = request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return qs.filter(project_manager=request.user)
+                else:
+                    return qs
+        else:
+            return qs
+
+    def get_list_filter(self, request):
+        #一般的项目管理只能有状态的过滤器，其他人员有所有的过滤器
+        groups = Group.objects.filter(user__id=request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return ['is_status']
+                else:
+                    return ['is_status', StatusListFilter]
+        else:
+            return ['is_status', StatusListFilter]
+
     # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
         add = object_id is None
         if add:
-            return super(SubProjectAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+            pass
         else:
             obj = SubProject.objects.get(pk=object_id)
             if obj:
@@ -174,7 +225,7 @@ class SubProjectAdmin(admin.ModelAdmin):
                     extra_context['show_save'] = False
                     extra_context['show_save_as_new'] = False
                     extra_context['show_save_and_continue'] = False
-                    extra_context['show_save_and_add_another'] = False
+                    extra_context['_addanother'] = False
         return super(SubProjectAdmin,self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
@@ -201,8 +252,14 @@ class SubProjectAdmin(admin.ModelAdmin):
                     create_submit_table(obj, states)
                 obj.save()
             else:
-                obj
-                self.message_user(request, '提取启动，必须上传审批文件',level=messages.ERROR)
+                if change:
+                    self.message_user(request, '子项目编号：%s属于提取启动，必须上传审批文件'%(obj.sub_number),level=messages.ERROR)
+                else:
+                    obj.status=False
+                    obj.is_submit=False
+                    obj.sample_count=0
+                    self.message_user(request, '子项目编号：%s，属于提取启动，必须上传审批文件'%(obj.sub_number), level=messages.ERROR)
+                    obj.save()
         else:
             if obj.is_submit:
                 contract = Contract.objects.get(id=obj.contract.id)
@@ -211,6 +268,7 @@ class SubProjectAdmin(admin.ModelAdmin):
                 # 新建执行表单
                 create_submit_table(obj, states)
             obj.save()
+
 
 
 
