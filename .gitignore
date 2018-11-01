@@ -1,7 +1,7 @@
 .idea/
 db.sqlite3
 */__pycache__/
-*/migrations/
+*/migrations/*
 */notifications/
 BMS/settings.py
 media/
