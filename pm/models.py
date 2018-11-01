@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils.html import format_html
 
 class SubProject(models.Model):
     # 项目选项
@@ -68,6 +68,17 @@ class SubProject(models.Model):
     def __str__(self):
             return '%s' % self.sub_number
 
+    def file_link(self):
+        if self.file_to_start:
+            print(self.file_to_start.url)
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.file_to_start.url))
+
+        else:
+            return "未上传"
+
+    file_link.allow_tags = True
+    file_link.short_description = "已上传信息"
 
 # 抽提提交
 class ExtSubmit(models.Model):
