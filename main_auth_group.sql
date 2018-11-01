@@ -6,3 +6,4 @@ INSERT INTO auth_group (id, name) VALUES (5, '财务部');
 INSERT INTO auth_group (id, name) VALUES (6, '业务员（公司）');
 INSERT INTO auth_group (id, name) VALUES (7, '销售总监');
 INSERT INTO auth_group (id, name) VALUES (8, '合作伙伴');
+INSERT INTO auth_group (id, name) VALUES (9, '生物信息部');
