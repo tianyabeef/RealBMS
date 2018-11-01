@@ -1,0 +1,9 @@
+UPDATE auth_group SET name = '实验部' WHERE id = 1;
+UPDATE auth_group SET name = '项目管理' WHERE id = 2;
+UPDATE auth_group SET name = '业务员（销售）' WHERE id = 3;
+UPDATE auth_group SET name = '市场部' WHERE id = 4;
+UPDATE auth_group SET name = '财务部' WHERE id = 5;
+UPDATE auth_group SET name = '业务员（公司）' WHERE id = 6;
+UPDATE auth_group SET name = '销售总监' WHERE id = 7;
+UPDATE auth_group SET name = '合作伙伴' WHERE id = 8;
+UPDATE auth_group SET name = '生物信息部' WHERE id = 9;
