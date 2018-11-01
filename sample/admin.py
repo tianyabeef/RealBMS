@@ -333,13 +333,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                     # print(str(int(SampleInfoForm.objects.latest("id").id)+1))
             if SampleInfoForm.objects.all().count() == 0:
                 obj.sampleinfoformid = request.user.username + \
-                                               '-' + str(datetime.datetime.now().year) + \
+                                               '-' + str(datetime.datetime.now().year) + "-"+ \
                                                str(datetime.datetime.now().month) + '-' + \
+                                                str(datetime.datetime.now().day)                  + "_" + \
                                                  "1"
             else:
                 obj.sampleinfoformid = request.user.username +\
-                                           '-' +str(datetime.datetime.now().year)+\
-                                           str(datetime.datetime.now().month) + '-'+\
+                                           '-' +str(datetime.datetime.now().year)+ "-"+ \
+                                           str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
+                                             "_" + \
                                            str(int(SampleInfoForm.objects.latest("id").id)+1)
             obj.partner_email = request.user.username
             super().save_model(request, obj, form, change)

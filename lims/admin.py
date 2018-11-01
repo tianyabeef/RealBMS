@@ -6,7 +6,7 @@ from import_export import resources
 from import_export.admin import ImportExportActionModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from lims.models import SampleInfoExt, ExtExecute, LibExecute,  SampleInfoLib, SampleInfoSeq, SeqExecute
-from pm.models import LibSubmit,SeqSubmit,ExtSubmit,AnaSubmit
+from pm.models import LibSubmit,SeqSubmit,ExtSubmit,AnaSubmit,SubProject
 
 try:
     from django.utils.encoding import force_text
@@ -17,11 +17,18 @@ from sample.models import SampleInfoForm, SampleInfo
 #外键样品
 class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
+    fields = (("extExecute","unique_code","sample_number","sample_name","species","sample_type","sample_used",
+               "sample_rest","density_checked","volume_checked","D260_280","D260_230","DNA_totel","note","quality_control_conclusion","is_rebuild"),)
+
 class SampleInfoLibInline(admin.StackedInline):
     model = SampleInfoLib
+    fields = (("libExecute", "unique_code", "sample_number", "sample_name", "lib_code", "index", "lib_volume",
+               "lib_concentration", "lib_total", "lib_result", "lib_note", "is_rebuild"),)
+
 class SampleInfoSeqInline(admin.StackedInline):
     model = SampleInfoSeq
-
+    fields = (("seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
+               "seq_data", "seq_result", "seq_note",  "is_rebuild"),)
 
 #抽提的导入
 class SampleInfoExtResource(resources.ModelResource):
@@ -104,46 +111,40 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+        id = obj.extSubmit.subProject.id
+
+        project = SubProject.objects.filter(id=id)
+
         if obj.ext_experimenter.all():
             #钉钉
-            if obj.extSubmit.subProject.is_status < 3:
-                obj.extSubmit.subProject.is_status = 3
-                obj.extSubmit.subProject.save()
-            else:
-                pass
-        if obj.is_submit:
-            if obj.extSubmit.subProject.is_status < 4:
-                obj.extSubmit.subProject.is_status = 4
-                obj.extSubmit.subProject.save()
-            if not obj.ext_end_date:
-                #钉钉
-                obj.ext_end_date = datetime.datetime.now()
-                qs = obj.sampleinfoext_set.all()
-                #建立建库任务单
-                # lib = LibSubmit()
-                # if LibSubmit.objects.all().count() == 0:
-                #     lib.id = "1"
-                # else:
-                #     lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
-                # lib.subProject = obj.extSubmit.subProject
-                for i in qs.filter(is_rebuild=0):
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code = "black"
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().save()
-                # lib.lib_number ="test00001"
-                # lib.save()
-                # del lib
-                #建立重抽提任务单
-                ext = ExtSubmit()
-                ext.subProject = obj.extSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code = "red"
-                    ext.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().save()
-                ext.ext_number = "重抽提编号测试一号"
-                ext.save()
-                del ext
-            else:
-                pass
+            if project.first().is_status < 3:
+                project.update(is_status=3)
+            if obj.is_submit:
+                if not obj.upload_file:
+                    raise Exception("抽提结果报告不能为空")
+                if project.first().is_status < 4:
+                    project.update(is_status=4)
+                if not obj.ext_end_date:
+                    #钉钉
+                    obj.ext_end_date = datetime.datetime.now()
+                    obj.save()
+                    qs = obj.sampleinfoext_set.all()
+                    for i in qs.filter(is_rebuild=0):
+                        print(i.unique_code)
+                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "black")
+                    #建立重抽提任务单
+                    ext = ExtSubmit()
+                    ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
+                    ext.subProject = obj.extSubmit.subProject
+                    for j in qs.filter(is_rebuild=1):
+                        print(j.unique_code)
+                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="red")
+                        ext.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                    ext.ext_number = "重抽提编号测试一号"
+                    ext.save()
+                    del ext
+                else:
+                    pass
 
 
 
@@ -229,50 +230,40 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
             return self.readonly_fields
         return self.readonly_fields
 
+
     def save_model(self, request, obj, form, change):
 
         super().save_model(request, obj, form, change)
 
+        id = obj.libSubmit.subProject.id
+
+        project = SubProject.objects.filter(id=id)
+
         if obj.lib_experimenter.all():
             #钉钉
-            if obj.libSubmit.subProject.is_status < 6:
-                obj.libSubmit.subProject.is_status = 6
-                obj.libSubmit.subProject.save()
-            else:
-                pass
-        if obj.is_submit:
-            if obj.libSubmit.subProject.is_status < 7:
-                obj.libSubmit.subProject.is_status = 7
-                obj.libSubmit.subProject.save()
-            if not obj.lib_end_date:
-                #钉钉
-                obj.lib_end_date = datetime.datetime.now()
-                qs = obj.sampleinfolib_set.all()
-                #建立测序任务单
-                # seq = SeqSubmit()
-                # if SeqSubmit.objects.all().count() == 0:
-                #     seq.id = "1"
-                # else:
-                #     seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
-                # seq.subProject = obj.libSubmit.subProject
-                for i in qs.filter(is_rebuild=0):
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code = "black"
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().save()
-                # seq.lib_number ="测序编号00001"
-                # seq.save()
-                # del seq
-                #建立重建库任务单
-                lib = LibSubmit()
-                lib.subProject = obj.libSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code = "blue"
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().save()
-                    lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                lib.lib_number = "重建库编号测试一号"
-                lib.save()
-                del lib
-            else:
-                pass
+            if project.first().is_status < 6:
+                project.update(is_status=6)
+            if obj.is_submit:
+                if project.first().is_status < 7:
+                    project.update(is_status=7)
+                if not obj.lib_end_date:
+                    #钉钉
+                    obj.lib_end_date = datetime.datetime.now()
+                    qs = obj.sampleinfolib_set.all()
+                    for i in qs.filter(is_rebuild=0):
+                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="black")
+                    #建立重建库任务单
+                    lib = LibSubmit()
+                    lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
+                    lib.subProject = obj.libSubmit.subProject
+                    for j in qs.filter(is_rebuild=1):
+                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="blue")
+                        lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                    lib.lib_number = "重建库编号测试一号"
+                    lib.save()
+                    del lib
+                else:
+                    pass
 
 
 
@@ -355,47 +346,35 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
 
         super().save_model(request, obj, form, change)
 
+        id = obj.seqSubmit.subProject.id
+
+        project = SubProject.objects.filter(id=id)
+
         if obj.seq_experimenter.all():
             #钉钉
-            if obj.seqSubmit.subProject.is_status < 9:
-                obj.seqSubmit.subProject.is_status = 9
-                obj.seqSubmit.subProject.save()
-            else:
-                pass
-
-        if obj.is_submit:
-            if obj.seqSubmit.subProject.is_status < 10:
-                obj.seqSubmit.subProject.is_status = 10
-                obj.seqSubmit.subProject.save()
-            if not obj.seq_end_date:
-                #钉钉
-                obj.seq_end_date = datetime.datetime.now()
-                qs = obj.sampleinfoseq_set.all()
-                #建立分析任务单
-                # ana = AnaSubmit()
-                # if AnaSubmit.objects.all().count() == 0:
-                #     ana.id = "1"
-                # else:
-                #     ana.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
-                # ana.subProject = obj.SeqSubmit.subProject
-                for i in qs.filter(is_rebuild=0):
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code = "black"
-                    SampleInfo.objects.filter(unique_code=i.unique_code).first().save()
-                # ana.ana_number ="分析下单编号00001"
-                # ana.save()
-                # del ana
-                #建立重测序任务单
-                seq = SeqSubmit()
-                seq.subProject = obj.seqSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code = "yellow"
-                    SampleInfo.objects.filter(unique_code=j.unique_code).first().save()
-                    seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                seq.seq_number = "重建库编号测试一号"
-                seq.save()
-                del seq
-            else:
-                pass
+            if project.first().is_status < 9:
+                project.update(is_status=9)
+            if obj.is_submit:
+                if project.first().is_status < 10:
+                    project.update(is_status=10)
+                if not obj.seq_end_date:
+                    #钉钉
+                    obj.seq_end_date = datetime.datetime.now()
+                    qs = obj.sampleinfoseq_set.all()
+                    for i in qs.filter(is_rebuild=0):
+                            SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="black")
+                    #建立重测序任务单
+                    seq = SeqSubmit()
+                    seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
+                    seq.subProject = obj.seqSubmit.subProject
+                    for j in qs.filter(is_rebuild=1):
+                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="yellow")
+                        seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                    seq.seq_number = "重建库编号测试一号"
+                    seq.save()
+                    del seq
+                else:
+                    pass
 
 
 
