@@ -83,9 +83,10 @@ class SubProject(models.Model):
 # 抽提提交
 class ExtSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(抽提)', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择抽提样品", blank=True,)
     ext_number = models.CharField('抽提号', max_length=100)
-    ext_start_date = models.DateField("提取开始日期", blank=True, null=True)
+    ext_start_date = models.DateField("提取下单日期", blank=True, null=True)
     sample_count = models.IntegerField('样品数量', blank=True, null=True)
     # ext_result = models.FileField('抽提结果')外键一张抽提样品表
     note = models.TextField('实验任务备注', blank=True, null=True)
@@ -107,6 +108,7 @@ class ExtSubmit(models.Model):
 # 建库提交
 class LibSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(建库)', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品", blank=True,)
     lib_number = models.CharField('建库号', max_length=100)
     lib_start_date = models.DateField("建库开始日期", blank=True, null=True)
@@ -134,6 +136,7 @@ class LibSubmit(models.Model):
 # 测序提交
 class SeqSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目编号', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品", blank=True,)
     seq_number = models.CharField('测序号', max_length=100)
     seq_start_date = models.DateField('测序上机日期', blank=True, null=True)
@@ -167,6 +170,7 @@ class AnaSubmit(models.Model):
     #     on_delete=models.SET_NULL, null=True
     # )
     subProject = models.ManyToManyField('SubProject', verbose_name='子项目编号', blank=True,)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     # 里面包含合同编号，合同名称
     ana_number = models.CharField('分析号', max_length=100,default="")
     # invoice_code = models.CharField('发票号码', max_length=12, unique=True)

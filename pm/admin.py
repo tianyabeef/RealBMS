@@ -16,7 +16,7 @@ class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
         sample_count = self.cleaned_data['sample_count']
         if sample_count == 0:
-            raise forms.ValidationError('样品数量不能为0，请留空')
+            raise forms.ValidationError('样品数量不能为0')
         return self.cleaned_data['sample_count']
 
 class StatusListFilter(admin.SimpleListFilter):
@@ -61,28 +61,28 @@ def create_submit_table(request,obj, states):
         if v == True:
             if i == 0:
                 sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
-                extSubmit = ExtSubmit.objects.create(subProject=obj, sample_count=obj.sample_count, ext_number=ext_number)
+                extSubmit = ExtSubmit.objects.create(subProject=obj, sample_count=obj.sample_count, ext_number=ext_number, project_manager=request.user)
                 for sampleInfoForm in sampleInfoForms:
                     sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
                     for sampleInfo in sampleInfos:
                         extSubmit.sample.add(sampleInfo)
             elif i == 1:
                 sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
-                libSubmit = LibSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count, lib_number=lib_number)
+                libSubmit = LibSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count, lib_number=lib_number, project_manager=request.user)
                 for sampleInfoForm in sampleInfoForms:
                     sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
                     for sampleInfo in sampleInfos:
                         libSubmit.sample.add(sampleInfo)
             elif i == 2:
                 sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
-                seqSubmit = SeqSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count, seq_number=seq_number)
+                seqSubmit = SeqSubmit.objects.create(subProject=obj, customer_sample_count=obj.sample_count, seq_number=seq_number, project_manager=request.user)
                 for sampleInfoForm in sampleInfoForms:
                     sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
                     for sampleInfo in sampleInfos:
                         seqSubmit.sample.add(sampleInfo)
             elif i == 3:
                 sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
-                anaSubmit = AnaSubmit.objects.create(subProject=obj, sample_count=obj.sample_count, ana_number=ana_number)
+                anaSubmit = AnaSubmit.objects.create(subProject=obj, sample_count=obj.sample_count, ana_number=ana_number, project_manager=request.user)
                 for sampleInfoForm in sampleInfoForms:
                     sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
                     for sampleInfo in sampleInfos:
@@ -267,7 +267,6 @@ class SubProjectAdmin(admin.ModelAdmin):
             obj.status = False
         obj.project_manager = request.user
         if obj.status:
-            print(obj.file_to_start)
             if obj.file_to_start:
                 if obj.is_submit:
                     contract = Contract.objects.get(id=obj.contract.id)
@@ -305,12 +304,43 @@ class ExtSubmitAdmin(admin.ModelAdmin):
     # form = ExtSubmitForm
     list_display = ['subProject', 'ext_number', 'sample_count', 'ext_start_date', 'is_submit', 'note', ]
     filter_horizontal = ('sample',)
-    fields = ('subProject', 'ext_number', 'sample', 'sample_count',
-              'ext_start_date',
-              # 'is_submit',
-              'note')
+    fieldsets = (
+        ('合同信息',{
+            'fields':(('contacts','contract_number','partner_company',),
+                      ('subProject','sub_project_name','sample_receiver','arrive_time',),)
+        }),
+        ('任务信息',{
+            'fields':('ext_number', 'sample', 'sample_count',
+              'ext_start_date',('note',),)
+        })
+    )
+    readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time']
 
-    # raw_id_fields = ['subProject', ]
+    def contacts(self, obj):
+        return obj.subProject.contract.contacts
+    contacts.short_description = '合同联系人姓名'
+
+    def sub_project_name(self, obj):
+        return obj.subProject.sub_project
+    sub_project_name.short_description = '子项目名称'
+
+    def contract_number(self, obj):
+        return obj.subProject.contract.contract_number
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.subProject.contract.partner_company
+    partner_company.short_description = '合同单位'
+
+    def sample_receiver(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
+        return ["%s %s"%(sampleInfoForm.sample_receiver.last_name,sampleInfoForm.sample_receiver.first_name) for sampleInfoForm in sampleInfoForms]
+    sample_receiver.short_description = '样品接收人'
+
+    def arrive_time(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
+        return [sampleInfoForm.arrive_time for sampleInfoForm in sampleInfoForms]
+    arrive_time.short_description = '样品接收时间'
 
     def get_list_display_links(self, request, list_display):
         return ['ext_number']
@@ -325,27 +355,61 @@ class ExtSubmitAdmin(admin.ModelAdmin):
         for obj in queryset:
             if (obj.is_submit == False) and obj.ext_start_date:
                 obj.is_submit = True
+                print(obj.subProject.is_status)
+                obj.subProject.is_status = 2
+                obj.subProject.save()
+                print(obj.subProject.is_status)
                 obj.save()
             else:
                 n += 1
 
-    make_ExtSubmit_submit.short_description = '提交提取的表单'
+    make_ExtSubmit_submit.short_description = '提交提取的任务'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
         if obj:
             if obj.is_submit:
-                readonly_fields = ['subProject', 'sample', 'ext_number', 'ext_start_date', 'sample_count',
-                                   'note', ]
+                readonly_fields = ['subProject', 'ext_number', 'ext_start_date', 'sample_count',
+                                   'note','sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time']
         return readonly_fields
 
-    def save_model(self, request, obj, form, change):
-        if obj.is_submit:
-            obj.subProject.is_status = 2
-            obj.subProject.save()
+    def get_queryset(self, request):
+        qs = super(ExtSubmitAdmin, self).get_queryset(request)
+        # 普通项目管理只能看到自己的下任务,其他的有权限的人可以看到所有的任务
+        groups = Group.objects.filter(user__id = request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return qs.filter(project_manager=request.user)
+                else:
+                    return qs
         else:
+            return qs
+
+        # 更改修改表单里的按钮
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        add = object_id is None
+        if add:
             pass
-        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+        else:
+            obj = ExtSubmit.objects.get(pk=object_id)
+            if obj:
+                if obj.is_submit:
+                    extra_context['show_delete'] = False
+                    extra_context['show_save_and_add_another'] = False
+                    extra_context['show_save'] = False
+                    extra_context['show_save_as_new'] = False
+                    extra_context['show_save_and_continue'] = False
+        return super(ExtSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+
+    # def save_model(self, request, obj, form, change):
+    #     if obj.is_submit:
+    #         obj.subProject.is_status = 2
+    #         obj.subProject.save()
+    #     else:
+    #         pass
+    #     super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 # 建库提交表
