@@ -24,8 +24,8 @@ class ExtExecute(models.Model):
     extract_method = models.CharField(verbose_name="提取方法",max_length=50)
     test_method = models.CharField(verbose_name="检测方法",max_length=50)
     ext_end_date = models.DateField('提取完成日期',blank=True,null=True)
-    upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/')
-    note = models.TextField('实验结果备注')
+    upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/',blank=True,null=True)
+    note = models.TextField('实验结果备注',blank=True,null=True)
     is_submit = models.BooleanField('提交',default=False)
     # def save(self, *args, **kwargs):
     #     super(ExtSubmit, self).save(*args, **kwargs)
@@ -55,20 +55,20 @@ class LibExecute(models.Model):
 
     )
     lib_end_date = models.DateField('建库完成日期',blank=True,null=True)
-    upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/')
-    note = models.TextField('实验结果备注')
+    upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/',blank=True,null=True)
+    note = models.TextField('实验结果备注',blank=True,null=True)
     is_submit = models.BooleanField('提交',default=False)
 
     #非必填
-    reaction_times = models.IntegerField(verbose_name="反应次数（选填）")
-    pcr_system = models.CharField(verbose_name="PCR体系（选填）",max_length=200)
-    dna_polymerase = models.CharField(verbose_name="DNA聚合酶（选填）",max_length=50)
-    model_initiation_mass = models.CharField(verbose_name="模板起始量（选填）",max_length=50)
-    enzyme_number = models.CharField(verbose_name="酶批号（选填）",max_length=50)
-    pcr_process = models.IntegerField(choices=((0,"KAPA酶程序"),(1,"唯赞酶程序"),(2,"降落PCR程序"),(3,"其它程序（见备注）")))
-    annealing_temperature = models.CharField(verbose_name="退货问题（选填）",max_length=50)
-    loop_number = models.IntegerField(verbose_name="循环数")
-    gel_recovery_kit = models.CharField(verbose_name="胶回收试剂盒（选填）",max_length=200)
+    reaction_times = models.IntegerField(verbose_name="反应次数（选填）",blank=True,null=True)
+    pcr_system = models.CharField(verbose_name="PCR体系（选填）",max_length=200,blank=True,null=True)
+    dna_polymerase = models.CharField(verbose_name="DNA聚合酶（选填）",max_length=50,blank=True,null=True)
+    model_initiation_mass = models.CharField(verbose_name="模板起始量（选填）",max_length=50,blank=True,null=True)
+    enzyme_number = models.CharField(verbose_name="酶批号（选填）",max_length=50,blank=True,null=True)
+    pcr_process = models.IntegerField(choices=((0,"KAPA酶程序"),(1,"唯赞酶程序"),(2,"降落PCR程序"),(3,"其它程序（见备注）")),blank=True,null=True)
+    annealing_temperature = models.CharField(verbose_name="退货问题（选填）",max_length=50,blank=True,null=True)
+    loop_number = models.IntegerField(verbose_name="循环数",blank=True,null=True)
+    gel_recovery_kit = models.CharField(verbose_name="胶回收试剂盒（选填）",max_length=200,blank=True,null=True)
     # def save(self, *args, **kwargs):
     #     super(LibSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -97,8 +97,8 @@ class SeqExecute(models.Model):
         # on_delete= models.DO_NOTHING,
     )
     seq_end_date = models.DateField('测序下机日期',blank=True,null=True)
-    upload_file = models.FileField('测序结果报告上传pooling表', upload_to='uploads/seq/%Y/%m/%d/',blank=True)
-    note = models.TextField('实验结果备注',blank=True)
+    upload_file = models.FileField('测序结果报告上传pooling表', upload_to='uploads/seq/%Y/%m/%d/',blank=True,null=True)
+    note = models.TextField('实验结果备注',blank=True,null=True)
     is_submit = models.BooleanField('提交',default=False)
 
     # def save(self, *args, **kwargs):
@@ -179,7 +179,7 @@ class SampleInfoExt(models.Model):
     )
 
     Rebulid = (
-        (0, '未重抽提'),
+        (0, '不重抽提'),
         (1, '重抽提'),
     )
     #外键
@@ -189,7 +189,7 @@ class SampleInfoExt(models.Model):
         on_delete=models.CASCADE,
         blank = True, null = True
     )
-    #以下七个字段从SampleInfo表中获得
+    #以下5个字段从SampleInfo表中获得
     # samples =
     unique_code = models.CharField(max_length=60,verbose_name="对应样品池唯一编号")
     sample_number = models.CharField(max_length=50,verbose_name="样品编号")
@@ -210,7 +210,7 @@ class SampleInfoExt(models.Model):
     quality_control_conclusion = models.IntegerField(choices=Quality_control_conclusion,verbose_name="质检结论",default=1)##ABC
     is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提",default=0)
     def __str__(self):
-        return self.sample_number
+        return str(self.sample_number)
 
     class Meta:
         verbose_name = "抽提详细样品信息"
@@ -230,7 +230,7 @@ class SampleInfoLib(models.Model):
         blank = True, null = True
     )
     Rebulid = (
-        (0, '未重建库'),
+        (0, '不重建库'),
         (1, '重建库'),
     )
     ##以下两个字段重SampleInfo表中获得
@@ -247,7 +247,7 @@ class SampleInfoLib(models.Model):
     lib_note = models.TextField('备注(文库)', blank=True, null=True)
     is_rebuild = models.IntegerField(choices=Rebulid, verbose_name="选择是否重建库", default=0)
     def __str__(self):
-        return self.sample_number
+        return str(self.sample_number)
 
     class Meta:
         verbose_name = "文库详细样品信息"
@@ -268,7 +268,7 @@ class SampleInfoSeq(models.Model):
         blank=True, null=True
     )
     Rebulid = (
-        (0, '未重测序'),
+        (0, '不重测序'),
         (1, '重测序'),
     )
 
@@ -285,7 +285,7 @@ class SampleInfoSeq(models.Model):
     seq_note = models.TextField('备注(测序)', blank=True, null=True)
     is_rebuild = models.IntegerField(choices=Rebulid, verbose_name="选择是否重测序", default=0)
     def __str__(self):
-        return self.sample_number
+        return str(self.sample_number)
 
     class Meta:
         verbose_name = "测序详细样品信息"
