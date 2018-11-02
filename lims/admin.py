@@ -140,7 +140,12 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
                         print(j.unique_code)
                         SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="red")
                         ext.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    ext.ext_number = "重抽提编号测试一号"
+                    old = obj.extSubmit.ext_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1])+1)
+                    else:
+                        new = old + "_" + "1"
+                    ext.ext_number = new
                     ext.save()
                     del ext
                 else:
@@ -259,7 +264,12 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
                     for j in qs.filter(is_rebuild=1):
                         SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="blue")
                         lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    lib.lib_number = "重建库编号测试一号"
+                    old = obj.libSubmit.lib_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1]) + 1)
+                    else:
+                        new = old + "_" + "1"
+                    lib.lib_number = new
                     lib.save()
                     del lib
                 else:
@@ -370,7 +380,12 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
                     for j in qs.filter(is_rebuild=1):
                         SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="yellow")
                         seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    seq.seq_number = "重建库编号测试一号"
+                    old = obj.seqSubmit.seq_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1]) + 1)
+                    else:
+                        new = old + "_" + "1"
+                    seq.seq_number = new
                     seq.save()
                     del seq
                 else:
