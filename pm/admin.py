@@ -362,7 +362,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
               'ext_start_date',('note',),)
         })
     )
-    readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time']
+    readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time','ext_number','sample_count',]
 
     def contacts(self, obj):
         return obj.subProject.contract.contacts
@@ -464,13 +464,12 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save_and_continue'] = False
         return super(ExtSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def save_model(self, request, obj, form, change):
-    #     if obj.is_submit:
-    #         obj.subProject.is_status = 2
-    #         obj.subProject.save()
-    #     else:
-    #         pass
-    #     super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+    def save_model(self, request, obj, form, change):
+        if not obj.ext_number:
+            ext_number = creat_uniq_number(request, ExtSubmit, 'Ext')
+            obj.ext_number = ext_number
+        obj.sample_count = obj.sample.all().count()
+        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 # 建库提交表
@@ -590,10 +589,10 @@ class LibSubmitAdmin(admin.ModelAdmin):
         return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
-        obj.project_manager = request.user
         if not obj.lib_number:
             lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
-        obj.lib_number = lib_number
+            obj.lib_number = lib_number
+        obj.sample_count = obj.sample.all().count()
         super(LibSubmitAdmin, self).save_model(request, obj, form, change)
 
 
@@ -722,9 +721,10 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
-        obj.project_manager = request.user
-        seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
-        obj.seq_number = seq_number
+        if not obj.seq_number:
+            seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
+            obj.seq_number = seq_number
+        obj.sample_count = obj.sample.all().count()
         super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
 
 # # 分析提交表
@@ -761,7 +761,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
 # 分析提交管理
 class AnaSubmitAdmin(admin.ModelAdmin):
     # form = AnaSubmitForm
-    list_display = ['ana_number', 'sample_count', 'ana_start_date', 'depart_data_path', 'confirmation_sheet',
+    list_display = ['ana_number', 'ana_start_date', 'depart_data_path', 'confirmation_sheet',
                     # 'contract_count',
                     # 'project_count',
                     'is_submit', 'note','file_link' ]
@@ -771,7 +771,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
             'fields':(('contacts','contract_number','partner_company',),)
         }),
         ('任务信息',{
-            'fields':('ana_number', ('subProject',),'sample_count', 'ana_start_date',
+            'fields':('ana_number', ('subProject',), 'ana_start_date',
               'depart_data_path', 'confirmation_sheet',('note'),)
         })
     )
@@ -867,15 +867,11 @@ class AnaSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save_and_continue'] = False
         return super(AnaSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def save_model(self, request, obj, form, change):
-    #     if obj.is_submit:
-    #         # is_submits = obj.save(is_submit=False)
-    #         obj.subProject.is_status = 11
-    #         obj.subProject.save()
-    #         obj.save_m2m()
-    #     else:
-    #         pass
-    #     super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
+    def save_model(self, request, obj, form, change):
+        if not obj.ana_number:
+            ana_number = creat_uniq_number(request, AnaSubmit, 'Ana')
+            obj.ana_number = ana_number
+        super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 BMS_admin_site.register(SubProject, SubProjectAdmin)
