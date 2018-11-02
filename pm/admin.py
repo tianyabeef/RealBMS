@@ -535,7 +535,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_staus =  5
+                obj.subProject.is_status =  5
                 obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
@@ -663,7 +663,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_staus = 8
+                obj.subProject.is_status = 8
                 obj.subProject.save()
                 seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])

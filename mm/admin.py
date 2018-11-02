@@ -27,6 +27,7 @@ from django.utils import formats
 from BMS import dingding
 from BMS import settings
 from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
+from em.models import Employees
 
 
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
@@ -390,10 +391,13 @@ class ContractAdmin(ExportActionModelAdmin):
             tt.groups.add(group_info)
             ##发送钉钉通知，给销售员
             user_id = False
-            for u in dingding.sub_dept_users:
-                if u["name"]==obj.salesman.username:
-                    user_id = u["userid"]
-                    break
+            if Employees.objects.filter(user=obj.salesman):
+                user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+            print(user_id)
+            # for u in dingding.sub_dept_users:
+            #     if u["name"]==obj.salesman.username:
+            #         user_id = u["userid"]
+            #         break
             params = {"access_token": dingding.access_token}
             if user_id:
                 data = {
