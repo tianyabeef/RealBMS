@@ -415,7 +415,13 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
-                    sampleInfoLib = lims_SampleInfoExt.objects.create(extExecute=extExecute)
+                    sampleInfoExt = lims_SampleInfoExt.objects.create(extExecute=extExecute)
+                    sampleInfoExt.unique_code = sampleInfo.unique_code
+                    sampleInfoExt.sample_number = sampleInfo.sample_number
+                    sampleInfoExt.sample_name = sampleInfo.sample_name
+                    sampleInfoExt.species = sampleInfo.sample_species
+                    sampleInfoExt.sample_type = sampleInfo.sample_type
+                    sampleInfoExt.save()
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s'%(queryset.count(),n,un,sn), level=messages.ERROR)
     make_ExtSubmit_submit.short_description = '提交提取任务'
@@ -477,7 +483,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
     # form = LibSubmitForm
     list_display = ['subProject', 'lib_number', 'customer_sample_count', 'lib_start_date', 'customer_confirmation_time',
                     # 'contract_count', 'project_count',
-                    'sample_count', 'is_submit', 'note', ]
+                    'customer_sample_count', 'is_submit', 'note', ]
     filter_horizontal = ('sample',)
     fieldsets = (
         ('合同信息',{
@@ -490,7 +496,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
         })
     )
 
-    readonly_fields =  ['contract_number', 'sub_project_name', 'contacts', 'partner_company']
+    readonly_fields =  ['lib_number','contract_number', 'sub_project_name', 'contacts', 'partner_company']
     # raw_id_fields = ['subProject', ]
 
     def contacts(self, obj):
@@ -512,12 +518,6 @@ class LibSubmitAdmin(admin.ModelAdmin):
     def get_list_display_links(self, request, list_display):
         return ['lib_number']
 
-    def sample_count(self, obj):
-        pass
-        # return obj.sample.all().count()
-
-    sample_count.short_description = '样品数'
-
     actions = ['make_LibSubmit_submit', ]
 
     def make_LibSubmit_submit(self, request, queryset):
@@ -535,12 +535,17 @@ class LibSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_staus =  5
+                if obj.subProject.is_status < 5:
+                    obj.subProject.is_status =  5
                 obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
                     sampleInfoLib = lims_SampleInfoLib.objects.create(libExecute=libExecute)
+                    sampleInfoLib.unique_code = sampleInfo.unique_code
+                    sampleInfoLib.sample_number = sampleInfo.sample_number
+                    sampleInfoLib.sample_name = sampleInfo.sample_name
+                    sampleInfoLib.save()
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
                           level=messages.ERROR)
@@ -550,7 +555,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
         readonly_fields = self.readonly_fields
         if obj:
             if obj.is_submit:
-                readonly_fields = ['subProject', 'sample', 'lib_number', 'lib_start_date', 'customer_confirmation_time',
+                readonly_fields = ['lib_number','subProject', 'sample', 'lib_number', 'lib_start_date', 'customer_confirmation_time',
                                    'customer_sample_count', 'note', 'contract_number', 'sub_project_name', 'contacts', 'partner_company']
         return readonly_fields
 
@@ -584,13 +589,12 @@ class LibSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save_and_continue'] = False
         return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def save_model(self, request, obj, form, change):
-    #     if obj.is_submit:
-    #         obj.subProject.is_status = 5
-    #         obj.subProject.save()
-    #     else:
-    #         pass
-    #     super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+    def save_model(self, request, obj, form, change):
+        obj.project_manager = request.user
+        if not obj.lib_number:
+            lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
+        obj.lib_number = lib_number
+        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 # 测序提交表
@@ -663,12 +667,17 @@ class SeqSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_staus = 8
+                if obj.subProject.is_status < 8:
+                    obj.subProject.is_status = 8
                 obj.subProject.save()
                 seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
                     sampleInfoseq = lims_SampleInfoSeq.objects.create(seqExecute=seqExecute)
+                    sampleInfoseq.unique_code = sampleInfo.unique_code
+                    sampleInfoseq.sample_number = sampleInfo.sample_number
+                    sampleInfoseq.sample_name = sampleInfo.sample_name
+                    sampleInfoseq.save()
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
                           level=messages.ERROR)
@@ -712,14 +721,11 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save_and_continue'] = False
         return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def save_model(self, request, obj, form, change):
-    #     if obj.is_submit:
-    #         obj.subProject.is_status = 8
-    #         obj.subProject.save()
-    #     else:
-    #         pass
-    #     super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
-    #
+    def save_model(self, request, obj, form, change):
+        obj.project_manager = request.user
+        seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
+        obj.seq_number = seq_number
+        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
 
 # # 分析提交表
 # class AnaSubmitForm(forms.ModelForm):
@@ -814,7 +820,8 @@ class AnaSubmitAdmin(admin.ModelAdmin):
                 obj.is_submit = True
                 for subProject in obj.subProject.all():
                     subProject_old = SubProject.objects.get(id=subProject.id)
-                    subProject_old.is_status = 11
+                    if subProject_old.is_status < 11:
+                        subProject_old.is_status = 11
                     subProject_old.save()
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()

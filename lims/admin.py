@@ -134,6 +134,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
                         SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "black")
                     #建立重抽提任务单
                     ext = ExtSubmit()
+                    ext.project_manager_id = obj.extSubmit.project_manager_id
                     ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
                     ext.subProject = obj.extSubmit.subProject
                     for j in qs.filter(is_rebuild=1):
@@ -259,6 +260,8 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
                         SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="black")
                     #建立重建库任务单
                     lib = LibSubmit()
+                    lib.project_manager_id = obj.libSubmit.project_manager_id
+                    print(obj.libSubmit.project_manager)
                     lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
                     lib.subProject = obj.libSubmit.subProject
                     for j in qs.filter(is_rebuild=1):
@@ -375,6 +378,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
                             SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="black")
                     #建立重测序任务单
                     seq = SeqSubmit()
+                    seq.project_manager_id = obj.seqSubmit.project_manager_id
                     seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
                     seq.subProject = obj.seqSubmit.subProject
                     for j in qs.filter(is_rebuild=1):
