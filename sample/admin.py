@@ -47,6 +47,10 @@ get_editable.short_description = "点击查看详情"
 #     else:
 #         return (obj.sampleinfoformid,obj.time_to_upload,obj.color_status,obj.file_link,obj.jindu_status)
 
+#选择样品编号对应月份字母
+
+Monthchoose = {1:"A",2:"B",3:"C",4:"D",5:"E",6:"F",7:"G",8:"H",9:"I",10:"G",11:"K",12:"L",}
+
 class SampleInline(admin.TabularInline):
     model = SampleInfo
     fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','remarks','data_request']
@@ -107,21 +111,6 @@ class SampleInfoResource(resources.ModelResource):
     def init_instance(self, row=None):
         if not row:
             row = {}
-        # id = row["id"]
-        # if id:
-        #     print(type(row["******************************"]))
-        #     instance_ = SampleInfo.objects.filter(id=id).first()
-        #     instance_.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
-        #     instance_.sample_name = row['样品名']
-        #     instance_.sample_receiver_name = row['实际收到样品名']
-        #     instance_.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
-        #     instance_.tube_number = row['管数']
-        #     instance_.is_extract = row['是否需要提取(0-不需要，1-需要)']
-        #     instance_.remarks = row['备注']
-        #     instance_.data_request = row['数据量要求']
-        #     instance_.save()
-        #     return instance_
-        # print("----------------------------------------------")
         instance = self._meta.model()
         # instance = SampleInfo()
         for attr, value in row.items():
@@ -139,6 +128,9 @@ class SampleInfoResource(resources.ModelResource):
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
         instance.sample_species = row["物种"]
+        instance.sample_number = str(datetime.datetime.now().year) + \
+                                 Monthchoose[datetime.datetime.now().month] + "000" + str(SampleInfo.objects.latest('id').id + 1)
+        instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
 
 
