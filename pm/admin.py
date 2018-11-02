@@ -11,6 +11,13 @@ from sample.models import SampleInfo
 from django.contrib.auth.models import Group,User
 from django import forms
 import datetime
+from lims.models import ExtExecute as lims_ExtExecute
+from lims.models import LibExecute as lims_LibExecute
+from lims.models import SeqExecute as lims_SeqExecute
+from am.models import AnaExecute as am_anaExecute
+from lims.models import SampleInfoExt as lims_SampleInfoExt
+from lims.models import SampleInfoLib as lims_SampleInfoLib
+from lims.models import SampleInfoSeq as lims_SampleInfoSeq
 
 class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
@@ -82,11 +89,8 @@ def create_submit_table(request,obj, states):
                         seqSubmit.sample.add(sampleInfo)
             elif i == 3:
                 sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.id)
-                anaSubmit = AnaSubmit.objects.create(subProject=obj, sample_count=obj.sample_count, ana_number=ana_number, project_manager=request.user)
-                for sampleInfoForm in sampleInfoForms:
-                    sampleInfos = SampleInfo.objects.filter(sampleinfoform__id=sampleInfoForm.id)
-                    for sampleInfo in sampleInfos:
-                        anaSubmit.sample.add(sampleInfo)
+                anaSubmit = AnaSubmit.objects.create(sample_count=obj.sample_count, ana_number=ana_number, project_manager=request.user)
+                anaSubmit.subProject.add(obj)
             else:
                 pass
             break
@@ -96,6 +100,7 @@ class SubProjectAdmin(admin.ModelAdmin):
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
                     'project_manager', 'is_submit', 'status','file_link','is_status')
     list_display_links = ['sub_number', ]
+    actions = ['make_submit', ]
     # list_editable = ['is_confirm']
     # list_filter = [StatusListFilter]
     fieldsets = (
@@ -293,6 +298,49 @@ class SubProjectAdmin(admin.ModelAdmin):
                 create_submit_table(request, obj, states)
             obj.save()
 
+    def make_submit(self, request, queryset):
+        n = 0
+        un =  0
+        sn = 0
+        for obj in queryset:
+            if not obj.is_submit:
+                states = [obj.is_ext, obj.is_lib, obj.is_seq, obj.is_ana]
+                project_amount = obj.sample_count * obj.contract.price
+                contract_income = 0
+                mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
+                for mm_invoice in mm_invoices:
+                    fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
+                    contract_income = fm_invoice.income + contract_income
+                if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
+                    obj.status = True
+                else:
+                    obj.status = False
+                obj.project_manager = request.user
+                if obj.status:
+                    if obj.file_to_start:
+                        contract = Contract.objects.get(id=obj.contract.id)
+                        contract.use_amount = contract.use_amount + project_amount
+                        contract.save()
+                        # 新建执行表单
+                        create_submit_table(request, obj, states)
+                        obj.is_submit = True
+                        obj.save()
+                        n = n +1
+                    else:
+                        un = un +1
+                else:
+                    contract = Contract.objects.get(id=obj.contract.id)
+                    contract.use_amount = contract.use_amount + project_amount
+                    contract.save()
+                    # 新建执行表单
+                    create_submit_table(request, obj, states)
+                    obj.is_submit = True
+                    obj.save()
+                    n = n + 1
+            else:
+                sn = sn + 1
+        self.message_user(request,"选择项目数量：%s,所选项目立项的子项目数量：%s,   无法立项的子项目数量：%s  ,已经立项过的子项目数量：%s" %(queryset.count(),n,un,sn), level=messages.ERROR)
+    make_submit.short_description = '设置所选项目为确认可启动状态'
 
 # 提取提交表
 class ExtSubmitForm(forms.ModelForm):
@@ -351,19 +399,26 @@ class ExtSubmitAdmin(admin.ModelAdmin):
         """
         提交提取的表单
         """
-        n = 0
+        n = 0  #可以确认
+        un = 0 #无法确认
+        sn = 0 #已经确认
         for obj in queryset:
-            if (obj.is_submit == False) and obj.ext_start_date:
+            if obj.is_submit:
+                sn = sn + 1
+            elif not obj.ext_start_date:
+                un = un + 1
+            else:
+                n = n + 1
                 obj.is_submit = True
-                print(obj.subProject.is_status)
                 obj.subProject.is_status = 2
                 obj.subProject.save()
-                print(obj.subProject.is_status)
+                extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
+                sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
+                for sampleInfo in sampleInfos:
+                    sampleInfoLib = lims_SampleInfoExt.objects.create(extExecute=extExecute)
                 obj.save()
-            else:
-                n += 1
-
-    make_ExtSubmit_submit.short_description = '提交提取的任务'
+        self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s'%(queryset.count(),n,un,sn), level=messages.ERROR)
+    make_ExtSubmit_submit.short_description = '提交提取任务'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
@@ -424,12 +479,35 @@ class LibSubmitAdmin(admin.ModelAdmin):
                     # 'contract_count', 'project_count',
                     'sample_count', 'is_submit', 'note', ]
     filter_horizontal = ('sample',)
-    fields = ('subProject', 'lib_number', 'sample', 'lib_start_date',
-              'customer_confirmation_time', 'customer_sample_count',
-              # 'is_submit',
-              'note',)
+    fieldsets = (
+        ('合同信息',{
+            'fields':(('contacts','contract_number','partner_company',),
+                      ('subProject','sub_project_name',),)
+        }),
+        ('任务信息',{
+            'fields':('lib_number', 'sample', 'lib_start_date',
+              'customer_confirmation_time', 'customer_sample_count',('note'),)
+        })
+    )
 
+    readonly_fields =  ['contract_number', 'sub_project_name', 'contacts', 'partner_company']
     # raw_id_fields = ['subProject', ]
+
+    def contacts(self, obj):
+        return obj.subProject.contract.contacts
+    contacts.short_description = '合同联系人姓名'
+
+    def contract_number(self, obj):
+        return obj.subProject.contract.contract_number
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.subProject.contract.partner_company
+    partner_company.short_description = '合同单位'
+
+    def sub_project_name(self, obj):
+        return obj.subProject.sub_project
+    sub_project_name.short_description = '子项目名称'
 
     def get_list_display_links(self, request, list_display):
         return ['lib_number']
@@ -446,31 +524,73 @@ class LibSubmitAdmin(admin.ModelAdmin):
         """
         提交建库的表单
         """
-        n = 0
+        n = 0  #可以确认
+        un = 0 #无法确认
+        sn = 0 #已经确认
         for obj in queryset:
-            if (obj.is_submit == False) and obj.lib_start_date:
-                obj.is_submit = True
-                obj.save()
+            if obj.is_submit:
+                sn = sn + 1
+            elif not obj.lib_start_date:
+                un = un + 1
             else:
-                n += 1
-
-    make_LibSubmit_submit.short_description = '建库提取的表单'
+                n = n + 1
+                obj.is_submit = True
+                obj.subProject.is_staus =  5
+                obj.subProject.save()
+                libExecute = lims_LibExecute.objects.create(libSubmit=obj)
+                sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
+                for sampleInfo in sampleInfos:
+                    sampleInfoLib = lims_SampleInfoLib.objects.create(libExecute=libExecute)
+                obj.save()
+        self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
+                          level=messages.ERROR)
+    make_LibSubmit_submit.short_description = '提交建库任务'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
         if obj:
             if obj.is_submit:
                 readonly_fields = ['subProject', 'sample', 'lib_number', 'lib_start_date', 'customer_confirmation_time',
-                                   'customer_sample_count', 'note', ]
+                                   'customer_sample_count', 'note', 'contract_number', 'sub_project_name', 'contacts', 'partner_company']
         return readonly_fields
 
-    def save_model(self, request, obj, form, change):
-        if obj.is_submit:
-            obj.subProject.is_status = 5
-            obj.subProject.save()
+    def get_queryset(self, request):
+        qs = super(LibSubmitAdmin, self).get_queryset(request)
+        # 普通项目管理只能看到自己的下任务,其他的有权限的人可以看到所有的任务
+        groups = Group.objects.filter(user__id = request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return qs.filter(project_manager=request.user)
+                else:
+                    return qs
         else:
+            return qs
+
+        # 更改修改表单里的按钮
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        add = object_id is None
+        if add:
             pass
-        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+        else:
+            obj = LibSubmit.objects.get(pk=object_id)
+            if obj:
+                if obj.is_submit:
+                    extra_context['show_delete'] = False
+                    extra_context['show_save_and_add_another'] = False
+                    extra_context['show_save'] = False
+                    extra_context['show_save_as_new'] = False
+                    extra_context['show_save_and_continue'] = False
+        return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+
+    # def save_model(self, request, obj, form, change):
+    #     if obj.is_submit:
+    #         obj.subProject.is_status = 5
+    #         obj.subProject.save()
+    #     else:
+    #         pass
+    #     super(LibSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 # 测序提交表
@@ -488,12 +608,40 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                     'customer_sample_count', 'is_submit', 'note',
                     ]
     filter_horizontal = ('sample',)
-    fields = ('subProject', 'seq_number', 'sample', 'seq_start_date', 'customer_confirmation_time',
-              'customer_sample_count', 'pooling_excel',
-              # 'is_submit',
-              'note',)
 
+    fieldsets = (
+        ('合同信息',{
+            'fields':(('contacts','contract_number','partner_company',),
+                      ('subProject','sub_project_name',),)
+        }),
+        ('任务信息',{
+            'fields':('seq_number', 'sample', 'seq_start_date', 'customer_confirmation_time',
+              'customer_sample_count', 'pooling_excel',('note'),)
+        })
+    )
+
+    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company']
     # raw_id_fields = ['subProject', ]
+
+    def contacts(self, obj):
+        return obj.subProject.contract.contacts
+
+    contacts.short_description = '合同联系人姓名'
+
+    def contract_number(self, obj):
+        return obj.subProject.contract.contract_number
+
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.subProject.contract.partner_company
+
+    partner_company.short_description = '合同单位'
+
+    def sub_project_name(self, obj):
+        return obj.subProject.sub_project
+
+    sub_project_name.short_description = '子项目名称'
 
     def get_list_display_links(self, request, list_display):
         return ['seq_number']
@@ -504,44 +652,86 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         """
         提交测序的表单
         """
-        n = 0
+        n = 0  # 可以确认
+        un = 0  # 无法确认
+        sn = 0  # 已经确认
         for obj in queryset:
-            if (obj.is_submit == False) and obj.seq_start_date:
-                obj.is_submit = True
-                obj.save()
+            if obj.is_submit:
+                sn = sn + 1
+            elif not obj.seq_start_date:
+                un = un + 1
             else:
-                n += 1
-
-    make_SeqSubmit_submit.short_description = '测序提取的表单'
+                n = n + 1
+                obj.is_submit = True
+                obj.subProject.is_staus = 8
+                obj.subProject.save()
+                seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
+                sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
+                for sampleInfo in sampleInfos:
+                    sampleInfoseq = lims_SampleInfoSeq.objects.create(seqExecute=seqExecute)
+                obj.save()
+        self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
+                          level=messages.ERROR)
+    make_SeqSubmit_submit.short_description = '提交测序任务'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
         if obj:
             if obj.is_submit:
                 readonly_fields = ['subProject', 'sample', 'seq_number', 'seq_start_date', 'customer_confirmation_time',
-                                   'customer_sample_count', 'pooling_excel', 'note', ]
+                                   'customer_sample_count', 'pooling_excel', 'note','contract_number', 'sub_project_name', 'contacts', 'partner_company' ]
         return readonly_fields
 
-    def save_model(self, request, obj, form, change):
-        if obj.is_submit:
-            obj.subProject.is_status = 8
-            obj.subProject.save()
+    def get_queryset(self, request):
+        qs = super(SeqSubmitAdmin, self).get_queryset(request)
+        # 普通项目管理只能看到自己的下任务,其他的有权限的人可以看到所有的任务
+        groups = Group.objects.filter(user__id = request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return qs.filter(project_manager=request.user)
+                else:
+                    return qs
         else:
+            return qs
+
+        # 更改修改表单里的按钮
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        add = object_id is None
+        if add:
             pass
-        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+        else:
+            obj = SeqSubmit.objects.get(pk=object_id)
+            if obj:
+                if obj.is_submit:
+                    extra_context['show_delete'] = False
+                    extra_context['show_save_and_add_another'] = False
+                    extra_context['show_save'] = False
+                    extra_context['show_save_as_new'] = False
+                    extra_context['show_save_and_continue'] = False
+        return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
+    # def save_model(self, request, obj, form, change):
+    #     if obj.is_submit:
+    #         obj.subProject.is_status = 8
+    #         obj.subProject.save()
+    #     else:
+    #         pass
+    #     super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+    #
 
-# 分析提交表
-class AnaSubmitForm(forms.ModelForm):
-    # pass
-
-    subProject = forms.ModelChoiceField(queryset=SubProject.objects.all())
-
-    class Meta():
-        fields = ('subProject',)
-        model = SubProject
-        labels = {'username': 'Email',
-                  'subProject': 'subProject'}
+# # 分析提交表
+# class AnaSubmitForm(forms.ModelForm):
+#     # pass
+#
+#     subProject = forms.ModelChoiceField(queryset=SubProject.objects.all())
+#
+#     class Meta():
+#         fields = ('subProject',)
+#         model = SubProject
+#         labels = {'username': 'Email',
+#                   'subProject': 'subProject'}
 
     # def save(self, commit=True):
     #     if not commit:
@@ -568,12 +758,35 @@ class AnaSubmitAdmin(admin.ModelAdmin):
     list_display = ['ana_number', 'sample_count', 'ana_start_date', 'depart_data_path', 'data_analysis',
                     # 'contract_count',
                     # 'project_count',
-                    'is_submit', 'note', ]
-    fields = ('ana_number', 'subProject', 'note', 'sample_count', 'ana_start_date',
-              'is_submit',
-              'depart_data_path', 'data_analysis')
+                    'is_submit', 'note','file_link' ]
+
+    fieldsets = (
+        ('合同信息',{
+            'fields':(('contacts','contract_number','partner_company',),)
+        }),
+        ('任务信息',{
+            'fields':('ana_number', ('subProject',),'sample_count', 'ana_start_date',
+              'depart_data_path', 'data_analysis',('note'),)
+        })
+    )
+    readonly_fields = ['contract_number', 'contacts', 'partner_company']
     # raw_id_fields = ['subProject', ]
     filter_horizontal = ('subProject',)
+
+    def contacts(self, obj):
+        contracts = Contract.objects.filter(pk__in = [i.contract.id for i in obj.subProject.all()])
+        return "\t".join([contract.contacts for contract in contracts])
+    contacts.short_description = '合同联系人姓名'
+
+    def contract_number(self, obj):
+        contracts = Contract.objects.filter(pk__in=[i.contract.id for i in obj.subProject.all()])
+        return "\t".join([contract.contract_number for contract in contracts])
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        contracts = Contract.objects.filter(pk__in=[i.contract.id for i in obj.subProject.all()])
+        return "\t".join([contract.partner_company for contract in contracts])
+    partner_company.short_description = '合同单位'
 
     def get_list_display_links(self, request, list_display):
         return ['ana_number']
@@ -584,33 +797,74 @@ class AnaSubmitAdmin(admin.ModelAdmin):
         """
         提交分析的表单
         """
-        n = 0
+        n = 0  # 可以确认
+        un = 0  # 无法确认
+        sn = 0  # 已经确认
         for obj in queryset:
-            if (obj.is_submit == False) and obj.ana_start_date:
-                obj.is_submit = True
-                obj.save()
+            if obj.is_submit:
+                sn = sn + 1
+            elif not obj.ana_start_date:
+                un = un + 1
             else:
-                n += 1
-
-    make_AnaSubmit_submit.short_description = '分析提取的表单'
+                n = n + 1
+                obj.is_submit = True
+                for subProject in obj.subProject.all():
+                    subProject_old = SubProject.objects.get(id=subProject.id)
+                    subProject_old.is_status = 11
+                    subProject_old.save()
+                anaExecute = am_anaExecute.objects.create(ana_submit=obj)
+                obj.save()
+        self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
+                          level=messages.ERROR)
+    make_AnaSubmit_submit.short_description = '提交分析任务'
 
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
         if obj:
             if obj.is_submit:
                 readonly_fields = ['subProject', 'ana_number', 'ana_start_date', 'note', 'sample_count',
-                                   'depart_data_path', 'data_analysis', ]
+                                   'depart_data_path', 'data_analysis','contract_number', 'sub_project_name', 'contacts', 'partner_company' ]
         return readonly_fields
 
-    def save_model(self, request, obj, form, change):
-        if obj.is_submit:
-            # is_submits = obj.save(is_submit=False)
-            obj.subProject.is_status = 11
-            obj.subProject.save()
-            obj.save_m2m()
+    def get_queryset(self, request):
+        qs = super(AnaSubmitAdmin, self).get_queryset(request)
+        # 普通项目管理只能看到自己的下任务,其他的有权限的人可以看到所有的任务
+        groups = Group.objects.filter(user__id = request.user.id)
+        if len(groups) >= 1:
+            for i in groups:
+                if i.name == "项目管理":
+                    return qs.filter(project_manager=request.user)
+                else:
+                    return qs
         else:
+            return qs
+
+        # 更改修改表单里的按钮
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        add = object_id is None
+        if add:
             pass
-        super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
+        else:
+            obj = AnaSubmit.objects.get(pk=object_id)
+            if obj:
+                if obj.is_submit:
+                    extra_context['show_delete'] = False
+                    extra_context['show_save_and_add_another'] = False
+                    extra_context['show_save'] = False
+                    extra_context['show_save_as_new'] = False
+                    extra_context['show_save_and_continue'] = False
+        return super(AnaSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+
+    # def save_model(self, request, obj, form, change):
+    #     if obj.is_submit:
+    #         # is_submits = obj.save(is_submit=False)
+    #         obj.subProject.is_status = 11
+    #         obj.subProject.save()
+    #         obj.save_m2m()
+    #     else:
+    #         pass
+    #     super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
 
     # print(SubProject.objects.get(pk=1))
     # entry = SubProject.objects.get(pk=1)

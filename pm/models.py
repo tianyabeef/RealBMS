@@ -70,7 +70,6 @@ class SubProject(models.Model):
 
     def file_link(self):
         if self.file_to_start:
-            print(self.file_to_start.url)
             return format_html(
             "<a href='{0}'>下载</a>" .format(self.file_to_start.url))
 
@@ -177,7 +176,7 @@ class AnaSubmit(models.Model):
     ana_start_date = models.DateField('分析开始日期', blank=True, null=True)
     note = models.TextField('备注', blank=True, null=True)
     sample_count = models.IntegerField('样品数量',default=0)
-    is_submit = models.BooleanField('提交')
+    is_submit = models.BooleanField('提交', default=False)
     depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
     data_analysis = models.FileField(verbose_name="数据分析单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
 
@@ -193,3 +192,14 @@ class AnaSubmit(models.Model):
 
     def __str__(self):
         return '%s' % self.ana_number
+
+    def file_link(self):
+        if self.data_analysis:
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.data_analysis.url))
+
+        else:
+            return "未上传"
+
+    file_link.allow_tags = True
+    file_link.short_description = "已上传信息"
