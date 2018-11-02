@@ -109,7 +109,7 @@ class LibSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(建库)', on_delete=models.SET_NULL, null=True)
     project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品", blank=True,)
-    lib_number = models.CharField('建库号', max_length=100)
+    lib_number = models.CharField('建库号', max_length=100,blank=True,null=True)
     lib_start_date = models.DateField("建库开始日期", blank=True, null=True)
     customer_confirmation_time = models.DateField('客户确认时间', blank=True, null=True)
     customer_sample_count = models.IntegerField('客户确认样品数量', blank=True, null=True)
