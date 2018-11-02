@@ -70,7 +70,6 @@ class SubProject(models.Model):
 
     def file_link(self):
         if self.file_to_start:
-            print(self.file_to_start.url)
             return format_html(
             "<a href='{0}'>下载</a>" .format(self.file_to_start.url))
 
@@ -83,9 +82,10 @@ class SubProject(models.Model):
 # 抽提提交
 class ExtSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(抽提)', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择抽提样品", blank=True,)
     ext_number = models.CharField('抽提号', max_length=100)
-    ext_start_date = models.DateField("提取开始日期", blank=True, null=True)
+    ext_start_date = models.DateField("提取下单日期", blank=True, null=True)
     sample_count = models.IntegerField('样品数量', blank=True, null=True)
     # ext_result = models.FileField('抽提结果')外键一张抽提样品表
     note = models.TextField('实验任务备注', blank=True, null=True)
@@ -107,6 +107,7 @@ class ExtSubmit(models.Model):
 # 建库提交
 class LibSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目(建库)', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择建库样品", blank=True,)
     lib_number = models.CharField('建库号', max_length=100)
     lib_start_date = models.DateField("建库开始日期", blank=True, null=True)
@@ -134,6 +135,7 @@ class LibSubmit(models.Model):
 # 测序提交
 class SeqSubmit(models.Model):
     subProject = models.ForeignKey('SubProject', verbose_name='子项目编号', on_delete=models.SET_NULL, null=True)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     sample = models.ManyToManyField("sample.SampleInfo", verbose_name="选择测序样品", blank=True,)
     seq_number = models.CharField('测序号', max_length=100)
     seq_start_date = models.DateField('测序上机日期', blank=True, null=True)
@@ -167,15 +169,16 @@ class AnaSubmit(models.Model):
     #     on_delete=models.SET_NULL, null=True
     # )
     subProject = models.ManyToManyField('SubProject', verbose_name='子项目编号', blank=True,)
+    project_manager = models.ForeignKey(User, verbose_name="项目管理员", on_delete=models.SET_NULL, null=True)
     # 里面包含合同编号，合同名称
     ana_number = models.CharField('分析号', max_length=100,default="")
     # invoice_code = models.CharField('发票号码', max_length=12, unique=True)
     ana_start_date = models.DateField('分析开始日期', blank=True, null=True)
     note = models.TextField('备注', blank=True, null=True)
     sample_count = models.IntegerField('样品数量',default=0)
-    is_submit = models.BooleanField('提交')
+    is_submit = models.BooleanField('提交', default=False)
     depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
-    data_analysis = models.FileField(verbose_name="数据分析单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
+    confirmation_sheet = models.FileField(verbose_name="数据分析确认单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
 
     # def save(self, *args, **kwargs):
     #     super(AnaSubmit, self).save(*args, **kwargs)
@@ -189,3 +192,14 @@ class AnaSubmit(models.Model):
 
     def __str__(self):
         return '%s' % self.ana_number
+
+    def file_link(self):
+        if self.confirmation_sheet:
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.confirmation_sheet.url))
+
+        else:
+            return "未上传"
+
+    file_link.allow_tags = True
+    file_link.short_description = "已上传信息"
