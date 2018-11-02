@@ -755,7 +755,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
 # 分析提交管理
 class AnaSubmitAdmin(admin.ModelAdmin):
     # form = AnaSubmitForm
-    list_display = ['ana_number', 'sample_count', 'ana_start_date', 'depart_data_path', 'data_analysis',
+    list_display = ['ana_number', 'sample_count', 'ana_start_date', 'depart_data_path', 'confirmation_sheet',
                     # 'contract_count',
                     # 'project_count',
                     'is_submit', 'note','file_link' ]
@@ -766,7 +766,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
         }),
         ('任务信息',{
             'fields':('ana_number', ('subProject',),'sample_count', 'ana_start_date',
-              'depart_data_path', 'data_analysis',('note'),)
+              'depart_data_path', 'confirmation_sheet',('note'),)
         })
     )
     readonly_fields = ['contract_number', 'contacts', 'partner_company']
@@ -805,6 +805,10 @@ class AnaSubmitAdmin(admin.ModelAdmin):
                 sn = sn + 1
             elif not obj.ana_start_date:
                 un = un + 1
+            elif not obj.confirmation_sheet:
+                un = un + 1
+            elif not obj.depart_data_path:
+                un = un + 1
             else:
                 n = n + 1
                 obj.is_submit = True
@@ -823,7 +827,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
         if obj:
             if obj.is_submit:
                 readonly_fields = ['subProject', 'ana_number', 'ana_start_date', 'note', 'sample_count',
-                                   'depart_data_path', 'data_analysis','contract_number', 'sub_project_name', 'contacts', 'partner_company' ]
+                                   'depart_data_path', 'confirmation_sheet','contract_number', 'sub_project_name', 'contacts', 'partner_company' ]
         return readonly_fields
 
     def get_queryset(self, request):
@@ -865,12 +869,6 @@ class AnaSubmitAdmin(admin.ModelAdmin):
     #     else:
     #         pass
     #     super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
-
-    # print(SubProject.objects.get(pk=1))
-    # entry = SubProject.objects.get(pk=1)
-    # joe = SubProject.objects.create(is_status=11)
-    # entry.SubProject.add(joe)
-    # super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
 
 
 BMS_admin_site.register(SubProject, SubProjectAdmin)

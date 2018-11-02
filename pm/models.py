@@ -178,7 +178,7 @@ class AnaSubmit(models.Model):
     sample_count = models.IntegerField('样品数量',default=0)
     is_submit = models.BooleanField('提交', default=False)
     depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
-    data_analysis = models.FileField(verbose_name="数据分析单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
+    confirmation_sheet = models.FileField(verbose_name="数据分析确认单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
 
     # def save(self, *args, **kwargs):
     #     super(AnaSubmit, self).save(*args, **kwargs)
@@ -194,9 +194,9 @@ class AnaSubmit(models.Model):
         return '%s' % self.ana_number
 
     def file_link(self):
-        if self.data_analysis:
+        if self.confirmation_sheet:
             return format_html(
-            "<a href='{0}'>下载</a>" .format(self.data_analysis.url))
+            "<a href='{0}'>下载</a>" .format(self.confirmation_sheet.url))
 
         else:
             return "未上传"

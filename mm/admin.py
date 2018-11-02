@@ -397,7 +397,7 @@ class ContractAdmin(ExportActionModelAdmin):
             params = {"access_token": dingding.access_token}
             if user_id:
                 data = {
-                    "agent_id": settings.agent_id,
+                    "agent_id": settings.DINGTALK_AGENT_ID,
                     "userid_list": user_id,
                     "msg": {
                         "msgtype": "text",
