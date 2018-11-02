@@ -1,8 +1,10 @@
 from am.models import AnaExecute, WeeklyReport
-from pm.models import AnaSubmit
+from django.contrib.auth.models import Group
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
+from BMS.notice_mixin import NotificationMixin
+from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
 
 
 class AnaExecuteResource(resources.ModelResource):
@@ -11,12 +13,12 @@ class AnaExecuteResource(resources.ModelResource):
         model = AnaExecute
         skip_unchanged = True
         fields = (
-            "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-            "depart_data_path", "baidu_link", "is_submit"
+            "ana_submit", "analyst", "notes", "end_date", "baidu_link",
+            "is_submit"
         )
         export_order = (
-            "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-            "depart_data_path", "baidu_link", "is_submit"
+            "ana_submit", "analyst", "notes", "end_date", "baidu_link",
+            "is_submit"
         )
 
     def get_export_headers(self):
@@ -26,7 +28,7 @@ class AnaExecuteResource(resources.ModelResource):
         ]
 
 
-class AnaExecuteAdmin(ImportExportModelAdmin):
+class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     resource_class = AnaExecuteResource
     list_per_page = 30
     save_as_continue = False
@@ -35,22 +37,66 @@ class AnaExecuteAdmin(ImportExportModelAdmin):
         "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
         "depart_data_path", "baidu_link", "is_submit"
     )
-    list_display_links = ('ana_submit', )
+    list_display_links = (
+        'ana_submit', "confirmation_sheet", "depart_data_path",
+    )
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
-            "ana_submit", "analyst", "end_date", "confirmation_sheet",
-            "depart_data_path", "baidu_link", "is_submit"
-        ) if obj and obj.is_submit else ()
+            "ana_submit", "analyst", "end_date", "baidu_link", "is_submit"
+        ) if obj and obj.is_submit else ("ana_submit", )
         return self.readonly_fields
+    
+    def depart_data_path(self, obj):
+        return obj.ana_submit.depart_data_path
+    
+    def confirmation_sheet(self, obj):
+        return obj.ana_submit.confirmation_sheet
+    
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == "ana_submit":
+            kwargs["queryset"] = AnaExecute.objects.filter(
+                ana_submit__subProject__is_status=11
+            )
+        return super(AnaExecuteAdmin, self).formfield_for_dbfield(
+            db_field, request, **kwargs
+        )
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "analyst":
+            analyst_group = Group.objects.get(id=9)
+            kwargs["queryset"] = analyst_group.user_set.all()
+        return super(AnaExecuteAdmin, self).formfield_for_foreignkey(
+            db_field, request, **kwargs
+        )
+    
+    def get_changeform_initial_data(self, request):
+        initial = super(AnaExecuteAdmin, self).get_changeform_initial_data(
+            request
+        )
+        initial["analyst"] = request.user.id
+        # initial["analyst"] = 14
+        return initial
     
     def save_model(self, request, obj, form, change):
         super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
-        if obj.is_submit:
-            ana_number = obj.ana_submit.ana_number
-            ana_submit = AnaSubmit.objects.get(ana_number=ana_number)
+        ana_number = obj.ana_submit.ana_number
+        ana_execute = AnaExecute.objects.get(ana_submit__ana_number=ana_number)
+        ana_submit = ana_execute.ana_submit
+        if obj.is_submit and obj.baidu_link and obj.end_date:
+            ana_submit.subProject.all().update(is_status=13)
+            name_list = [n.sub_project for n in ana_submit.subProject.all()]
+            content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
+            self.send_work_notice(content, DINGTALK_AGENT_ID, "")
+            if self.send_dingtalk_result:
+                self.message_user(request, "已通知项目管理")
+            else:
+                self.message_user(request, "钉钉通知发送失败")
+        else:
             ana_submit.subProject.all().update(is_status=12)
-
+    
 
 class WeeklyReportResource(resources.ModelResource):
     """The import_export resource class for model WeeklyReport"""

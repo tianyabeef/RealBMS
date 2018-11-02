@@ -9,19 +9,13 @@ class AnaExecute(models.Model):
         AnaSubmit, verbose_name="子项目编号（分析）", on_delete=models.CASCADE
     )
     analyst = models.ForeignKey(
-        User, verbose_name="生信分析员", on_delete=models.CASCADE
+        User, verbose_name="生信分析员", on_delete=models.SET_NULL, null=True
     )
     submit_date = models.DateField(
         verbose_name="分析提交日期", auto_now_add=True
     )
     end_date = models.DateField(
         verbose_name="实际结束日期", blank=True, null=True
-    )
-    confirmation_sheet = models.URLField(
-        verbose_name="分析确认单", max_length=512, blank=True, null=True
-    )
-    depart_data_path = models.CharField(
-        verbose_name="数据拆分路径", max_length=512, blank=True, null=True
     )
     baidu_link = models.CharField(
         verbose_name="结果百度链接", max_length=512, blank=True, null=True
