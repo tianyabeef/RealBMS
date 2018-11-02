@@ -142,7 +142,7 @@ class SeqSubmit(models.Model):
     customer_confirmation_time = models.DateField('客户确认上机时间', blank=True, null=True)
     customer_sample_count = models.IntegerField('客户确认上机样品数量', blank=True, null=True)
     # customer_sample_info = models.FileField('客上机样本明细')
-    pooling_excel = models.FileField(verbose_name="Pooling表格", upload_to="uploads/pooling/%Y/%m/%d/", blank=True)
+    pooling_excel = models.FileField(verbose_name="Pooling表格", upload_to="uploads/pooling/%Y/%m/%d/")
     # 外键一张测序样品表
     note = models.TextField('备注', blank=True, null=True)
     is_submit = models.BooleanField('提交', default=False)
@@ -178,7 +178,7 @@ class AnaSubmit(models.Model):
     sample_count = models.IntegerField('样品数量',default=0)
     is_submit = models.BooleanField('提交', default=False)
     depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
-    confirmation_sheet = models.FileField(verbose_name="数据分析确认单", upload_to="uploads/ana/%Y/%m/%d/", blank=True)
+    confirmation_sheet = models.FileField(verbose_name="数据分析确认单", upload_to="uploads/ana/%Y/%m/%d/")
 
     # def save(self, *args, **kwargs):
     #     super(AnaSubmit, self).save(*args, **kwargs)
