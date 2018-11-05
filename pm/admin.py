@@ -468,19 +468,18 @@ class ExtSubmitAdmin(admin.ModelAdmin):
         if not obj.ext_number:
             ext_number = creat_uniq_number(request, ExtSubmit, 'Ext')
             obj.ext_number = ext_number
+        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+
         if ExtSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.sample_count = obj.sample.all().count()
+            obj.save()
         else:
-            obj.id = str(int(ExtSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.sample_count = obj.sample.all().count()
-        # for sample in obj.sample.all():
-        #     sample_old = SampleInfo.objects.get(id=sample.id)
-        #     sample_old.save()
-        #     obj.sample_count = sample_old
-            # obj.sample_count.save()
+            obj.save()
 
-        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+
 
 
 # 建库提交表
@@ -600,20 +599,32 @@ class LibSubmitAdmin(admin.ModelAdmin):
         return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
+        # if not obj.lib_number:
+        #     lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
+        #     obj.lib_number = lib_number
+        # # for sample in obj.sample.all():
+        # #     sample_old = SampleInfo.objects.get(id=sample.id)
+        # #     sample_old.save()
+        # #     obj.customer_sample_count = sample_old
+        # if LibSubmit.objects.all().count() == 0:
+        #     obj.id = "1"
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # else:
+        #     obj.id = str(int(LibSubmit.objects.latest("id").id) + 1)
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+
         if not obj.lib_number:
             lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
             obj.lib_number = lib_number
-        # for sample in obj.sample.all():
-        #     sample_old = SampleInfo.objects.get(id=sample.id)
-        #     sample_old.save()
-        #     obj.customer_sample_count = sample_old
+        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
         if LibSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
         else:
-            obj.id = str(int(LibSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
-        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+            obj.save()
 
 
 # 测序提交表
@@ -741,16 +752,28 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
+        # if not obj.seq_number:
+        #     seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
+        #     obj.seq_number = seq_number
+        # if SeqSubmit.objects.all().count() == 0:
+        #     obj.id = "1"
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # else:
+        #     obj.id = str(int(SeqSubmit.objects.latest("id").id) + 1)
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+
         if not obj.seq_number:
             seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
             obj.seq_number = seq_number
+        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
         if SeqSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
         else:
-            obj.id = str(int(SeqSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
-        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+            obj.save()
 
 # # 分析提交表
 # class AnaSubmitForm(forms.ModelForm):
