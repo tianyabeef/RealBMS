@@ -628,7 +628,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                     'pooling_excel',
                     # 'contract_count',  'project_count',
                     # 'sample_count',
-                    'customer_sample_count', 'is_submit', 'note',
+                    'is_submit', 'note',
                     ]
     filter_horizontal = ('sample',)
 
@@ -643,7 +643,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         })
     )
 
-    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company']
+    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number']
     # raw_id_fields = ['subProject', ]
 
     def contacts(self, obj):
@@ -800,7 +800,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
               'depart_data_path', 'confirmation_sheet',('note'),)
         })
     )
-    readonly_fields = ['contract_number', 'contacts', 'partner_company']
+    readonly_fields = ['contract_number', 'contacts', 'partner_company', 'ana_number',]
     # raw_id_fields = ['subProject', ]
     filter_horizontal = ('subProject',)
 
