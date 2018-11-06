@@ -395,6 +395,22 @@ class ExtSubmitAdmin(admin.ModelAdmin):
 
     actions = ['make_ExtSubmit_submit', ]
 
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(ExtSubmitAdmin,self).get_object(request,object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request,**kwargs):
+
+        if db_field.name == "sample" and getattr(self,"obj",None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+
     def make_ExtSubmit_submit(self, request, queryset):
         """
         提交提取的表单
@@ -464,6 +480,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save'] = False
                     extra_context['show_save_as_new'] = False
                     extra_context['show_save_and_continue'] = False
+
         return super(ExtSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
@@ -532,6 +549,22 @@ class LibSubmitAdmin(admin.ModelAdmin):
         return ['lib_number']
 
     actions = ['make_LibSubmit_submit', ]
+
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(LibSubmitAdmin, self).get_object(request, object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+
+        if db_field.name == "sample" and getattr(self, "obj", None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(LibSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_LibSubmit_submit(self, request, queryset):
         """
@@ -689,6 +722,22 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         return ['seq_number']
 
     actions = ['make_SeqSubmit_submit', ]
+
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(SeqSubmitAdmin, self).get_object(request, object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+
+        if db_field.name == "sample" and getattr(self, "obj", None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(SeqSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_SeqSubmit_submit(self, request, queryset):
         """
