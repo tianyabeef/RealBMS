@@ -395,6 +395,22 @@ class ExtSubmitAdmin(admin.ModelAdmin):
 
     actions = ['make_ExtSubmit_submit', ]
 
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(ExtSubmitAdmin,self).get_object(request,object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request,**kwargs):
+
+        if db_field.name == "sample" and getattr(self,"obj",None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+
     def make_ExtSubmit_submit(self, request, queryset):
         """
         提交提取的表单
@@ -410,11 +426,13 @@ class ExtSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_status = 2
-                obj.subProject.save()
+                if obj.subProject.is_status < 2:
+                    SubProject.objects.filter(sub_number = obj.subProject).update(is_status = 2)
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重抽提（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoExt = lims_SampleInfoExt.objects.create(extExecute=extExecute)
                     sampleInfoExt.unique_code = sampleInfo.unique_code
                     sampleInfoExt.sample_number = sampleInfo.sample_number
@@ -462,25 +480,27 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     extra_context['show_save'] = False
                     extra_context['show_save_as_new'] = False
                     extra_context['show_save_and_continue'] = False
+
         return super(ExtSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
         if not obj.ext_number:
             ext_number = creat_uniq_number(request, ExtSubmit, 'Ext')
             obj.ext_number = ext_number
+        if not obj.project_manager:
+            obj.project_manager = request.user
+        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+
         if ExtSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.sample_count = obj.sample.all().count()
+            obj.save()
         else:
-            obj.id = str(int(ExtSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.sample_count = obj.sample.all().count()
-        # for sample in obj.sample.all():
-        #     sample_old = SampleInfo.objects.get(id=sample.id)
-        #     sample_old.save()
-        #     obj.sample_count = sample_old
-            # obj.sample_count.save()
+            obj.save()
 
-        super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
+
 
 
 # 建库提交表
@@ -530,6 +550,22 @@ class LibSubmitAdmin(admin.ModelAdmin):
 
     actions = ['make_LibSubmit_submit', ]
 
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(LibSubmitAdmin, self).get_object(request, object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+
+        if db_field.name == "sample" and getattr(self, "obj", None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(LibSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+
     def make_LibSubmit_submit(self, request, queryset):
         """
         提交建库的表单
@@ -546,11 +582,13 @@ class LibSubmitAdmin(admin.ModelAdmin):
                 n = n + 1
                 obj.is_submit = True
                 if obj.subProject.is_status < 5:
-                    obj.subProject.is_status =  5
+                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=5)
                 obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重建库（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoLib = lims_SampleInfoLib.objects.create(libExecute=libExecute)
                     sampleInfoLib.unique_code = sampleInfo.unique_code
                     sampleInfoLib.sample_number = sampleInfo.sample_number
@@ -600,20 +638,34 @@ class LibSubmitAdmin(admin.ModelAdmin):
         return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
+        # if not obj.lib_number:
+        #     lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
+        #     obj.lib_number = lib_number
+        # # for sample in obj.sample.all():
+        # #     sample_old = SampleInfo.objects.get(id=sample.id)
+        # #     sample_old.save()
+        # #     obj.customer_sample_count = sample_old
+        # if LibSubmit.objects.all().count() == 0:
+        #     obj.id = "1"
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # else:
+        #     obj.id = str(int(LibSubmit.objects.latest("id").id) + 1)
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+
         if not obj.lib_number:
             lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
             obj.lib_number = lib_number
-        # for sample in obj.sample.all():
-        #     sample_old = SampleInfo.objects.get(id=sample.id)
-        #     sample_old.save()
-        #     obj.customer_sample_count = sample_old
+        if not obj.project_manager:
+            obj.project_manager = request.user
+        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
         if LibSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
         else:
-            obj.id = str(int(LibSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
-        super(LibSubmitAdmin, self).save_model(request, obj, form, change)
+            obj.save()
 
 
 # 测序提交表
@@ -628,7 +680,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                     'pooling_excel',
                     # 'contract_count',  'project_count',
                     # 'sample_count',
-                    'customer_sample_count', 'is_submit', 'note',
+                    'is_submit', 'note',
                     ]
     filter_horizontal = ('sample',)
 
@@ -643,7 +695,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         })
     )
 
-    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company']
+    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number']
     # raw_id_fields = ['subProject', ]
 
     def contacts(self, obj):
@@ -671,6 +723,22 @@ class SeqSubmitAdmin(admin.ModelAdmin):
 
     actions = ['make_SeqSubmit_submit', ]
 
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(SeqSubmitAdmin, self).get_object(request, object_id)
+
+        return self.obj
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+
+        if db_field.name == "sample" and getattr(self, "obj", None):
+
+            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+
+            for i in sampleinfoform:
+                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+        return super(SeqSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+
     def make_SeqSubmit_submit(self, request, queryset):
         """
         提交测序的表单
@@ -687,11 +755,13 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                 n = n + 1
                 obj.is_submit = True
                 if obj.subProject.is_status < 8:
-                    obj.subProject.is_status = 8
+                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=8)
                 obj.subProject.save()
                 seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重测序（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoseq = lims_SampleInfoSeq.objects.create(seqExecute=seqExecute)
                     sampleInfoseq.unique_code = sampleInfo.unique_code
                     sampleInfoseq.sample_number = sampleInfo.sample_number
@@ -741,16 +811,30 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
+        # if not obj.seq_number:
+        #     seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
+        #     obj.seq_number = seq_number
+        # if SeqSubmit.objects.all().count() == 0:
+        #     obj.id = "1"
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # else:
+        #     obj.id = str(int(SeqSubmit.objects.latest("id").id) + 1)
+        #     obj.customer_sample_count = obj.sample.all().count()
+        # super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+
         if not obj.seq_number:
             seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
             obj.seq_number = seq_number
+        if not obj.project_manager:
+            obj.project_manager = request.user
+        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
         if SeqSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
         else:
-            obj.id = str(int(SeqSubmit.objects.latest("id").id) + 1)
+            obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
-        super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
+            obj.save()
 
 # # 分析提交表
 # class AnaSubmitForm(forms.ModelForm):
@@ -800,7 +884,7 @@ class AnaSubmitAdmin(admin.ModelAdmin):
               'depart_data_path', 'confirmation_sheet',('note'),)
         })
     )
-    readonly_fields = ['contract_number', 'contacts', 'partner_company']
+    readonly_fields = ['contract_number', 'contacts', 'partner_company', 'ana_number',]
     # raw_id_fields = ['subProject', ]
     filter_horizontal = ('subProject',)
 

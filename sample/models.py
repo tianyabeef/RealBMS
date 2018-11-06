@@ -246,7 +246,7 @@ class SampleInfo(models.Model):
     sample_species = models.CharField(max_length=200, verbose_name="物种", default='')
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
-    color_code = models.CharField(max_length=6,blank=True,null=True)
+    color_code = models.CharField(max_length=6,blank=True,null=True,default="")
     sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
 
     # sample_status = models.IntegerField(choices=Status_of_Sample,verbose_name="样品状态",default=1)
@@ -281,9 +281,9 @@ class SampleInfo(models.Model):
 
     def __str__(self):
         return format_html(
-            '<span style="color: {};">{}</span>',
-            self.color_code,
-            self.sample_number)
+            '<h5 >{}_{}</h5>',
+            self.sample_number,
+            self.color_code)
 
     class Meta:
         verbose_name = "详细样品信息"
