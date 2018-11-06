@@ -420,11 +420,13 @@ class ExtSubmitAdmin(admin.ModelAdmin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                obj.subProject.is_status = 2
-                obj.subProject.save()
+                if obj.subProject.is_status < 2:
+                    SubProject.objects.filter(sub_number = obj.subProject).update(is_status = 2)
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重抽提（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoExt = lims_SampleInfoExt.objects.create(extExecute=extExecute)
                     sampleInfoExt.unique_code = sampleInfo.unique_code
                     sampleInfoExt.sample_number = sampleInfo.sample_number
@@ -478,6 +480,8 @@ class ExtSubmitAdmin(admin.ModelAdmin):
         if not obj.ext_number:
             ext_number = creat_uniq_number(request, ExtSubmit, 'Ext')
             obj.ext_number = ext_number
+        if not obj.project_manager:
+            obj.project_manager = request.user
         super(ExtSubmitAdmin, self).save_model(request, obj, form, change)
 
         if ExtSubmit.objects.all().count() == 0:
@@ -555,11 +559,13 @@ class LibSubmitAdmin(admin.ModelAdmin):
                 n = n + 1
                 obj.is_submit = True
                 if obj.subProject.is_status < 5:
-                    obj.subProject.is_status =  5
+                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=5)
                 obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重建库（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoLib = lims_SampleInfoLib.objects.create(libExecute=libExecute)
                     sampleInfoLib.unique_code = sampleInfo.unique_code
                     sampleInfoLib.sample_number = sampleInfo.sample_number
@@ -627,6 +633,8 @@ class LibSubmitAdmin(admin.ModelAdmin):
         if not obj.lib_number:
             lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
             obj.lib_number = lib_number
+        if not obj.project_manager:
+            obj.project_manager = request.user
         super(LibSubmitAdmin, self).save_model(request, obj, form, change)
         if LibSubmit.objects.all().count() == 0:
             obj.id = "1"
@@ -708,11 +716,13 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                 n = n + 1
                 obj.is_submit = True
                 if obj.subProject.is_status < 8:
-                    obj.subProject.is_status = 8
+                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=8)
                 obj.subProject.save()
                 seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
+                    if "_" in sampleInfo.color_code:
+                        sampleInfo.color_code = "重测序（已执行）_" + sampleInfo.color_code[-1]
                     sampleInfoseq = lims_SampleInfoSeq.objects.create(seqExecute=seqExecute)
                     sampleInfoseq.unique_code = sampleInfo.unique_code
                     sampleInfoseq.sample_number = sampleInfo.sample_number
@@ -776,6 +786,8 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         if not obj.seq_number:
             seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
             obj.seq_number = seq_number
+        if not obj.project_manager:
+            obj.project_manager = request.user
         super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
         if SeqSubmit.objects.all().count() == 0:
             obj.id = "1"
