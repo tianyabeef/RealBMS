@@ -100,7 +100,7 @@ class SubProjectAdmin(admin.ModelAdmin):
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
                     'project_manager', 'is_submit', 'status','file_link','is_status')
     list_display_links = ['sub_number', ]
-    actions = ['make_submit', ]
+    actions = ['make_submit', 'make_subProject_submit']
     # list_editable = ['is_confirm']
     # list_filter = [StatusListFilter]
     fieldsets = (
@@ -135,6 +135,16 @@ class SubProjectAdmin(admin.ModelAdmin):
     # actions = ['make_confirm']
     search_fields = ['contract__contract_number','sub_number']
     # change_list_template = "pm/chang_list_custom.html"
+
+    def make_subProject_submit(self, request,queryset):
+        """
+        终止任务
+        """
+        for obj in queryset:
+            if obj.is_submit:
+                obj.is_status = 14
+                obj.save()
+    make_subProject_submit.short_description = '终止'
 
     def contract_number(self, obj):
         return obj.contract.contract_number
@@ -492,7 +502,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
     # form = LibSubmitForm
     list_display = ['subProject', 'lib_number', 'customer_sample_count', 'lib_start_date', 'customer_confirmation_time',
                     # 'contract_count', 'project_count',
-                    'customer_sample_count', 'is_submit', 'note', ]
+                    'is_submit', 'note', ]
     filter_horizontal = ('sample',)
     fieldsets = (
         ('合同信息',{
