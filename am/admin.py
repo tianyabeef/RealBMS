@@ -81,9 +81,7 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
         initial = super(AnaExecuteAdmin, self).get_changeform_initial_data(
             request
         )
-        # initial["analyst"] = request.user.id
-        print("test")
-        initial["analyst"] = 14
+        initial["analyst"] = request.user.id
         return initial
     
     def save_model(self, request, obj, form, change):

@@ -24,7 +24,7 @@ from notification.signals import notify
 from operator import is_not
 from functools import partial
 from django.utils import formats
-# from BMS import dingding
+from BMS import dingding
 from BMS import settings
 from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
 from em.models import Employees
