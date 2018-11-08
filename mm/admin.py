@@ -4,7 +4,7 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from sample.models import SampleInfoForm
 from BMS.admin_bms import BMS_admin_site
-from .models import Invoice, Contract,InvoiceTitle
+from .models import Invoice, Contract, InvoiceTitle, BzContract
 from fm.models import Invoice as fm_Invoice
 from fm.models import Bill
 from django.contrib import messages
@@ -214,7 +214,7 @@ class ContractAdmin(ExportActionModelAdmin):
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone','contacts_email','contact_address'), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
+            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone','contacts_email','contact_address',"partner_company"), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
         }),
         ('邮寄信息', {
             'fields': ('tracking_number','send_date','receive_date')
@@ -441,6 +441,14 @@ class ContractAdmin(ExportActionModelAdmin):
                                             (obj.contract_number,obj.name,obj.contacts,obj.contact_phone))
         obj.save()
 
+
+class BzContractAdmin(admin.ModelAdmin):
+
+    filter_horizontal = ["contract",]
+
+    list_display = ["contract_number","name","send_date","receive_date"]
+
+BMS_admin_site.register(BzContract, BzContractAdmin)
 BMS_admin_site.register(Contract, ContractAdmin)
 BMS_admin_site.register(Invoice, InvoiceAdmin)
 BMS_admin_site.register(InvoiceTitle,InvoiceTitleAdmin)
