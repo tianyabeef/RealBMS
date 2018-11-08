@@ -203,6 +203,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 return qs
             elif current_group_set.name == "合作伙伴":
                 return qs.filter(partner_email=request.user)
+            else:
+                return qs
         except:
             return qs
 
@@ -216,7 +218,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
         extra_context['show_save_as_new'] = True
         extra_context['show_save_and_continue'] = False
         return super(SampleInfoFormAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
-# 设置老师没有导入功能
+
 
 
     def import_action(self, request, *args, **kwargs):
