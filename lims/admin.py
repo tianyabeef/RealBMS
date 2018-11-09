@@ -1,5 +1,4 @@
 import datetime
-import gc
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from import_export import resources
@@ -104,12 +103,15 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
                 self.readonly_fields = ('extSubmit','ext_experimenter',"extract_method","test_method",'upload_file','ext_end_date', 'note',"is_submit",)
                 return self.readonly_fields
         except:
+
             return self.readonly_fields
+
         return self.readonly_fields
 
     def save_model(self, request, obj, form, change):
 
         if not obj.ext_experimenter.all():
+
             raise Exception("请先选择实验员")
 
         super().save_model(request, obj, form, change)
