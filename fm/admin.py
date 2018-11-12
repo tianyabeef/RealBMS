@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from BMS.admin_bms import BMS_admin_site
 from .models import Bill, Invoice
+from .models import Invoice as fm_Invoice
 from datetime import datetime
 from django.contrib import messages
 from django.contrib.admin.views.main import ChangeList
@@ -16,7 +17,15 @@ from import_export.widgets import ForeignKeyWidget
 from mm.models import Contract
 from notification.signals import notify
 from pm.models import SubProject
+from django import forms
 
+class InvoiceForm(forms.ModelForm):
+    def clean_invoice_code(self):
+        invoice_code = self.cleaned_data['invoice_code']
+        for invoice in fm_Invoice.objects.all():
+            if invoice.invoice_code == invoice_code:
+                raise forms.ValidationError('发票号码不能重复')
+        return self.cleaned_data['invoice_code']
 
 class InvoiceChangeList(ChangeList):
     def get_results(self, *args, **kwargs):
@@ -117,6 +126,7 @@ class SaleListFilter(admin.SimpleListFilter):
 
 
 class InvoiceAdmin(ExportActionModelAdmin):
+    form = InvoiceForm
     resource_class = InvoiceInfoResource
     list_display = ('invoice_contract_number', 'invoice_contract_name', 'contract_amount', 'salesman_name',
                     'contract_type', 'invoice_period','invoice_issuingUnit', 'invoice_title', 'invoice_amount', 'income_date',
@@ -307,9 +317,10 @@ class InvoiceAdmin(ExportActionModelAdmin):
     def get_actions(self, request):
         # 无删除或新增权限人员取消actions,销售总监有export_admin_action权限
         actions = super(InvoiceAdmin, self).get_actions(request)
-        if not request.user.has_perm('fm.delete_invoice'):
-            # actions = None
-            del actions['delete_selected']
+        ##TODO,测试的时候报错，需要修改
+        # if not request.user.has_perm('fm.delete_invoice'):
+        #     # actions = None
+        #     del actions['delete_selected']
         if not request.user.has_perm('fm.add_invoice'):
             if not actions:
                 actions = None

@@ -1,12 +1,12 @@
 from django.db import models
-
+from django.utils.html import format_html
 
 class Invoice(models.Model):
     invoice = models.OneToOneField(
         'mm.Invoice',
         verbose_name='发票',on_delete=models.SET_NULL,null=True
     )
-    invoice_code = models.CharField('发票号码', max_length=12, unique=True)
+    invoice_code = models.CharField('发票号码', max_length=12,default="")
     date = models.DateField('开票日期', null=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     send_date = models.DateField('寄出日期', null=True,blank=True)
@@ -21,7 +21,7 @@ class Invoice(models.Model):
 
     def file_link(self):
         if self.invoice_file:
-            return "<a href='%s'>下载</a>" % (self.invoice_file.url,)
+            return format_html("<a href='%s'>下载</a>" % (self.invoice_file.url,))
         else:
             return "未上传"
     file_link.short_description = "电子发票"
