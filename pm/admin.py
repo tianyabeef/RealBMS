@@ -19,6 +19,9 @@ from lims.models import SampleInfoExt as lims_SampleInfoExt
 from lims.models import SampleInfoLib as lims_SampleInfoLib
 from lims.models import SampleInfoSeq as lims_SampleInfoSeq
 
+import time
+
+
 class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
         sample_count = self.cleaned_data['sample_count']

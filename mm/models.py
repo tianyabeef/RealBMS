@@ -12,7 +12,7 @@ class InvoiceTitle(models.Model):
         verbose_name_plural = '发票抬头'
 
     def __str__(self):
-        return '%s' % self.title
+        return '%s-%s' % (self.title, self.tariffItem)
 
 
 class Contract(models.Model):
@@ -30,16 +30,10 @@ class Contract(models.Model):
     )
     contract_number = models.CharField('合同号', max_length=30, unique=True)
     name = models.CharField('合同名', max_length=100)
-    type = models.IntegerField(
-        '类型',
-        choices=TYPE_CHOICES
-    )
+    type = models.IntegerField('类型', choices=TYPE_CHOICES)
     salesman = models.ForeignKey(User, verbose_name='业务员', on_delete=models.SET_NULL, null=True)
     price = models.DecimalField('单价', max_digits=7, decimal_places=2, blank=True)
-    range = models.IntegerField(
-        '价格区间',
-        choices=RANGE_CHOICES, blank=True
-    )
+    range = models.IntegerField('价格区间', choices=RANGE_CHOICES, blank=True)
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     fis_amount = models.DecimalField('首款额', max_digits=12, decimal_places=2)
     fis_date = models.DateField('首款到款日', blank=True, null=True)
@@ -57,7 +51,6 @@ class Contract(models.Model):
     contact_address = models.CharField('合同联系人地址', max_length=30, blank=True)
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位", default="")
     use_amount = models.DecimalField("已使用的金额", null=True, blank=True, max_digits=12, decimal_places=2, default=0)
-
     contact_note = models.TextField('合同备注', blank=True)
 
     class Meta:
@@ -93,15 +86,22 @@ class Invoice(models.Model):
         ('sz', '金锐生物'),
     )
     contract = models.ForeignKey(
-        Contract,
-        verbose_name='合同',
-        on_delete=models.CASCADE,
+        Contract, verbose_name='合同', on_delete=models.CASCADE,
     )
-    title = models.ForeignKey(InvoiceTitle, verbose_name='发票抬头', on_delete=models.SET_NULL, null=True)
-    issuingUnit = models.CharField('开票单位', choices=ISSUING_UNIT_CHOICES, max_length=25, default='sh')
-    period = models.CharField('款期', max_length=3, choices=PERIOD_CHOICES, default='FIS')
+    title = models.ForeignKey(
+        InvoiceTitle, verbose_name='发票抬头', on_delete=models.SET_NULL,
+        null=True
+    )
+    issuingUnit = models.CharField(
+        '开票单位', choices=ISSUING_UNIT_CHOICES, max_length=25, default='sh'
+    )
+    period = models.CharField(
+        '款期', max_length=3, choices=PERIOD_CHOICES, default='FIS'
+    )
     amount = models.DecimalField('发票金额', max_digits=9, decimal_places=2)
-    type = models.CharField('发票类型', max_length=3, choices=INVOICE_TYPE_CHOICES, default='CC')
+    type = models.CharField(
+        '发票类型', max_length=3, choices=INVOICE_TYPE_CHOICES, default='CC'
+    )
     content = models.TextField('发票内容', null=True)
     note = models.TextField('备注', null=True)
     submit = models.NullBooleanField('提交开票', null=True)

@@ -13,6 +13,14 @@ class DingtalkChatAdmin(admin.ModelAdmin):
     raw_id_fields = ("chat_owner", )
     search_fields = ("chat_id", "chat_name", )
     list_filter = ("is_valid", )
+    # readonly_fields = ("chat_id", )
+    
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        initial["chat_owner"] = request.user.id
+        initial["chat_id"] = "12345678"
+        initial["members"] = [request.user.id, 4]
+        return initial
 
 
 class ChatTemplatesAdmin(admin.ModelAdmin):

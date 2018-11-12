@@ -1,11 +1,12 @@
 from am.models import AnaExecute, WeeklyReport
 from django.contrib.auth.models import Group
+from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
-from django.utils.html import format_html
+
 
 class AnaExecuteResource(resources.ModelResource):
     """The import_export resource class for model AnaSubmit"""
@@ -54,9 +55,8 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     
     def file_link(self, obj):
         if obj.ana_submit.confirmation_sheet:
-            return format_html(
-            "<a href='{0}'>下载</a>" .format(obj.ana_submit.confirmation_sheet.url))
-
+            url = obj.ana_submit.confirmation_sheet.url
+            return format_html("<a href='{0}'>下载</a>" .format(url))
         else:
             return "未上传"
     
@@ -124,7 +124,12 @@ class WeeklyReportAdmin(ImportExportModelAdmin):
         "is_submit",
     )
     list_display_links = ('reporter', )
-    
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        initial["reporter"] = request.user
+        return initial
+
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
             "reporter", "start_date", "end_date", "content", "attachment",
