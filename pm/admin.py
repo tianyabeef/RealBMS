@@ -18,6 +18,9 @@ from am.models import AnaExecute as am_anaExecute
 from lims.models import SampleInfoExt as lims_SampleInfoExt
 from lims.models import SampleInfoLib as lims_SampleInfoLib
 from lims.models import SampleInfoSeq as lims_SampleInfoSeq
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
+
 
 import time
 
@@ -97,13 +100,34 @@ def create_submit_table(request,obj, states):
             else:
                 pass
             break
-class SubProjectAdmin(admin.ModelAdmin):
-    # resource_class = ProjectResource
+
+
+class SubProject_Resource(resources.ModelResource):
+    def get_export_headers(self):
+        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
+                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)',
+                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）','已上传信息']
+
+    class Meta:
+        model = SubProject
+        skip_unchanged = True
+        report_skipped = False
+        fields = ('contract__contract_number', 'contract__name', 'sub_number', 'sub_project', 'contract__contacts',
+                  'contract__salesman__username', 'project_manager__username', 'is_submit', 'status', 'file_to_start',
+                  'is_status', )
+        export_order = ('contract__contract_number', 'contract__name', 'sub_number', 'sub_project',
+                        'contract__contacts', 'contract__salesman__username', 'project_manager__username', 'is_submit',
+                        'status', 'file_to_start', 'is_status', )
+
+
+# class SubProjectAdmin(admin.ModelAdmin):
+class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
+    resource_class = SubProject_Resource
     form = SubProjectForm
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
                     'project_manager', 'is_submit', 'status','file_link','is_status')
     list_display_links = ['sub_number', ]
-    actions = ['make_submit', ]
+    actions = ['make_submit', 'make_subProject_submit']
     # list_editable = ['is_confirm']
     # list_filter = [StatusListFilter]
     fieldsets = (
@@ -136,8 +160,18 @@ class SubProjectAdmin(admin.ModelAdmin):
     raw_id_fields = ['contract', ]
     filter_horizontal = ['sampleInfoForm', ]
     # actions = ['make_confirm']
-    search_fields = ['contract__contract_number','sub_number']
+    search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
+                     'contract__salesman__username', 'project_manager__username', ]
     # change_list_template = "pm/chang_list_custom.html"
+    list_per_page = 20
+    def make_subProject_submit(self, request,queryset):
+        """
+        终止任务
+        """
+        for obj in queryset:
+            obj.is_status = 14
+            obj.save()
+    make_subProject_submit.short_description = '终止'
 
     def contract_number(self, obj):
         return obj.contract.contract_number
@@ -366,7 +400,8 @@ class ExtSubmitAdmin(admin.ModelAdmin):
         })
     )
     readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time','ext_number','sample_count',]
-
+    search_fields = ['subProject__sub_number', 'ext_number', 'sample_count', 'ext_start_date', 'note', ]
+    list_per_page = 20
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -503,7 +538,12 @@ class ExtSubmitAdmin(admin.ModelAdmin):
             obj.sample_count = obj.sample.all().count()
             obj.save()
 
-
+        if obj.subProject.is_status < 13:
+            obj.save()
+        elif obj.subProject.is_status == 13:
+            raise Exception("该子项目已经完成，请选择其他子项目")
+        else:
+            raise Exception("该子项目已经中止，请选择其他子项目")
 
 
 # 建库提交表
@@ -516,7 +556,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
     # form = LibSubmitForm
     list_display = ['subProject', 'lib_number', 'customer_sample_count', 'lib_start_date', 'customer_confirmation_time',
                     # 'contract_count', 'project_count',
-                    'customer_sample_count', 'is_submit', 'note', ]
+                    'is_submit', 'note', ]
     filter_horizontal = ('sample',)
     fieldsets = (
         ('合同信息',{
@@ -525,13 +565,15 @@ class LibSubmitAdmin(admin.ModelAdmin):
         }),
         ('任务信息',{
             'fields':('lib_number', 'sample', 'lib_start_date',
-              'customer_confirmation_time', 'customer_sample_count',('note'),)
+                      'customer_confirmation_time', ('note', ),)
         })
     )
 
     readonly_fields =  ['lib_number','contract_number', 'sub_project_name', 'contacts', 'partner_company']
+    search_fields = ['subProject__sub_number', 'lib_number', 'customer_sample_count', 'lib_start_date',
+                     'customer_confirmation_time', 'note', ]
     # raw_id_fields = ['subProject', ]
-
+    list_per_page = 20
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -669,6 +711,12 @@ class LibSubmitAdmin(admin.ModelAdmin):
             obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
             obj.save()
+        if obj.subProject.is_status < 13:
+            obj.save()
+        elif obj.subProject.is_status == 13:
+            raise Exception("该子项目已经完成，请选择其他子项目")
+        else:
+            raise Exception("该子项目已经中止，请选择其他子项目")
 
 
 # 测序提交表
@@ -694,13 +742,15 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         }),
         ('任务信息',{
             'fields':('seq_number', 'sample', 'seq_start_date', 'customer_confirmation_time',
-              'customer_sample_count', 'pooling_excel',('note'),)
+                      'pooling_excel', ('note', ),)
         })
     )
 
     readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number']
+    search_fields = ['subProject__sub_number', 'seq_number', 'customer_sample_count', 'seq_start_date',
+                     'customer_confirmation_time', 'note', ]
     # raw_id_fields = ['subProject', ]
-
+    list_per_page = 20
     def contacts(self, obj):
         return obj.subProject.contract.contacts
 
@@ -838,6 +888,13 @@ class SeqSubmitAdmin(admin.ModelAdmin):
             obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
             obj.save()
+        if obj.subProject.is_status < 13:
+            obj.save()
+        elif obj.subProject.is_status == 13:
+            raise Exception("该子项目已经完成，请选择其他子项目")
+        else:
+            raise Exception("该子项目已经中止，请选择其他子项目")
+
 
 # # 分析提交表
 # class AnaSubmitForm(forms.ModelForm):
@@ -890,7 +947,8 @@ class AnaSubmitAdmin(admin.ModelAdmin):
     readonly_fields = ['contract_number', 'contacts', 'partner_company', 'ana_number',]
     # raw_id_fields = ['subProject', ]
     filter_horizontal = ('subProject',)
-
+    search_fields = ['ana_number', 'ana_start_date', 'note', ]
+    list_per_page = 20
     def contacts(self, obj):
         contracts = Contract.objects.filter(pk__in = [i.contract.id for i in obj.subProject.all()])
         return "\t".join([contract.contacts for contract in contracts])
@@ -984,6 +1042,14 @@ class AnaSubmitAdmin(admin.ModelAdmin):
             ana_number = creat_uniq_number(request, AnaSubmit, 'Ana')
             obj.ana_number = ana_number
         super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
+        for subProject in obj.subProject.all():
+            subProject_status = SubProject.objects.get(id=subProject.id)
+            if subProject_status.is_status == 14:
+                raise Exception("该子项目已经中止，请选择其他子项目")
+            elif subProject_status.is_status == 13:
+                raise Exception("该子项目已经完成，请选择其他子项目")
+            else:
+                obj.save()
 
 
 BMS_admin_site.register(SubProject, SubProjectAdmin)
