@@ -151,7 +151,6 @@ class InvoiceInline(admin.StackedInline):
         "type": admin.HORIZONTAL,
     }
     autocomplete_fields = ('title', )
-    # readonly_fields = ('title_tariffItem', )
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         field = super().formfield_for_dbfield(db_field, request, **kwargs)
