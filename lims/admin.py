@@ -1,10 +1,16 @@
 import datetime
 from django.contrib import admin
-from django.contrib.auth.models import Group
-from import_export import resources
+from django.contrib.admin import widgets
+from nm.models import DingtalkChat
+from import_export import resources, fields
 from import_export.admin import ImportExportActionModelAdmin
+from django.db import models
+from BMS import settings
 from BMS.admin_bms import BMS_admin_site
-from lims.models import SampleInfoExt, ExtExecute, LibExecute,  SampleInfoLib, SampleInfoSeq, SeqExecute
+from BMS.notice_mixin import NotificationMixin
+from BMS.settings import DINGTALK_SECRET, DINGTALK_APPKEY
+from lims.models import SampleInfoExt, ExtExecute, LibExecute, SampleInfoLib, SampleInfoSeq, SeqExecute, Extmethod, \
+    Testmethod
 from pm.models import LibSubmit,SeqSubmit,ExtSubmit,AnaSubmit,SubProject
 
 try:
@@ -18,6 +24,11 @@ class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
     fields = (("extExecute","unique_code","sample_number","sample_name","species","sample_type","sample_used",
                "sample_rest","density_checked","volume_checked","D260_280","D260_230","DNA_totel","note","quality_control_conclusion","is_rebuild"),)
+    radio_fields = {
+        "quality_control_conclusion": admin.HORIZONTAL,
+        "is_rebuild": admin.HORIZONTAL,
+        "sample_type": admin.HORIZONTAL,
+    }
 
 class SampleInfoLibInline(admin.StackedInline):
     model = SampleInfoLib
@@ -31,16 +42,32 @@ class SampleInfoSeqInline(admin.StackedInline):
 
 #抽提的导入
 class SampleInfoExtResource(resources.ModelResource):
+    # sample_number = fields.Field(column_name='样品编号')
+    # sample_used = fields.Field(column_name='样品提取用量')
+    # sample_rest = fields.Field(column_name='样品剩余用量')
+    # density_checked = fields.Field(column_name='浓度ng/uL(公司检测)')
+    # volume_checked = fields.Field(column_name='体积uL(公司检测)')
+    # D260_280 = fields.Field(column_name='D260/280')
+    # D260_230 = fields.Field(column_name='D260/230')
+    # DNA_totel = fields.Field(column_name='DNA总量')
+    # note = fields.Field(column_name='备注')
+    # quality_control_conclusion = fields.Field(column_name='质检结论')
+    # is_rebuild = fields.Field(column_name='选择是否重抽提(0代表不重抽提,1代表重抽提)')
+
     class Meta:
         model = SampleInfoExt
         skip_unchanged = True
         import_id_fields = ("sample_number",)
         fields = ("id",'sample_number','sample_used',
         'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
-        export_order = ("id",'sample_number','sample_used',
-        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
+        # export_order = ("id",'sample_number','sample_used',
+        # 'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
 
     def get_export_headers(self):
+        return ["id","样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
+            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+
+    def get_diff_headers(self):
         return ["id","样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
@@ -65,11 +92,16 @@ class SampleInfoExtResource(resources.ModelResource):
             raise Exception("请核对样品编号")
             # return (self.init_instance(row), True)
 
-    def get_diff_headers(self):
-        return ["id","样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
-            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
-class ExtExecuteAdmin(ImportExportActionModelAdmin):
+#抽提方法注册
+class ExtmothodAdmin(admin.ModelAdmin):
+    search_fields = ("mothod",)
+
+
+class TestmothodAdmin(admin.ModelAdmin):
+    search_fields = ("mothod",)
+
+class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     filter_horizontal = ("ext_experimenter",)
 
@@ -83,6 +115,16 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
+    appkey = DINGTALK_APPKEY
+
+    appsecret = DINGTALK_SECRET
+
+
+    search_fields = ("extract_method","test_method")
+
+    autocomplete_fields = ("extract_method","test_method")
+    # raw_id_fields = ("extract_method","test_method")
+
     #多对多不能显示在列表页面
     # list_display = ('extSubmit', 'ext_experimenter', 'ext_end_date', 'note')
     list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
@@ -93,8 +135,23 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
 
     # actions = ["submit_result",]
 
-    # def save_model(self, request, obj, form, change):
-    #     if obj.is_submit:
+    # def export_action(self, request, *args, **kwargs):
+
+    # def change_view(self, request, object_id, form_url='', extra_context=None):
+
+
+    def get_object(self, request, object_id, from_field=None):
+
+        self.obj = super(ExtExecuteAdmin,self).get_object(request,object_id)
+
+        return self.obj
+
+    def get_export_filename(self, file_format):
+        date_str = datetime.datetime.now().strftime('%Y-%m-%d')
+        filename = "%s-%s.%s" % (self.model.__name__,
+                                 date_str,
+                                 file_format.get_extension())
+        return filename
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = []
@@ -109,44 +166,63 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
         return self.readonly_fields
 
     def save_model(self, request, obj, form, change):
-
-        if not obj.ext_experimenter.all():
-
-            raise Exception("请先选择实验员")
-
-        super().save_model(request, obj, form, change)
+        Dinggroupid = DingtalkChat.objects.filter(chat_name="实验钉钉群-BMS").first().chat_id
 
         id = obj.extSubmit.subProject.id
 
-        project = SubProject.objects.filter(id=id)
-        #钉钉
-        if project.first().is_status < 3:
-            project.update(is_status=3)
+        project = SubProject.objects.filter(id=id).first()
+
+        if project.is_status < 3:
+            project.is_status = 3
+            project.save()
+            man = []
+            for i in obj.ext_experimenter.all():
+                man.append((i.last_name+i.first_name))
+            self.send_group_message("编号{0}的抽提任务执行中------，执行人:{1}".format(obj.extSubmit,
+                                                                   man),"chat62dbddc59ef51ae0f4a47168bdd2a65b")
         if obj.is_submit:
             if not obj.upload_file:
                 raise Exception("抽提结果报告不能为空")
-            if project.first().is_status < 4:
-                project.update(is_status=4)
+            if project.is_status < 4:
+                project.is_status = 4
+                project.save()
             if not obj.ext_end_date:
-                    #钉钉
                 obj.ext_end_date = datetime.datetime.now()
                 obj.save()
                 qs = obj.sampleinfoext_set.all()
+                msg_dingding = "项目{0}的抽提执行{1}结果已上传".format(project.sub_project,obj.extSubmit)
+                msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
+                             "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
+                             "<th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>".format(msg_dingding),]
                 for i in qs.filter(is_rebuild=0):
-                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "已抽提")
-                    #建立重抽提任务单
+                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
+                                      "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(i.sample_number,i.sample_name,i.species,i.Type_of_Sample[i.sample_type-1][1],i.sample_used,
+                               i.sample_rest,str(i.density_checked),str(i.volume_checked),str(i.D260_280),str(i.D260_230),
+                               str(i.DNA_totel),str(i.Rebulid[i.is_rebuild][1]),str(i.Quality_control_conclusion[i.quality_control_conclusion-1][1]),
+                               i.note)))
+                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "已抽提")
+                #建立重抽提任务单
                 ext = ExtSubmit()
                 ext.project_manager_id = obj.extSubmit.project_manager_id
                 ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
                 ext.subProject = obj.extSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    if "_" in SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[0:-1] +\
-                              str(int(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1])+1)
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
+                for i in qs.filter(is_rebuild=1):
+                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
+                                         "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(
+                                             i.sample_number, i.sample_name, i.species,
+                                             i.Type_of_Sample[i.sample_type - 1][1], i.sample_used,
+                                             i.sample_rest, str(i.density_checked), str(i.volume_checked),
+                                             str(i.D260_280), str(i.D260_230),
+                                             str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
+                                             str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
+                                             i.note)))
+                    if "_" in SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
+                        new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] +\
+                              str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1])+1)
+                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
                     else:
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="重抽提（未执行）_1")
-                        ext.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="重抽提（未执行）_1")
+                        ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
                 old = obj.extSubmit.ext_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1])+1)
@@ -155,10 +231,22 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin):
                 ext.ext_number = new
                 ext.save()
                 del ext
+                content = ""
+                for x in msg_email:
+                    content += x
+                content += "</table>"
+                self.send_email(content="内容",html_message=content,
+                        sender=settings.EMAIL_FROM,
+                        recipient_list=["love949872618@qq.com",],
+                        fail_silently=False)
+                self.send_group_message(msg_dingding,"chat62dbddc59ef51ae0f4a47168bdd2a65b")
+
             else:
                 pass
+        else:
+            pass
 
-
+        super().save_model(request, obj, form, change)
 
 
     # def get_actions(self, request):
@@ -208,7 +296,7 @@ class SampleInfoLibResource(resources.ModelResource):
 
 
 #
-class LibExecuteAdmin(ImportExportActionModelAdmin):
+class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoLibResource
 
@@ -220,6 +308,9 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
+    appkey = DINGTALK_APPKEY
+
+    appsecret = DINGTALK_SECRET
     # list_display = ('libSubmit', 'lib_experimenter', 'lib_end_date', 'note')
     list_display = ('libSubmit', 'lib_end_date', 'note',"is_submit")
 
@@ -245,12 +336,6 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
 
     def save_model(self, request, obj, form, change):
 
-        if not obj.lib_experimenter.all():
-
-            raise Exception("请先选择实验员")
-
-        super().save_model(request, obj, form, change)
-
         id = obj.libSubmit.subProject.id
 
         project = SubProject.objects.filter(id=id)
@@ -258,14 +343,29 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
         #钉钉
         if project.first().is_status < 6:
             project.update(is_status=6)
+            man = []
+            for i in obj.lib_experimenter.all():
+                man.append((i.last_name + i.first_name))
+            self.send_group_message("编号{0}的建库任务执行中------，执行人:{1}".format(obj.libSubmit,
+                                                                         man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+
         if obj.is_submit:
+            if not obj.upload_file:
+                raise Exception("提交时建库报告不能为空")
             if project.first().is_status < 7:
                 project.update(is_status=7)
             if not obj.lib_end_date:
                 # 钉钉
                 obj.lib_end_date = datetime.datetime.now()
                 qs = obj.sampleinfolib_set.all()
+                msg_dingding = "项目{0}的建库执行{1}结果已上传".format(project.first().sub_project, obj.libSubmit)
+                msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
+                             "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
+                             "</tr>".format(msg_dingding), ]
                 for i in qs.filter(is_rebuild=0):
+                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
+                                      .format(i.sample_number,i.sample_name,i.lib_code,i.index,i.lib_volume,i.lib_concentration,
+                                              i.lib_total,i.Lib_result[i.lib_result-1][1],i.lib_note,i.Rebulid[i.is_rebuild][1])))
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="已建库")
                 # 建立重建库任务单
                 lib = LibSubmit()
@@ -274,6 +374,12 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
                 lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
                 lib.subProject = obj.libSubmit.subProject
                 for j in qs.filter(is_rebuild=1):
+                    msg_email.append((
+                                         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
+                                         .format(j.sample_number, j.sample_name, j.lib_code, j.index, j.lib_volume,
+                                                 j.lib_concentration,
+                                                 j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
+                                                 j.Rebulid[j.is_rebuild][1])))
                     if "_" in SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
                         new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[0:-1] +\
                               str(int(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1])+1)
@@ -289,9 +395,19 @@ class LibExecuteAdmin(ImportExportActionModelAdmin):
                 lib.lib_number = new
                 lib.save()
                 del lib
+                content = ""
+                for x in msg_email:
+                    content += x
+                content += "</table>"
+                self.send_email(content="内容", html_message=content,
+                                sender=settings.EMAIL_FROM,
+                                recipient_list=["love949872618@qq.com", ],
+                                fail_silently=False)
+                self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+
             else:
                 pass
-
+        super().save_model(request, obj, form, change)
 
 
     # def get_actions(self, request):
@@ -337,7 +453,7 @@ class SampleInfoSeqResource(resources.ModelResource):
         return ["样品编号","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
-class SeqExecuteAdmin(ImportExportActionModelAdmin):
+class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoSeqResource
 
@@ -348,6 +464,10 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
     inlines = [SampleInfoSeqInline]
 
     save_on_top = False
+
+    appkey = DINGTALK_APPKEY
+
+    appsecret = DINGTALK_SECRET
 
     filter_horizontal = ("seq_experimenter",)
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
@@ -371,12 +491,6 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
 
     def save_model(self, request, obj, form, change):
 
-        if not obj.seq_experimenter.all():
-
-            raise Exception("请先选择实验员")
-
-        super().save_model(request, obj, form, change)
-
         id = obj.seqSubmit.subProject.id
 
         project = SubProject.objects.filter(id=id)
@@ -384,14 +498,33 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
         # 钉钉
         if project.first().is_status < 9:
             project.update(is_status=9)
+            man = []
+            for i in obj.seq_experimenter.all():
+                man.append((i.last_name + i.first_name))
+            self.send_group_message("编号{0}的测序任务执行中------，执行人:{1}".format(obj.seqSubmit,
+                                                                         man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+
         if obj.is_submit:
+            if not obj.upload_file:
+                raise Exception("pooling表格不能为空")
             if project.first().is_status < 10:
                 project.update(is_status=10)
             if not obj.seq_end_date:
                 # 钉钉
                 obj.seq_end_date = datetime.datetime.now()
                 qs = obj.sampleinfoseq_set.all()
+                msg_dingding = "项目{0}的测序执行{1}结果已上传".format(project.first().sub_project, obj.seqSubmit)
+                msg_email = [
+                    "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
+                    "</th><th>测序数据量</th><th>结论(测序)</th><th>备注(测序)</th><th>选择是否重测序</th>"
+                    "</tr>".format(msg_dingding), ]
                 for i in qs.filter(is_rebuild=0):
+                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
+                                         .format(i.sample_number, i.sample_name, i.seq_code, i.seq_index, i.data_request,
+                                                 i.seq_data,
+                                                 i.Seq_result[i.seq_result-1][1], i.seq_note,
+                                                 i.Rebulid[i.is_rebuild][1])))
+
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="已测序")
                 # 建立重测序任务单
                 seq = SeqSubmit()
@@ -399,6 +532,13 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
                 seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
                 seq.subProject = obj.seqSubmit.subProject
                 for j in qs.filter(is_rebuild=1):
+                    msg_email.append((
+                                         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
+                                         .format(j.sample_number, j.sample_name, j.seq_code, j.seq_index,
+                                                 j.data_request,
+                                                 j.seq_data,
+                                                 j.Seq_result[j.seq_result - 1][1], j.seq_note,
+                                                 j.Rebulid[j.is_rebuild][1])))
                     if "_" in SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
                         new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[0:-1] +\
                               str(int(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1])+1)
@@ -414,9 +554,18 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
                 seq.seq_number = new
                 seq.save()
                 del seq
+                content = ""
+                for x in msg_email:
+                    content += x
+                content += "</table>"
+                self.send_email(content="内容", html_message=content,
+                                sender=settings.EMAIL_FROM,
+                                recipient_list=["love949872618@qq.com", ],
+                                fail_silently=False)
+                self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
             else:
                 pass
-
+        super().save_model(request, obj, form, change)
 
 
 
@@ -424,7 +573,8 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin):
     #     actions = super().get_actions(request)
     #     del actions['export_admin_action']
     #     return actions
-
+BMS_admin_site.register(Extmethod,ExtmothodAdmin)
+BMS_admin_site.register(Testmethod,TestmothodAdmin)
 BMS_admin_site.register(ExtExecute,ExtExecuteAdmin)
 BMS_admin_site.register(LibExecute,LibExecuteAdmin)
 BMS_admin_site.register(SeqExecute,SeqExecuteAdmin)
