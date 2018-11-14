@@ -65,27 +65,21 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             kwargs["queryset"] = AnaExecute.objects.filter(
                 ana_submit__subProject__is_status=11
             )
-        return super(AnaExecuteAdmin, self).formfield_for_dbfield(
-            db_field, request, **kwargs
-        )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "analyst":
             analyst_group = Group.objects.get(id=9)
             kwargs["queryset"] = analyst_group.user_set.all()
-        return super(AnaExecuteAdmin, self).formfield_for_foreignkey(
-            db_field, request, **kwargs
-        )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
     def get_changeform_initial_data(self, request):
-        initial = super(AnaExecuteAdmin, self).get_changeform_initial_data(
-            request
-        )
+        initial = super().get_changeform_initial_data(request)
         initial["analyst"] = request.user.id
         return initial
     
     def save_model(self, request, obj, form, change):
-        super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)
         ana_number = obj.ana_submit.ana_number
         ana_execute = AnaExecute.objects.get(ana_submit__ana_number=ana_number)
         ana_submit = ana_execute.ana_submit

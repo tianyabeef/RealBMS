@@ -272,22 +272,19 @@ class ContractAdmin(ExportActionModelAdmin):
             )
         }),
         ('邮寄信息', {
-            'fields': ('tracking_number','send_date','receive_date')
+            'fields': ('tracking_number', 'send_date', 'receive_date')
         }),
         ('上传合同', {
-            'fields': ('contract_file',)
+            'fields': ('contract_file', )
         })
     )
     radio_fields = {"range": admin.HORIZONTAL, "type": admin.HORIZONTAL}
-    raw_id_fields = ('salesman', )
-    search_fields = ('contract_number', 'name', 'tracking_number', "salesman")
+    search_fields = ('contract_number', 'name', "salesman__username", )
     
-    def title_tariffItem(self,obj):
-        #抬头的单位名称
+    def title_tariffItem(self, obj):
+        # 抬头的单位名称
         invoices = Invoice.objects.filter(contract=obj)
-        if invoices:
-            return invoices[0].title.title
-        return ""
+        return invoices[0].title.title if invoices else ""
     title_tariffItem.short_description = "单位"
     
     def salesman_name(self, obj):
@@ -407,11 +404,13 @@ class ContractAdmin(ExportActionModelAdmin):
         ]
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('mm.delete_contract'):
-            return ['contract_number', 'name', 'type', 'salesman','contacts','contact_phone', 'price', 'range', 'fis_amount', 'fin_amount',
-                    'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file']
-        return []
-
+        return [
+            'contract_number', 'name', 'type', 'salesman', 'contacts',
+            'contact_phone', 'price', 'range', 'fis_amount', 'fin_amount',
+            'all_amount', 'tracking_number', 'send_date', 'receive_date',
+            'contract_file'
+        ] if not request.user.has_perm('mm.delete_contract') else []
+    
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for obj in formset.deleted_objects:

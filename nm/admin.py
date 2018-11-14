@@ -31,7 +31,6 @@ class ChatTemplatesAdmin(admin.ModelAdmin):
     list_display_links = ("name", )
     search_fields = ("name", "sign", "text", )
     list_filter = ("is_valid", "sign")
-    
 
 
 BMS_admin_site.register(ChatTemplates, ChatTemplatesAdmin)
