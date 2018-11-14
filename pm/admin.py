@@ -20,6 +20,14 @@ from lims.models import SampleInfoLib as lims_SampleInfoLib
 from lims.models import SampleInfoSeq as lims_SampleInfoSeq
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
+from datetime import date
+from daterange_filter.filter import DateRangeFilter
+from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
+from BMS import dingding
+from BMS import settings
+from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
+from BMS.notice_mixin import NotificationMixin
+from nm.models import DingtalkChat
 
 
 import time
@@ -31,6 +39,26 @@ class SubProjectForm(forms.ModelForm):
         if sample_count == 0:
             raise forms.ValidationError('样品数量不能为0')
         return self.cleaned_data['sample_count']
+
+
+class SalemanListFilter(admin.SimpleListFilter):
+    title = "销售人员"
+    parameter_name = 'salesman'
+
+    def lookups(self, request, model_admin):
+        qs_sale = User.objects.filter(groups__name='业务员（销售）')
+        value = ['contract__salesman'] + list(qs_sale.values_list('username', flat=True))
+        label = ['销售人员'] + ['——' + i.last_name + i.first_name for i in qs_sale]
+        return tuple(zip(value, label))
+
+    def queryset(self, request, queryset):
+        if self.value() == 'contract__salesman':
+            return queryset.filter(contract__salesman__in=list(User.objects.filter(groups__name="业务员（销售）")))
+        qs = User.objects.filter(groups__name="业务员（销售）")
+        for i in qs:
+            if self.value() == i.username:
+                return queryset.filter(contract__salesman=i)
+
 
 class StatusListFilter(admin.SimpleListFilter):
     title = '项目管理员'
@@ -105,8 +133,13 @@ def create_submit_table(request,obj, states):
 class SubProject_Resource(resources.ModelResource):
     def get_export_headers(self):
         return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
-                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)',
-                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）','已上传信息']
+                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
+                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
+
+    def get_diff_headers(self):
+        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
+                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
+                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
 
     class Meta:
         model = SubProject
@@ -121,11 +154,14 @@ class SubProject_Resource(resources.ModelResource):
 
 
 # class SubProjectAdmin(admin.ModelAdmin):
-class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
+class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,NotificationMixin):
     resource_class = SubProject_Resource
     form = SubProjectForm
+
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
-                    'project_manager', 'is_submit', 'status','file_link','is_status')
+                    'project_manager', 'is_submit', 'status','file_link','is_status',  'project_start_time', 'time_ext', 'time_lib', 'time_ana')
     list_display_links = ['sub_number', ]
     actions = ['make_submit', 'make_subProject_submit']
     # list_editable = ['is_confirm']
@@ -150,9 +186,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
                 'fields': (('is_ext', 'is_lib','is_seq', 'is_ana'),
                            ('sub_project_note',),)
         }),
-        ('关键信息  (注：请审核好以上的所有的信息，再选中确定栏。)', {
-            'fields': (('is_submit',),)
-        }),
+        # ('关键信息  (注：请审核好以上的所有的信息，再选中确定栏。)', {
+        #     'fields': (('is_submit',),)
+        # }),
     )
     readonly_fields = ['contract_number', 'contract_name', 'contacts','contacts_phone', 'saleman','company',
                        'project_type','income_notes','customer_name', 'customer_phone', 'service_types',
@@ -161,7 +197,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
     filter_horizontal = ['sampleInfoForm', ]
     # actions = ['make_confirm']
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
-                     'contract__salesman__username', 'project_manager__username', ]
+                     'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
+    autocomplete_fields = ('contract',)
+    ordering = ['-sub_number', ]
     # change_list_template = "pm/chang_list_custom.html"
     list_per_page = 20
     def make_subProject_submit(self, request,queryset):
@@ -171,6 +209,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
         for obj in queryset:
             obj.is_status = 14
             obj.save()
+        # 项目中止的时候，给项目管理和实验发钉钉通知
+        self.send_group_message("编号{0}中止------，中止人员:{1}".format(obj.sub_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_subProject_submit.short_description = '终止'
 
     def contract_number(self, obj):
@@ -237,6 +279,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
         return [sampleInfoForm.arrive_time for sampleInfoForm in sampleInfoForms]
     arrive_time.short_description = '样品接收时间'
 
+
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = self.readonly_fields
         if obj:
@@ -273,9 +316,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
                 if i.name == "项目管理":
                     return ['is_status']
                 else:
-                    return ['is_status', StatusListFilter]
+                    return ['is_status', 'contract__contacts', StatusListFilter, SalemanListFilter, ('project_start_time', DateRangeFilter), ('time_ext', DateRangeFilter),('time_lib',  DateRangeFilter),('time_ana', DateRangeFilter), ]
         else:
-            return ['is_status', StatusListFilter]
+            return ['is_status', 'contract__contacts', StatusListFilter, SalemanListFilter, ('project_start_time', DateRangeFilter), ('time_ext', DateRangeFilter),('time_lib',  DateRangeFilter),('time_ana', DateRangeFilter), ]
 
     # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -296,6 +339,8 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
         return super(SubProjectAdmin,self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
+        if not obj.project_start_time:
+            obj.project_start_time = date.today()
         states =[obj.is_ext , obj.is_lib ,obj.is_seq, obj.is_ana]
         project_amount = obj.sample_count * obj.contract.price
         contract_income = 0
@@ -334,6 +379,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
                 # 新建执行表单
                 create_submit_table(request, obj, states)
             obj.save()
+        super().save_model(request, obj, form, change)
 
     def make_submit(self, request, queryset):
         n = 0
@@ -377,6 +423,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin):
             else:
                 sn = sn + 1
         self.message_user(request,"选择项目数量：%s,所选项目立项的子项目数量：%s,   无法立项的子项目数量：%s  ,已经立项过的子项目数量：%s" %(queryset.count(),n,un,sn), level=messages.ERROR)
+        # 新增立项的时候，给实验发钉钉通知
+        self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_submit.short_description = '设置所选项目为确认可启动状态'
 
 # 提取提交表
@@ -385,8 +435,10 @@ class ExtSubmitForm(forms.ModelForm):
 
 
 # 提取提交管理
-class ExtSubmitAdmin(admin.ModelAdmin):
+class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     # form = ExtSubmitForm
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ['subProject', 'ext_number', 'sample_count', 'ext_start_date', 'is_submit', 'note', ]
     filter_horizontal = ('sample',)
     fieldsets = (
@@ -401,6 +453,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
     )
     readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time','ext_number','sample_count',]
     search_fields = ['subProject__sub_number', 'ext_number', 'sample_count', 'ext_start_date', 'note', ]
+    autocomplete_fields = ('subProject',)
     list_per_page = 20
     def contacts(self, obj):
         return obj.subProject.contract.contacts
@@ -481,6 +534,10 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     sampleInfoExt.save()
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s'%(queryset.count(),n,un,sn), level=messages.ERROR)
+        # 新增抽提的时候，给实验发钉钉通知
+        self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_ExtSubmit_submit.short_description = '提交提取任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -503,6 +560,12 @@ class ExtSubmitAdmin(admin.ModelAdmin):
                     return qs
         else:
             return qs
+
+    def get_list_filter(self, request):
+        # 过滤器，过滤时间
+        groups = Group.objects.filter(user__id=request.user.id)
+        if len(groups) >= 1:
+            return [('ext_start_date', DateRangeFilter), ]
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -545,6 +608,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
             raise Exception("该子项目已经完成，请选择其他子项目")
         else:
             raise Exception("该子项目已经中止，请选择其他子项目")
+        super().save_model(request, obj, form, change)
 
 
 # 建库提交表
@@ -553,8 +617,10 @@ class LibSubmitForm(forms.ModelForm):
 
 
 # 建库提交管理
-class LibSubmitAdmin(admin.ModelAdmin):
+class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     # form = LibSubmitForm
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ['subProject', 'lib_number', 'customer_sample_count', 'lib_start_date', 'customer_confirmation_time',
                     # 'contract_count', 'project_count',
                     'is_submit', 'note', ]
@@ -573,6 +639,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
     readonly_fields =  ['lib_number','contract_number', 'sub_project_name', 'contacts', 'partner_company']
     search_fields = ['subProject__sub_number', 'lib_number', 'customer_sample_count', 'lib_start_date',
                      'customer_confirmation_time', 'note', ]
+    autocomplete_fields = ('subProject',)
     # raw_id_fields = ['subProject', ]
     list_per_page = 20
     def contacts(self, obj):
@@ -643,6 +710,10 @@ class LibSubmitAdmin(admin.ModelAdmin):
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
                           level=messages.ERROR)
+        # 新增建库的时候，给实验发钉钉通知
+        self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_LibSubmit_submit.short_description = '提交建库任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -666,6 +737,12 @@ class LibSubmitAdmin(admin.ModelAdmin):
         else:
             return qs
 
+    def get_list_filter(self, request):
+        # 过滤器，过滤时间
+        groups = Group.objects.filter(user__id=request.user.id)
+        if len(groups) >= 1:
+            return [('lib_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
+
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -684,21 +761,6 @@ class LibSubmitAdmin(admin.ModelAdmin):
         return super(LibSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
-        # if not obj.lib_number:
-        #     lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
-        #     obj.lib_number = lib_number
-        # # for sample in obj.sample.all():
-        # #     sample_old = SampleInfo.objects.get(id=sample.id)
-        # #     sample_old.save()
-        # #     obj.customer_sample_count = sample_old
-        # if LibSubmit.objects.all().count() == 0:
-        #     obj.id = "1"
-        #     obj.customer_sample_count = obj.sample.all().count()
-        # else:
-        #     obj.id = str(int(LibSubmit.objects.latest("id").id) + 1)
-        #     obj.customer_sample_count = obj.sample.all().count()
-        # super(LibSubmitAdmin, self).save_model(request, obj, form, change)
-
         if not obj.lib_number:
             lib_number = creat_uniq_number(request, LibSubmit, 'Lib')
             obj.lib_number = lib_number
@@ -718,6 +780,7 @@ class LibSubmitAdmin(admin.ModelAdmin):
             raise Exception("该子项目已经完成，请选择其他子项目")
         else:
             raise Exception("该子项目已经中止，请选择其他子项目")
+        super().save_model(request, obj, form, change)
 
 
 # 测序提交表
@@ -726,8 +789,10 @@ class SeqSubmitForm(forms.ModelForm):
 
 
 # 测序提交管理
-class SeqSubmitAdmin(admin.ModelAdmin):
+class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     # form = SeqSubmitForm
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ['subProject', 'seq_number', 'customer_sample_count', 'seq_start_date', 'customer_confirmation_time',
                     'pooling_excel',
                     # 'contract_count',  'project_count',
@@ -750,6 +815,7 @@ class SeqSubmitAdmin(admin.ModelAdmin):
     readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number']
     search_fields = ['subProject__sub_number', 'seq_number', 'customer_sample_count', 'seq_start_date',
                      'customer_confirmation_time', 'note', ]
+    autocomplete_fields = ('subProject',)
     # raw_id_fields = ['subProject', ]
     list_per_page = 20
     def contacts(self, obj):
@@ -824,6 +890,10 @@ class SeqSubmitAdmin(admin.ModelAdmin):
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
                           level=messages.ERROR)
+        # 新增测序的时候，给实验发钉钉通知
+        self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_SeqSubmit_submit.short_description = '提交测序任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -847,6 +917,12 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         else:
             return qs
 
+    def get_list_filter(self, request):
+        # 过滤器过滤时间
+        groups = Group.objects.filter(user__id=request.user.id)
+        if len(groups) >= 1:
+            return [('seq_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
+
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -865,17 +941,6 @@ class SeqSubmitAdmin(admin.ModelAdmin):
         return super(SeqSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def save_model(self, request, obj, form, change):
-        # if not obj.seq_number:
-        #     seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
-        #     obj.seq_number = seq_number
-        # if SeqSubmit.objects.all().count() == 0:
-        #     obj.id = "1"
-        #     obj.customer_sample_count = obj.sample.all().count()
-        # else:
-        #     obj.id = str(int(SeqSubmit.objects.latest("id").id) + 1)
-        #     obj.customer_sample_count = obj.sample.all().count()
-        # super(SeqSubmitAdmin, self).save_model(request, obj, form, change)
-
         if not obj.seq_number:
             seq_number = creat_uniq_number(request, SeqSubmit, 'Seq')
             obj.seq_number = seq_number
@@ -895,42 +960,14 @@ class SeqSubmitAdmin(admin.ModelAdmin):
             raise Exception("该子项目已经完成，请选择其他子项目")
         else:
             raise Exception("该子项目已经中止，请选择其他子项目")
+        super().save_model(request, obj, form, change)
 
-
-# # 分析提交表
-# class AnaSubmitForm(forms.ModelForm):
-#     # pass
-#
-#     subProject = forms.ModelChoiceField(queryset=SubProject.objects.all())
-#
-#     class Meta():
-#         fields = ('subProject',)
-#         model = SubProject
-#         labels = {'username': 'Email',
-#                   'subProject': 'subProject'}
-
-    # def save(self, commit=True):
-    #     if not commit:
-    #         raise NotImplementedError("Can't create User and Userextended without database save")
-    #     user = super(UserCreateForm, self).save(commit=True)
-    #     user_profile = Userextended(user=user, cristin=self.cleaned_data['cristin'],
-    #                                 rolle=self.cleaned_data['rolle'])
-    #     user_profile.save()
-    #     return user
-
-    # def save(self, commit=True):
-    #     if not commit:
-    #         raise NotImplementedError("Can't create User and Userextended without database save")
-    #     SubProject = super(AnaSubmitForm, self).save(is_submit=True)
-    #     SubProject = AnaSubmit(user=user, cristin=self.cleaned_data['cristin'])
-    #     SubProject_is_status.save()
-    #     SubProject_is_status.subProject.add(self.cleaned_data['subProject'])
-    #     SubProject_is_status.save()
-    #     return SubProject
 
 # 分析提交管理
-class AnaSubmitAdmin(admin.ModelAdmin):
+class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     # form = AnaSubmitForm
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ['ana_number', 'ana_start_date', 'depart_data_path', 'confirmation_sheet',
                     # 'contract_count',
                     # 'project_count',
@@ -998,6 +1035,10 @@ class AnaSubmitAdmin(admin.ModelAdmin):
                 obj.save()
         self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
                           level=messages.ERROR)
+        # 新增分析的时候，给实验发钉钉通知
+        self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        print(self.send_dingtalk_result)
     make_AnaSubmit_submit.short_description = '提交分析任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -1020,6 +1061,12 @@ class AnaSubmitAdmin(admin.ModelAdmin):
                     return qs
         else:
             return qs
+
+    def get_list_filter(self, request):
+        # 过滤器过滤时间
+        groups = Group.objects.filter(user__id=request.user.id)
+        if len(groups) >= 1:
+            return [('ana_start_date', DateRangeFilter), ]
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -1045,12 +1092,13 @@ class AnaSubmitAdmin(admin.ModelAdmin):
         super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
         for subProject in obj.subProject.all():
             subProject_status = SubProject.objects.get(id=subProject.id)
-            if subProject_status.is_status == 14:
-                raise Exception("该子项目已经中止，请选择其他子项目")
-            elif subProject_status.is_status == 13:
-                raise Exception("该子项目已经完成，请选择其他子项目")
-            else:
+            if obj.subProject.is_status < 13:
                 obj.save()
+            elif obj.subProject.is_status == 13:
+                raise Exception("该子项目已经完成，请选择其他子项目")
+            elif obj.subProject.is_status == 14:
+                raise Exception("该子项目已经中止，请选择其他子项目")
+            subProject_status.save()
 
 
 BMS_admin_site.register(SubProject, SubProjectAdmin)
