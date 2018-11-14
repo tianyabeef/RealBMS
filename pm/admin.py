@@ -22,6 +22,9 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
 
 
+import time
+
+
 class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
         sample_count = self.cleaned_data['sample_count']
