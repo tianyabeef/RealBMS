@@ -1,51 +1,51 @@
-from dingtalk_sdk_gmdzy2010.authority_request import AccessTokenRequest
-from BMS import settings
-from em.models import Employees
-from django.contrib.auth.models import Group,User
-import datetime
-
-###获取access_token，之后的所有接口调用都需要这个token，其有效期为2小时，超时后刷新即可
-params = {"appkey": settings.DINGTALK_APPKEY, "appsecret": settings.DINGTALK_SECRET}
-request = AccessTokenRequest(params=params)
-request.get_json_response()
-access_token = request.get_access_token()
-
-
-from dingtalk_sdk_gmdzy2010.department_request import  DeptsRequest, SubDeptIdsRequest
-from dingtalk_sdk_gmdzy2010.user_request import DeptUsersSimpleRequest
-from dingtalk_sdk_gmdzy2010.message_request import CreateGroupChatRequest,SendGroupChatRequest
-
-
-def recruit_dept_ids(init_ids=None, total_ids=None, access_token=None):
-    if init_ids:
-        sub_level_ids = []
-        for id in init_ids:
-            params = {"access_token": access_token, "id": id}
-            get_new_ids = SubDeptIdsRequest(params=params)
-            get_new_ids.get_json_response()
-            new_ids = get_new_ids.get_sub_dept_ids()
-            sub_level_ids.extend(new_ids)
-            if not new_ids:
-                continue
-        total_ids.extend(sub_level_ids)
-        return recruit_dept_ids(init_ids=sub_level_ids, total_ids=total_ids,
-                                access_token=access_token)
-    else:
-        return total_ids
-
-
-def get_sub_dept_users(dept_ids=None):
-    if dept_ids:
-        dept_users = []
-        for id in dept_ids:
-            params = {"access_token": access_token, "department_id": id}
-            get_users = DeptUsersSimpleRequest(params=params)
-            get_users.get_json_response()
-            users = get_users.get_dept_users_brief()
-            dept_users.extend(users)
-        return dept_users
-
-
+# from dingtalk_sdk_gmdzy2010.authority_request import AccessTokenRequest
+# from BMS import settings
+# from em.models import Employees
+# from django.contrib.auth.models import Group,User
+# import datetime
+#
+# ###获取access_token，之后的所有接口调用都需要这个token，其有效期为2小时，超时后刷新即可
+# params = {"appkey": settings.DINGTALK_APPKEY, "appsecret": settings.DINGTALK_SECRET}
+# request = AccessTokenRequest(params=params)
+# request.get_json_response()
+# access_token = request.get_access_token()
+#
+#
+# from dingtalk_sdk_gmdzy2010.department_request import  DeptsRequest, SubDeptIdsRequest
+# from dingtalk_sdk_gmdzy2010.user_request import DeptUsersSimpleRequest
+# from dingtalk_sdk_gmdzy2010.message_request import CreateGroupChatRequest,SendGroupChatRequest
+#
+#
+# def recruit_dept_ids(init_ids=None, total_ids=None, access_token=None):
+#     if init_ids:
+#         sub_level_ids = []
+#         for id in init_ids:
+#             params = {"access_token": access_token, "id": id}
+#             get_new_ids = SubDeptIdsRequest(params=params)
+#             get_new_ids.get_json_response()
+#             new_ids = get_new_ids.get_sub_dept_ids()
+#             sub_level_ids.extend(new_ids)
+#             if not new_ids:
+#                 continue
+#         total_ids.extend(sub_level_ids)
+#         return recruit_dept_ids(init_ids=sub_level_ids, total_ids=total_ids,
+#                                 access_token=access_token)
+#     else:
+#         return total_ids
+#
+#
+# def get_sub_dept_users(dept_ids=None):
+#     if dept_ids:
+#         dept_users = []
+#         for id in dept_ids:
+#             params = {"access_token": access_token, "department_id": id}
+#             get_users = DeptUsersSimpleRequest(params=params)
+#             get_users.get_json_response()
+#             users = get_users.get_dept_users_brief()
+#             dept_users.extend(users)
+#         return dept_users
+#
+#
 # get_level_2_depts_params = {
 #     "access_token": access_token,
 #     "id": 1,
@@ -117,6 +117,6 @@ def get_sub_dept_users(dept_ids=None):
 # # chatMessage.get_json_response()
 # # response = chatMessage.json_response
 # # print(response)
-
-
-
+#
+#
+#

@@ -1,12 +1,11 @@
 from am.models import AnaExecute, WeeklyReport
 from django.contrib.auth.models import Group
-from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
-
+from django.utils.html import format_html
 
 class AnaExecuteResource(resources.ModelResource):
     """The import_export resource class for model AnaSubmit"""
@@ -55,8 +54,9 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     
     def file_link(self, obj):
         if obj.ana_submit.confirmation_sheet:
-            url = obj.ana_submit.confirmation_sheet.url
-            return format_html("<a href='{0}'>下载</a>" .format(url))
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(obj.ana_submit.confirmation_sheet.url))
+
         else:
             return "未上传"
     
@@ -65,21 +65,27 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             kwargs["queryset"] = AnaExecute.objects.filter(
                 ana_submit__subProject__is_status=11
             )
-        return super().formfield_for_dbfield(db_field, request, **kwargs)
+        return super(AnaExecuteAdmin, self).formfield_for_dbfield(
+            db_field, request, **kwargs
+        )
     
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "analyst":
             analyst_group = Group.objects.get(id=9)
             kwargs["queryset"] = analyst_group.user_set.all()
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+        return super(AnaExecuteAdmin, self).formfield_for_foreignkey(
+            db_field, request, **kwargs
+        )
     
     def get_changeform_initial_data(self, request):
-        initial = super().get_changeform_initial_data(request)
+        initial = super(AnaExecuteAdmin, self).get_changeform_initial_data(
+            request
+        )
         initial["analyst"] = request.user.id
         return initial
     
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
+        super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
         ana_number = obj.ana_submit.ana_number
         ana_execute = AnaExecute.objects.get(ana_submit__ana_number=ana_number)
         ana_submit = ana_execute.ana_submit
@@ -118,12 +124,7 @@ class WeeklyReportAdmin(ImportExportModelAdmin):
         "is_submit",
     )
     list_display_links = ('reporter', )
-
-    def get_changeform_initial_data(self, request):
-        initial = super().get_changeform_initial_data(request)
-        initial["reporter"] = request.user
-        return initial
-
+    
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
             "reporter", "start_date", "end_date", "content", "attachment",

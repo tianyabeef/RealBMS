@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+
+from BMS.notice_mixin import NotificationMixin
 from sample.models import SampleInfoForm
 from BMS.admin_bms import BMS_admin_site
 from .models import Invoice, Contract, InvoiceTitle, BzContract
@@ -28,7 +30,6 @@ from BMS import dingding
 from BMS import settings
 from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
 from em.models import Employees
-import time
 
 
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
@@ -61,27 +62,18 @@ class InvoiceAdmin(admin.ModelAdmin):
     """
     Admin class for invoice
     """
-    actions = ['make_invoice_submit']
     form = InvoiceForm
-    fields = (
-        'contract', 'title', 'issuingUnit', 'type', 'period', 'amount',
-        'content', 'note',
-    )
-    list_display = (
-        'contract', 'title', 'period', 'amount', 'issuingUnit','note', 'submit'
-    )
+    list_display = ('contract', 'title', 'period', 'amount', 'issuingUnit','note', 'submit')
+    actions = ['make_invoice_submit']
     list_display_links = None
-    radio_fields = {
-        'issuingUnit': admin.HORIZONTAL,
-        'period': admin.HORIZONTAL,
-        "type": admin.HORIZONTAL,
-    }
+    fields = ('contract','title','issuingUnit','period', 'amount','type','content', 'note')
 
     def make_invoice_submit(self, request, queryset):
         """
         批量提交开票申请
         """
-        i, n = '', 0
+        i = ''
+        n = 0
         for obj in queryset:
             if not obj.submit:
                 i = fm_Invoice.objects.create(invoice=obj)
@@ -97,25 +89,6 @@ class InvoiceAdmin(admin.ModelAdmin):
         if n:
             self.message_user(request, '%s 个开票申请已提交过，不能再次提交' % n, level=messages.ERROR)
     make_invoice_submit.short_description = '提交开票申请到财务'
-    
-    # 李洋 2018-11-12 增加新增/修改表单的默认选项
-    @staticmethod
-    def get_period_amount(obj, period):
-        return {
-            "FIS": obj.fis_amount if obj.fis_amount else 0,
-            "FIN": obj.fin_amount if obj.fin_amount else 0,
-        }.get(period, 0)
-
-    def get_changeform_initial_data(self, request):
-        initial = super().get_changeform_initial_data(request)
-        period = initial.get("period", 'FIS')
-        contracts = Contract.objects.all()
-        if contracts:
-            contract_latest = contracts.latest("id")
-            initial["amount"] = self.get_period_amount(contract_latest, period)
-            initial["content"] = contract_latest.name
-            initial["contract"] = contract_latest
-        return initial
 
 
 class InvoiceInlineFormSet(BaseInlineFormSet):
@@ -138,28 +111,14 @@ class InvoiceInlineFormSet(BaseInlineFormSet):
 class InvoiceInline(admin.StackedInline):
     model = Invoice
     formset = InvoiceInlineFormSet
-    extra = 0
-    fields = (
-        'title', 'issuingUnit', 'period', 'amount', 'type',
-        'content', 'note',
-    )
-    # raw_id_fields = ('title', )
-    search_fields = ['title', ]
-    radio_fields = {
-        'issuingUnit': admin.HORIZONTAL,
-        'period': admin.HORIZONTAL,
-        "type": admin.HORIZONTAL,
-    }
-    autocomplete_fields = ('title', )
+    extra = 1
+    fields = ('title','title_tariffItem','issuingUnit','period', 'amount','type','content', 'note')
+    raw_id_fields = ('title',)
+    readonly_fields = ('title_tariffItem',)
 
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
-        field = super().formfield_for_dbfield(db_field, request, **kwargs)
-        if db_field.name == 'contract':
-            print(db_field)
-            field.initial = 'My initial description'
-        elif db_field.name == 'counter':
-            field.initial = "test"
-        return field
+    def title_tariffItem(self, obj):
+        return obj.title.tariffItem
+    title_tariffItem.short_description = '税号'
 
 
 class ContractChangeList(ChangeList):
@@ -244,49 +203,38 @@ class ContractResource(resources.ModelResource):
         return "%s%s"%(contract.salesman.last_name,contract.salesman.first_name)
 
 
-class ContractAdmin(ExportActionModelAdmin):
+class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
+    resource_class = ContractResource
     """
     Admin class for Contract
     """
-    actions = ['make_receive', ]
-    autocomplete_fields = ("salesman", )
-    resource_class = ContractResource
-    list_display = (
-        'contract_number', 'name', 'title_tariffItem', 'type', 'salesman_name',
-        'price', 'range', 'all_amount', 'fis_income', 'fin_income',
-        'send_date', 'tracking_number', 'receive_date', 'file_link'
-    )
+    list_display = ('contract_number', 'name','title_tariffItem', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
+                    'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     inlines = [
         InvoiceInline,
     ]
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': (
-                'contract_number', 'name', 'type', 'salesman', (
-                    'contacts', 'contact_phone', 'contacts_email',
-                    'contact_address', "partner_company"
-                ), ('price', 'range', ), (
-                    'fis_amount', 'fin_amount', 'all_amount',
-                ), ('contact_note', )
-            )
+            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone','contacts_email','contact_address',"partner_company"), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
         }),
         ('邮寄信息', {
-            'fields': ('tracking_number', 'send_date', 'receive_date')
+            'fields': ('tracking_number','send_date','receive_date')
         }),
         ('上传合同', {
-            'fields': ('contract_file', )
+            'fields': ('contract_file',)
         })
     )
-    radio_fields = {"range": admin.HORIZONTAL, "type": admin.HORIZONTAL}
-    search_fields = ('contract_number', 'name', "salesman__username", )
-    
-    def title_tariffItem(self, obj):
-        # 抬头的单位名称
+    raw_id_fields = ['salesman']
+    search_fields = ['contract_number', 'name', 'tracking_number']
+    actions = ['make_receive']
+    def title_tariffItem(self,obj):
+        #抬头的单位名称
         invoices = Invoice.objects.filter(contract=obj)
-        return invoices[0].title.title if invoices else ""
+        if invoices:
+            return invoices[0].title.title
+        return ""
     title_tariffItem.short_description = "单位"
-    
     def salesman_name(self, obj):
         # 销售用户名或姓名显示
         name = obj.salesman.last_name + obj.salesman.first_name
@@ -339,7 +287,6 @@ class ContractAdmin(ExportActionModelAdmin):
         rows_updated = queryset.update(receive_date=datetime.now())
         for obj in queryset:
             if rows_updated:
-                
                 #合同寄到日 通知项目管理2
                 for j in User.objects.filter(groups__id=2):
                     notify.send(request.user, recipient=j, verb='客户收到新合同',\
@@ -350,8 +297,13 @@ class ContractAdmin(ExportActionModelAdmin):
                 self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     make_receive.short_description = '登记所选合同已收到'
 
-    def get_changelist(self, request, **kwargs):
+    def get_changelist(self, request):
         return ContractChangeList
+
+    # def get_list_display_links(self, request, list_display):
+    #     if not request.user.has_perm('mm.add_contract'):
+    #         return
+    #     return ['contract_number']
 
     def get_actions(self, request):
         actions = super(ContractAdmin, self).get_actions(request)
@@ -361,6 +313,11 @@ class ContractAdmin(ExportActionModelAdmin):
             if "make_receive" in actions:
                 del actions['make_receive']
         return actions
+
+    # def get_readonly_fields(self, request, obj=None):
+        # if obj.send_date:
+        #     return ['contract_number', 'name', 'price', 'range', 'fis_amount', 'fin_amount', 'contract_file']
+        # return
 
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
@@ -404,13 +361,11 @@ class ContractAdmin(ExportActionModelAdmin):
         ]
 
     def get_readonly_fields(self, request, obj=None):
-        return [
-            'contract_number', 'name', 'type', 'salesman', 'contacts',
-            'contact_phone', 'price', 'range', 'fis_amount', 'fin_amount',
-            'all_amount', 'tracking_number', 'send_date', 'receive_date',
-            'contract_file'
-        ] if not request.user.has_perm('mm.delete_contract') else []
-    
+        if not request.user.has_perm('mm.delete_contract'):
+            return ['contract_number', 'name', 'type', 'salesman','contacts','contact_phone', 'price', 'range', 'fis_amount', 'fin_amount',
+                    'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file']
+        return []
+
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for obj in formset.deleted_objects:
@@ -427,51 +382,33 @@ class ContractAdmin(ExportActionModelAdmin):
             #     self.message_user(request, '开票申请总额超过对应款期可开额度,未成功添加开票', level=messages.ERROR)
 
     def save_model(self, request, obj, form, change):
-        # 新增合同的时候，合作伙伴的email就在用户表中同步新增好了，客户提交样品信息单的时
-        # 候，登入系统使用，发钉钉通知
+        # 新增合同的时候，合作伙伴的email就在用户表中同步新增好了，客户提交样品信息单的时候，登入系统使用 发钉钉通知
         if change:
             pass
-        else:
-            # 新增的时候,同时初始化账号和密码一样
-            tt = User.objects.create(
-                username=obj.contacts_email,
-                password=make_password(obj.contacts_email),
-                email=obj.contacts_email, is_staff=True
-            )
+        else:# 新增的时候,同时初始化账号和密码一样
+            tt = User.objects.create(username=obj.contacts_email,password=make_password(obj.contacts_email),email=obj.contacts_email,is_staff=True)
             content_type = ContentType.objects.get_for_model(SampleInfoForm)
-            
-            # group分组
+            ##group分组
             group_info = Group.objects.get(name="合作伙伴")
             tt.groups.add(group_info)
-            
-            # 发送钉钉通知，给销售员
+            ##发送钉钉通知，给销售员
             user_id = False
             if Employees.objects.filter(user=obj.salesman):
                 user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息" + obj.contract_number
             # for u in dingding.sub_dept_users:
             #     if u["name"]==obj.salesman.username:
             #         user_id = u["userid"]
             #         break
-            params = {"access_token": dingding.access_token}
+            # params = {"access_token": dingding.access_token}
             if user_id:
-                data = {
-                    "agent_id": settings.DINGTALK_AGENT_ID,
-                    "userid_list": user_id,
-                    "msg": {
-                        "msgtype": "text",
-                        "text": {
-                            "content": "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息"+obj.contract_number
-                        }
-                    }
-                }
-                request = WorkNoticeRequest(params=params, json=data)
-                request.request_method = "post"
-                request.get_json_response()
-                response = request.json_response
+                self.send_work_notice(content, settings.DINGTALK_AGENT_ID, user_id)
+                if self.send_dingtalk_result:
+                    self.message_user(request, "已通知项目管理")
+                else:
+                    self.message_user(request, "钉钉通知发送失败")
             else:
-                messages.set_level(request, messages.ERROR)
-                self.message_user(request, "没有这个人的钉钉ID号，信息没有发送成功",
-                                  level=messages.ERROR)
+                pass
         """
         1、新增快递单号时自动记录时间戳
         """
@@ -494,15 +431,6 @@ class ContractAdmin(ExportActionModelAdmin):
                                 description="合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
                                             (obj.contract_number,obj.name,obj.contacts,obj.contact_phone))
         obj.save()
-
-    # 增加新增/修改表单的默认选项
-    def get_changeform_initial_data(self, request):
-        time_str = time.strftime('%Y%m%d', time.localtime(time.time()))
-        initial = super().get_changeform_initial_data(request)
-        initial["contract_number"] = "RY%s" % time_str
-        initial["range"] = 1
-        initial["type"] = 1
-        return initial
 
 
 class BzContractAdmin(admin.ModelAdmin):
