@@ -4,8 +4,26 @@ from pm.models import ExtSubmit, LibSubmit, SeqSubmit
 
 
 
-#执行表
+#提取方法
+class Extmethod(models.Model):
+    mothod = models.CharField(verbose_name="提取方法",max_length=100)
 
+    def __str__(self):
+        return self.mothod
+    class Meta:
+        ordering = ['id']
+        verbose_name = '提取方法'
+        verbose_name_plural = '提取方法'
+#质检方法
+class Testmethod(models.Model):
+    mothod = models.CharField(verbose_name="质检方法", max_length=100)
+
+    def __str__(self):
+        return self.mothod
+    class Meta:
+        ordering = ['id']
+        verbose_name = '质检方法'
+        verbose_name_plural = '质检方法'
 
 #抽提执行
 
@@ -18,11 +36,11 @@ class ExtExecute(models.Model):
     )
     ext_experimenter = models.ManyToManyField(
         User,
-        verbose_name='抽提实验员',blank= True,
+        verbose_name='抽提实验员',
         # on_delete= models.DO_NOTHING,
     )
-    extract_method = models.CharField(verbose_name="提取方法",max_length=50)
-    test_method = models.CharField(verbose_name="检测方法",max_length=50)
+    extract_method = models.ForeignKey(Extmethod,verbose_name="提取方法",on_delete=models.CASCADE,null=True)
+    test_method = models.ForeignKey(Testmethod,verbose_name="质检方法",on_delete=models.CASCADE,null=True)
     ext_end_date = models.DateField('提取完成日期',blank=True,null=True)
     upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
@@ -51,7 +69,7 @@ class LibExecute(models.Model):
     lib_experimenter = models.ManyToManyField(
         User,
         # on_delete= models.DO_NOTHING,
-        verbose_name='建库实验员',blank= True,
+        verbose_name='建库实验员',
 
     )
     lib_end_date = models.DateField('建库完成日期',blank=True,null=True)
@@ -93,7 +111,7 @@ class SeqExecute(models.Model):
     # subproject = models.ForeignKey()
     seq_experimenter = models.ManyToManyField(
         User,
-        verbose_name='测序实验员',blank= True,
+        verbose_name='测序实验员',
         # on_delete= models.DO_NOTHING,
     )
     seq_end_date = models.DateField('测序下机日期',blank=True,null=True)
@@ -290,8 +308,5 @@ class SampleInfoSeq(models.Model):
     class Meta:
         verbose_name = "测序详细样品信息"
         verbose_name_plural = "测序详细样品信息"
-
-
-
 
 
