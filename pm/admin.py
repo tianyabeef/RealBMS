@@ -22,6 +22,9 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
 
 
+import time
+
+
 class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
         sample_count = self.cleaned_data['sample_count']
@@ -444,6 +447,7 @@ class ExtSubmitAdmin(admin.ModelAdmin):
 
             for i in sampleinfoform:
                 kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+
         return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_ExtSubmit_submit(self, request, queryset):

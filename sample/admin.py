@@ -10,6 +10,7 @@ from import_export.forms import ConfirmImportForm, ImportForm
 from django.utils.translation import ugettext_lazy as _
 
 from BMS.admin_bms import BMS_admin_site
+from BMS.notice_mixin import NotificationMixin
 
 try:
     from django.utils.encoding import force_text
@@ -54,7 +55,7 @@ Monthchoose = {1:"A",2:"B",3:"C",4:"D",5:"E",6:"F",7:"G",8:"H",9:"I",10:"G",11:"
 class SampleInline(admin.TabularInline):
     model = SampleInfo
     fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','remarks','data_request']
-    readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
+    # readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
 
 
     # def get_readonly_fields(self, request, obj=None):
@@ -68,6 +69,16 @@ class SampleInline(admin.TabularInline):
         if current_group_set.name == "合作伙伴" or current_group_set.name == "实验部" :
             return False
         else:
+            return True
+
+    #设置不能修改确认后的样品详情列表
+    def has_change_permission(self, request, obj=None):
+        try:
+            if obj.sample_status == 2 :
+                return False
+            else:
+                return True
+        except:
             return True
 
 #上传管理器
@@ -145,7 +156,9 @@ class SampleInfoResource(resources.ModelResource):
 
 
 #样品概要管理
-class SampleInfoFormAdmin(ImportExportActionModelAdmin):
+class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
+
+
 
     resource_class = SampleInfoResource
 
@@ -159,9 +172,19 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     save_on_top = False
 
-    # raw_id_fields = ("saler",)
+    autocomplete_fields = ("saler",)
+
+    raw_id_fields = ("saler",)
 
     ordering = ('sample_status',)
+
+    radio_fields = {
+        "transform_status": admin.HORIZONTAL,
+        "sample_diwenjiezhi": admin.HORIZONTAL,
+        "management_to_rest": admin.HORIZONTAL,
+        "sample_status":admin.HORIZONTAL,
+        "sample_diwenzhuangtai":admin.HORIZONTAL,
+    }
 
     list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link', 'jindu_status')
     # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
@@ -170,27 +193,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
-        send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
+        send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
                   settings.EMAIL_FROM,
                   [sample.partner_email, ],
                   # ["love949872618@qq.com", ],
                       fail_silently=False)
         return super(SampleInfoFormAdmin, self).process_result(result, request)
-
-    # @method_decorator(require_POST)
-    # def process_import(self, request, *args, **kwargs):
-    #
-    #     sample = SampleInfo.objects.latest("id").sampleinfoform
-    #
-    #     send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-    #               settings.EMAIL_FROM,
-    #               [sample.partner_email, ],
-    #               # ["love949872618@qq.com", ],
-    #               fail_silently=False)
-    #     return super(SampleInfoFormAdmin, self).process_import(request, *args, **kwargs)
-
-
-
 
     actions = ['make_sampleinfoform_submit','insure_sampleinfoform']
 
@@ -222,16 +230,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
 
     def import_action(self, request, *args, **kwargs):
-
-        #只有超级用户和老师不能使用导入功能
-
-        # sample = SampleInfo.objects.latest("id").sampleinfoform
-        #
-        # send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-        #           settings.EMAIL_FROM,
-        #           [sample.partner_email, ],
-        #           # ["love949872618@qq.com", ],
-        #           fail_silently=False)
 
         resource = self.get_import_resource_class()(**self.get_import_resource_kwargs(request, *args, **kwargs))
 
@@ -322,17 +320,19 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
 
 
     def save_model(self, request, obj, form, change):
+        if not obj.time_to_upload:
+            obj.time_to_upload = datetime.datetime.now()
         if not obj.sampleinfoformid:
                     # print("**********************")
                     # print(str(int(SampleInfoForm.objects.latest("id").id)+1))
             if SampleInfoForm.objects.all().count() == 0:
-                obj.sampleinfoformid = request.user.username + \
+                obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
                                                '-' + str(datetime.datetime.now().year) + "-"+ \
                                                str(datetime.datetime.now().month) + '-' + \
                                                 str(datetime.datetime.now().day)                  + "_" + \
                                                  "1"
             else:
-                obj.sampleinfoformid = request.user.username +\
+                obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
                                            '-' +str(datetime.datetime.now().year)+ "-"+ \
                                            str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
                                              "_" + \
@@ -404,6 +404,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
                 send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
                           ["love949872618@qq.com", ],
                           fail_silently=False)
+                self.send_work_notice(msg, settings.DINGTALK_AGENT_ID, "00000")
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
             else:
@@ -422,6 +423,11 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin):
             if obj.sample_status == 1 and obj.arrive_time:
                 obj.sample_status = 2
                 obj.save()
+                msg = "<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner,obj.sampleinfoformid)
+                send_mail("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner,obj.sampleinfoformid), settings.EMAIL_FROM,
+                          ["love949872618@qq.com", ],
+                          fail_silently=False)
+                self.send_work_notice(msg, settings.DINGTALK_AGENT_ID, "00000")
             else:
                 n += 1
 
