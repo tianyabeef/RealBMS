@@ -30,6 +30,9 @@ from BMS.notice_mixin import NotificationMixin
 from nm.models import DingtalkChat
 
 
+import time
+
+
 class SubProjectForm(forms.ModelForm):
     def clean_sample_count(self):
         sample_count = self.cleaned_data['sample_count']
@@ -497,6 +500,7 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
             for i in sampleinfoform:
                 kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+
         return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_ExtSubmit_submit(self, request, queryset):

@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+
+from BMS.notice_mixin import NotificationMixin
 from sample.models import SampleInfoForm
 from BMS.admin_bms import BMS_admin_site
 from .models import Invoice, Contract, InvoiceTitle, BzContract
@@ -201,7 +203,7 @@ class ContractResource(resources.ModelResource):
         return "%s%s"%(contract.salesman.last_name,contract.salesman.first_name)
 
 
-class ContractAdmin(ExportActionModelAdmin):
+class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     resource_class = ContractResource
     """
     Admin class for Contract
@@ -393,31 +395,20 @@ class ContractAdmin(ExportActionModelAdmin):
             user_id = False
             if Employees.objects.filter(user=obj.salesman):
                 user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
-            print(user_id)
+            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息" + obj.contract_number
             # for u in dingding.sub_dept_users:
             #     if u["name"]==obj.salesman.username:
             #         user_id = u["userid"]
             #         break
-            params = {"access_token": dingding.access_token}
+            # params = {"access_token": dingding.access_token}
             if user_id:
-                data = {
-                    "agent_id": settings.DINGTALK_AGENT_ID,
-                    "userid_list": user_id,
-                    "msg": {
-                        "msgtype": "text",
-                        "text": {
-                            "content": "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息"+obj.contract_number
-                        }
-                    }
-                }
-                request = WorkNoticeRequest(params=params, json=data)
-                request.request_method = "post"
-                request.get_json_response()
-                response = request.json_response
+                self.send_work_notice(content, settings.DINGTALK_AGENT_ID, user_id)
+                if self.send_dingtalk_result:
+                    self.message_user(request, "已通知项目管理")
+                else:
+                    self.message_user(request, "钉钉通知发送失败")
             else:
-                messages.set_level(request, messages.ERROR)
-                self.message_user(request, "没有这个人的钉钉ID号，信息没有发送成功",
-                                  level=messages.ERROR)
+                pass
         """
         1、新增快递单号时自动记录时间戳
         """
