@@ -1,1 +1,0 @@
-INSERT INTO mm_invoice (id, issuingUnit, period, amount, type, content, note, submit, contract_id, title_id) VALUES (1, 'sh', 'FIS', 700, 'CC', '测试', '测试', 1, 3, 1);

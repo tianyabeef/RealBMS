@@ -1,1 +1,0 @@
-INSERT INTO mm_invoicetitle (id, title, tariffItem) VALUES (1, '301医院', '9133000000X');
