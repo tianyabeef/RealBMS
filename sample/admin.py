@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib import admin
 from django.template.response import TemplateResponse
 from django.contrib.auth.models import Group, User
+from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportActionModelAdmin
 from import_export.forms import ConfirmImportForm, ImportForm
@@ -54,32 +55,31 @@ Monthchoose = {1:"A",2:"B",3:"C",4:"D",5:"E",6:"F",7:"G",8:"H",9:"I",10:"G",11:"
 
 class SampleInline(admin.TabularInline):
     model = SampleInfo
-    fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','remarks','data_request']
+    fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','data_request','remarks']
     # readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
 
 
     # def get_readonly_fields(self, request, obj=None):
 
-    #设置老师没有导入功能,没有用
-    def has_add_permission(self, request):
-        try:
-            current_group_set = Group.objects.get(user=request.user)
-        except:
-            return True
-        if current_group_set.name == "合作伙伴" or current_group_set.name == "实验部" :
-            return False
-        else:
-            return True
+    # def has_add_permission(self, request):
+    #     # try:
+    #     #     current_group_set = Group.objects.get(user=request.user)
+    #     # except:
+    #     #     return False
+    #     # if current_group_set.name == "合作伙伴" or current_group_set.name == "实验部" :
+    #     #     return False
+    #     # else:
+    #         return False
 
     #设置不能修改确认后的样品详情列表
     def has_change_permission(self, request, obj=None):
         try:
             if obj.sample_status == 2 :
                 return False
-            else:
-                return True
         except:
-            return True
+            pass
+        return super().has_change_permission(request, obj=None)
+
 
 #上传管理器
 class SampleInfoResource(resources.ModelResource):
@@ -191,6 +191,11 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     list_display_links = ('sampleinfoformid',)
 
+    # def download(self,obj):
+    #     return format_html("""
+    #             <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
+    #     """)
+    # download.short_description = '下载模板'
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
         send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
@@ -297,15 +302,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         return tmp_storage
 
     #设置实验员没有增加样本功能
-    def has_add_permission(self, request):
-        try:
-            current_group_set = Group.objects.get(user=request.user)
-        except:
-            return True
-        if current_group_set.name == "实验部":
-            return False
-        else:
-            return True
+    # def has_add_permission(self, request):
+    #     try:
+    #         current_group_set = Group.objects.get(user=request.user)
+    #     except:
+    #         return True
+    #     if current_group_set.name == "实验部":
+    #         return False
+    #     else:
+    #         return True
 
     #测试
     # def test1(self, request, queryset):
@@ -437,18 +442,18 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         """  重新定义此函数，限制普通用户所能修改的字段  """
         if request.user.is_superuser:
-            self.readonly_fields = []
+            self.readonly_fields = ["download_teacher","download_tester",]
             return self.readonly_fields
         try:
             current_group_set = Group.objects.get(user=request.user)
             if current_group_set.name == "实验部":
-                self.readonly_fields = ('transform_company',"partner", 'transform_number','sample_diwenjiezhi',
+                self.readonly_fields = ('transform_company',"partner", 'transform_number',
                                         'transform_contact', 'transform_phone',
                                         'transform_status', 'sender_address', 'partner', 'partner_company',
                                         'partner_phone', 'partner_email', 'saler',
                                         'project_type',
                                         'sample_num', 'extract_to_pollute_DNA',
-                                        'management_to_rest', 'file_teacher',
+                                        'management_to_rest', 'file_teacher',"download_teacher","download_tester",
                                         "sampleinfoformid", "time_to_upload","information_email")
                 return self.readonly_fields
 
@@ -457,15 +462,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                            'transform_contact','transform_phone',
                            'transform_status','sender_address','partner', 'partner_company', 'partner_phone','partner_email', 'saler',
                                         'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai','project_type','arrive_time','sample_diwenjiezhi',
-                           'sample_num','extract_to_pollute_DNA',
+                           'sample_num','extract_to_pollute_DNA',"download_teacher","download_tester",
                             'management_to_rest','file_teacher',
                             "sampleinfoformid","time_to_upload","information_email")
                 return self.readonly_fields
         except:
-            self.readonly_fields = []
+            self.readonly_fields = ["download_teacher","download_tester",]
             return self.readonly_fields
         else:
-            self.readonly_fields = []
+            self.readonly_fields = ["download_teacher","download_tester",]
             return self.readonly_fields
 
 
@@ -506,7 +511,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 }], ['客户信息', {
                     'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'saler'),),
                 }], ['项目信息', {
-                    'fields': ('project_type','sample_diwenjiezhi',
+                    'fields': ('project_type',
                                'sample_num', 'extract_to_pollute_DNA',
                                'management_to_rest', 'file_teacher',
                                # "sampleinfoformid",

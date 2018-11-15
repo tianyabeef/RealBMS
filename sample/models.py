@@ -99,11 +99,11 @@ class SampleInfoForm(models.Model):
 
 
     #物流信息
-    transform_company = models.CharField(max_length=200,verbose_name="运输公司")
+    transform_company = models.CharField(max_length=200,verbose_name="运输公司",default="顺丰")
     transform_number = models.CharField(max_length=200,verbose_name="快递单号")
     transform_contact = models.CharField(max_length=200,verbose_name="寄样人姓名",default="")
     transform_phone = models.BigIntegerField(verbose_name="寄样联系人电话")
-    transform_status = models.IntegerField(choices=TransForm_Status,verbose_name="运输状态",default=2)
+    transform_status = models.IntegerField(choices=TransForm_Status,verbose_name="运输状态",default=0)
     sender_address = models.CharField(max_length=200, verbose_name="寄件人联系地址", default='')
 
 
@@ -117,15 +117,15 @@ class SampleInfoForm(models.Model):
     saler = models.ForeignKey(User,related_name="销售联系人",verbose_name="销售代表",blank=True,null=True,on_delete=models.SET_NULL)
 
     #服务类型
-    project_type = models.IntegerField(choices=Project_choices,verbose_name="项目类型",default=1)
+    project_type = models.IntegerField(choices=Project_choices,verbose_name="项目类型",default=2)
 
     #样品信息
     sample_num = models.IntegerField(verbose_name="样品数量")
-    extract_to_pollute_DNA = models.NullBooleanField("DNA提取是否可能有大量非目标DNA污染",default='')
+    extract_to_pollute_DNA = models.NullBooleanField("DNA提取是否可能有大量非目标DNA污染",default=False)
     management_to_rest = models.IntegerField(choices=Management_to_the_rest,
                                              verbose_name="剩余样品处理方式",default=2)
 
-    sample_diwenjiezhi = models.IntegerField(choices=TransForm_Status,verbose_name="低温保存介质",default=2)
+    sample_diwenjiezhi = models.IntegerField(choices=TransForm_Status,verbose_name="低温保存介质",default=0)
 
     #上传信息
     # download_model = models.CharField(max_length=200,verbose_name="点击下载表格",default="www.")
@@ -136,14 +136,19 @@ class SampleInfoForm(models.Model):
                                                         on_delete=models.SET_NULL)
     time_to_upload = models.DateField(verbose_name="上传时间",blank=True,null=True)
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
-
+    # download_teacher =  models.CharField(max_length=200,verbose_name='客户上传文件模板下载',default="""
+    #                         <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
+    #                         """)
+    # download_tester = models.FileField(max_length=200,verbose_name='实验室上传文件模板下载',default="""
+    #                         <a href="{% static 'modelform/实验室上传样品详情.xlsx' %}" style="color: #c9302c">实验室信息模板下载</a>
+    #                         """)
     #样品接收信息
     arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
     sample_checker = models.ForeignKey(User,related_name="物流接收人",verbose_name="样品核对人",blank=True,null=True,on_delete=models.SET_NULL)
     sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)
     sample_jindu = models.IntegerField(choices=Sample_jindu,verbose_name="样品进度",default=0)
-    sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=0)
+    sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=1)
     note_receive = models.TextField(verbose_name="样品接收备注",blank=True,null=True)
     #颜色显示
     color_code = models.CharField(max_length=6,default='')
@@ -246,38 +251,15 @@ class SampleInfo(models.Model):
     sample_species = models.CharField(max_length=200, verbose_name="物种", default='')
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
-    color_code = models.CharField(max_length=6,blank=True,null=True,default="")
+    color_code = models.CharField(max_length=16,blank=True,null=True,default="")
     sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
+    color_code2 = models.CharField(max_length=16,blank=True,null=True,default="")
 
-    # sample_status = models.IntegerField(choices=Status_of_Sample,verbose_name="样品状态",default=1)
-    #样品编号
-    # sample_id = models
-    # sample_used = models.CharField(max_length=200,verbose_name="样品提取用量")
-    # sample_rest = models.CharField(max_length=200,verbose_name="样品剩余用量")
-    # density_checked = models.DecimalField('浓度ng/uL(公司检测)', max_digits=5, decimal_places=3, null=True)
-    # volume_checked = models.DecimalField('体积uL(公司检测)', max_digits=5, decimal_places=3, null=True)
-    # D260_280 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/280")
-    # D260_230 = models.DecimalField(max_digits=8,decimal_places=1,verbose_name="D260/230")
-    # species = models.CharField(max_length=200,verbose_name="物种")
-    # preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
-    # is_RNase_processing = models.IntegerField(choices=Is_RNase_processing,verbose_name="是否经过RNase处理",default=1)
-
-    #DNA质检
-    # quality_control_conclusion = models.TextField(verbose_name="质检报告")
-
-    #跑胶
-    # sample_loading = models.CharField(max_length=200,verbose_name="上样量")
-    # integrity = models.CharField(max_length=200,verbose_name="完整性")
-    # note_running_glue = models.TextField('备注(跑胶)', blank=True, null=True)
-
-    #文库质检
-    # lib_code = models.CharField('文库号', max_length=20, null=True)
-    # index = models.CharField('Index', max_length=20, null=True)
-    # lib_volume = models.DecimalField('体积uL(文库)', max_digits=5, decimal_places=3, null=True)
-    # lib_concentration = models.DecimalField('浓度ng/uL(文库)', max_digits=5, decimal_places=3, null=True)
-    # lib_total = models.DecimalField('总量ng(文库)', max_digits=5, decimal_places=3, null=True)
-    # lib_result = models.NullBooleanField('结论(文库)', null=True)
-    # lib_note = models.TextField('备注(文库)', blank=True, null=True)
+    def sample_receiver_name_color(self):
+        return format_html(
+            '<h5 >{}_{}</h5>',
+            self.sample_receiver_name,
+            self.color_code2)
 
     def __str__(self):
         return format_html(
