@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.html import format_html
+from django import forms
 
 
 class InvoiceTitle(models.Model):
@@ -12,7 +13,7 @@ class InvoiceTitle(models.Model):
         verbose_name_plural = '发票抬头'
 
     def __str__(self):
-        return '%s' % self.title
+        return '%s-%s' % (self.title, self.tariffItem)
 
 
 class Contract(models.Model):
@@ -28,6 +29,12 @@ class Contract(models.Model):
         (4, '转录组'),
         (5, '其它'),
     )
+    # 选项
+    STATUS_CHOICES = (
+        (1, '新合同'),  #创建新合同默认的状态
+        (2, '已申请开票'),  #提交第一个发票申请的状态
+        (3, '已完成'),  #合同的总款额的发票都已经开出的状态
+    )
     contract_number = models.CharField('合同号', max_length=30, unique=True)
     name = models.CharField('合同名', max_length=100)
     type = models.IntegerField(
@@ -35,7 +42,7 @@ class Contract(models.Model):
         choices=TYPE_CHOICES
     )
     salesman = models.ForeignKey(User, verbose_name='业务员', on_delete=models.SET_NULL, null=True)
-    price = models.DecimalField('单价', max_digits=7, decimal_places=2, blank=True, null=True)
+    price = models.DecimalField('单价', max_digits=7, decimal_places=2, null=True)
     range = models.IntegerField(
         '价格区间',
         choices=RANGE_CHOICES, blank=True,null=True
@@ -51,14 +58,14 @@ class Contract(models.Model):
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄回日', null=True, blank=True)
     contract_file = models.FileField('附件', upload_to='uploads/%Y/%m', blank=True)
-    contacts = models.CharField('合同联系人', max_length=15, blank=True)
+    contacts = models.CharField('合同联系人', max_length=15, blank=True,default="")
     contacts_email = models.EmailField(verbose_name="合同联系人邮箱", default='')
-    contact_phone = models.CharField('合同联系人电话', max_length=30, blank=True)
+    contact_phone = models.CharField('合同联系人电话', max_length=30, blank=True,default="")
     contact_address = models.CharField('合同联系人地址', max_length=30, blank=True)
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位", default="")
     use_amount = models.DecimalField("已使用的金额", null=True, blank=True, max_digits=12, decimal_places=2, default=0)
-
-    contact_note = models.TextField('合同备注', blank=True)
+    contact_note = models.TextField('合同备注', blank=True,default="")
+    is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
 
     class Meta:
         verbose_name = '合同管理'

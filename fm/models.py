@@ -12,7 +12,7 @@ class Invoice(models.Model):
     send_date = models.DateField('寄出日期', null=True,blank=True)
     income_date = models.DateField('到账日期', null=True)
     income = models.DecimalField('到账金额',null=True,max_digits=12,decimal_places=2)
-    tax_amount = models.DecimalField('开票税率', max_digits=9, decimal_places=2,default=0)
+    tax_amount = models.DecimalField('开票税率', max_digits=9, decimal_places=2,null=True,default=0)
     invoice_file = models.FileField('电子发票', upload_to='uploadsInvoice/%Y/%m',null=True)
 
     class Meta:
