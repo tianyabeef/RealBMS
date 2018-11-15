@@ -107,7 +107,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoExtResource
 
-    list_per_page = 30
+    list_per_page = 50
 
     inlines = [SampleInfoExtInline]
 
@@ -231,6 +231,8 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 ext.ext_number = new
                 ext.save()
                 del ext
+                project.time_ext = datetime.datetime.now()
+                project.save()
                 content = ""
                 for x in msg_email:
                     content += x
@@ -300,7 +302,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoLibResource
 
-    list_per_page = 30
+    list_per_page = 50
 
     save_as_continue = False
 
@@ -395,6 +397,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 lib.lib_number = new
                 lib.save()
                 del lib
+                project.update(time_lib=datetime.datetime.now())
                 content = ""
                 for x in msg_email:
                     content += x
@@ -457,7 +460,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoSeqResource
 
-    list_per_page = 30
+    list_per_page = 50
 
     save_as_continue = False
 
