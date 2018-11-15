@@ -329,8 +329,8 @@ class InvoiceAdmin(ExportActionModelAdmin):
         return actions
 
     def get_readonly_fields(self, request, obj=None):
-        if not request.user.has_perm('fm.add_invoice'):
-            return ['invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount','invoice_type','invoice_content', 'invoice_note', 'invoice_code', 'tracking_number','tax_amount','date','invoice_file']
+        # if not request.user.has_perm('fm.add_invoice'):
+        #     return ['invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount','invoice_type','invoice_content', 'invoice_note', 'invoice_code', 'tracking_number','tax_amount','date','invoice_file']
         return ['invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount', 'invoice_type','invoice_content','invoice_note']
 
     def get_inline_instances(self, request, obj=None):
@@ -354,7 +354,7 @@ class InvoiceAdmin(ExportActionModelAdmin):
         # 只允许管理员和拥有该模型删除权限的人员，销售总监才能查看所有
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7:
+            if (group.id == 7) or (group.id == 14) or (group.id == 5):  #财务总监，销售总监,财务部
                 haved_perm=True
         qs = super(InvoiceAdmin, self).get_queryset(request)
         if request.user.is_superuser or request.user.has_perm('fm.delete_invoice') or haved_perm:
