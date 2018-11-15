@@ -81,7 +81,7 @@
           {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
           {% result_list cl %}
           {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
-          {% if cl.amount %}首尾款额合计：{{ cl.amount }}    合同总额合计：{{ cl.amount_input }}{% endif %}
+          {% if cl.amount %}首尾款额合计：{{ cl.amount }}    合同总额合计：{{ cl.amount_input }}          已到账合计：{{ cl.amount_in }}{% endif %}
       {% endblock %}
       {% block pagination %}{% pagination cl %}{% endblock %}
       </form>
