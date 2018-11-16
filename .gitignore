@@ -8,3 +8,4 @@ media/
 dev.db
 .git/
 settings.py
+*.pyc
