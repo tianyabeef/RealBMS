@@ -1,5 +1,5 @@
 {% load i18n %}
 {% load admin_urls %}
-{% if group_id == "实验部" or  group_id == 0 %}
-<li><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li>
+{% if opts.model_name == "sampleinfoform"  %}
+{#<li><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li>#}
 {% endif %}
