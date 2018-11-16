@@ -71,4 +71,4 @@ class Employees(models.Model):
         verbose_name_plural = verbose_name = '部门员工'
 
     def __str__(self):
-        return '%s-%s' % (self.dingtalk_id, self.user.username)
+        return '【{:s}】-【{:s}】'.format(self.user.username, self.dingtalk_id)
