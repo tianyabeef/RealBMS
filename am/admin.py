@@ -1,11 +1,24 @@
 from am.models import AnaExecute, WeeklyReport
-from django.contrib.auth.models import Group
+from am.views import AnaAutocompleteJsonView
+from django.contrib.auth.models import Group, User
+from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
+
+
+class UserForAutocompleteAdmin(UserAdmin):
+    """User define user admin for the queryset filtration"""
+    
+    def autocomplete_view(self, request):
+        return AnaAutocompleteJsonView.as_view(model_admin=self)(request)
+
+
+BMS_admin_site.unregister(User)
+BMS_admin_site.register(User, UserForAutocompleteAdmin)
 
 
 class AnaExecuteResource(resources.ModelResource):
