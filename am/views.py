@@ -25,7 +25,8 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         if self.request.user in ana_users:
             users_queryset = ana_users
         elif self.request.user in mar_users:
-            users_queryset = sal_users.extend(mar_users)
+            sal_users.extend(mar_users)
+            users_queryset = sal_users
         elif self.request.user in sal_users:
             users_queryset = sal_users
         elif self.request.user in exp_users:
