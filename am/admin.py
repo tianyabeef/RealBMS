@@ -110,6 +110,14 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             ana_submit.subProject.all().update(is_status=12)
             self.message_user(request, "项目状态已变更为【分析中】，请及时跟进")
     
+    def render_change_form(self, request, context, add=False, change=False,
+                           form_url='', obj=None):
+        context["adminform"].form.initial["analyst"] = request.user.id
+        return super().render_change_form(
+            request, context, add=add, change=change, form_url=form_url,
+            obj=obj
+        )
+
 
 class WeeklyReportResource(resources.ModelResource):
     """The import_export resource class for model WeeklyReport"""
