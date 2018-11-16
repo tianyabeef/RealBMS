@@ -22,15 +22,8 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
 from datetime import date
 from daterange_filter.filter import DateRangeFilter
-from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
-from BMS import dingding
-from BMS import settings
-from dingtalk_sdk_gmdzy2010.message_request import WorkNoticeRequest
+from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET
 from BMS.notice_mixin import NotificationMixin
-from nm.models import DingtalkChat
-
-
-import time
 
 
 class SubProjectForm(forms.ModelForm):
@@ -39,6 +32,12 @@ class SubProjectForm(forms.ModelForm):
         if sample_count == 0:
             raise forms.ValidationError('样品数量不能为0')
         return self.cleaned_data['sample_count']
+
+    def clean_sampleInfoForm(self):
+        sampleInfoForm = self.cleaned_data['sampleInfoForm']
+        if not sampleInfoForm:
+            raise forms.ValidationError("样品表单需要添加")
+        return self.cleaned_data['sampleInfoForm']
 
 
 class SalemanListFilter(admin.SimpleListFilter):
@@ -164,8 +163,6 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,Notif
                     'project_manager', 'is_submit', 'status','file_link','is_status',  'project_start_time', 'time_ext', 'time_lib', 'time_ana')
     list_display_links = ['sub_number', ]
     actions = ['make_submit', 'make_subProject_submit']
-    # list_editable = ['is_confirm']
-    # list_filter = [StatusListFilter]
     fieldsets = (
         ('合同信息', {
            'fields': (('contract','contract_number', 'contract_name',),
@@ -186,22 +183,18 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,Notif
                 'fields': (('is_ext', 'is_lib','is_seq', 'is_ana'),
                            ('sub_project_note',),)
         }),
-        # ('关键信息  (注：请审核好以上的所有的信息，再选中确定栏。)', {
-        #     'fields': (('is_submit',),)
-        # }),
     )
     readonly_fields = ['contract_number', 'contract_name', 'contacts','contacts_phone', 'saleman','company',
                        'project_type','income_notes','customer_name', 'customer_phone', 'service_types',
                        'sample_receiver','arrive_time']
     raw_id_fields = ['contract', ]
     filter_horizontal = ['sampleInfoForm', ]
-    # actions = ['make_confirm']
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
                      'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
     autocomplete_fields = ('contract',)
     ordering = ['-sub_number', ]
     # change_list_template = "pm/chang_list_custom.html"
-    list_per_page = 20
+    list_per_page = 50
     def make_subProject_submit(self, request,queryset):
         """
         终止任务
@@ -454,7 +447,7 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time','ext_number','sample_count',]
     search_fields = ['subProject__sub_number', 'ext_number', 'sample_count', 'ext_start_date', 'note', ]
     autocomplete_fields = ('subProject',)
-    list_per_page = 20
+    list_per_page = 50
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -518,8 +511,15 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                if obj.subProject.is_status < 2:
-                    SubProject.objects.filter(sub_number = obj.subProject).update(is_status = 2)
+                id = obj.subProject.id
+                project = SubProject.objects.filter(id=id).first()
+                if project.is_status < 2:
+                    project.is_status = 2
+                    project.save()
+                # if obj.subProject.is_status < 2:
+                #     SubProject.objects.filter(sub_number = obj.subProject).update(is_status = 2)
+                # obj.subProject.save()
+                # print(obj.subProject.is_status)
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -640,8 +640,7 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     search_fields = ['subProject__sub_number', 'lib_number', 'customer_sample_count', 'lib_start_date',
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
-    # raw_id_fields = ['subProject', ]
-    list_per_page = 20
+    list_per_page = 50
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -694,9 +693,14 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                if obj.subProject.is_status < 5:
-                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=5)
-                obj.subProject.save()
+                id = obj.subProject.id
+                project = SubProject.objects.filter(id=id).first()
+                if project.is_status < 5:
+                    project.is_status = 5
+                    project.save()
+                # if obj.subProject.is_status < 5:
+                #     SubProject.objects.filter(sub_number=obj.subProject).update(is_status=5)
+                # obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -816,8 +820,7 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     search_fields = ['subProject__sub_number', 'seq_number', 'customer_sample_count', 'seq_start_date',
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
-    # raw_id_fields = ['subProject', ]
-    list_per_page = 20
+    list_per_page = 50
     def contacts(self, obj):
         return obj.subProject.contract.contacts
 
@@ -874,9 +877,14 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             else:
                 n = n + 1
                 obj.is_submit = True
-                if obj.subProject.is_status < 8:
-                    SubProject.objects.filter(sub_number=obj.subProject).update(is_status=8)
-                obj.subProject.save()
+                id = obj.subProject.id
+                project = SubProject.objects.filter(id=id).first()
+                if project.is_status < 8:
+                    project.is_status = 8
+                    project.save()
+                # if obj.subProject.is_status < 8:
+                #     SubProject.objects.filter(sub_number=obj.subProject).update(is_status=8)
+                # obj.subProject.save()
                 seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -983,10 +991,9 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         })
     )
     readonly_fields = ['contract_number', 'contacts', 'partner_company', 'ana_number',]
-    # raw_id_fields = ['subProject', ]
     filter_horizontal = ('subProject',)
     search_fields = ['ana_number', 'ana_start_date', 'note', ]
-    list_per_page = 20
+    list_per_page = 50
     def contacts(self, obj):
         contracts = Contract.objects.filter(pk__in = [i.contract.id for i in obj.subProject.all()])
         return "\t".join([contract.contacts for contract in contracts])
@@ -1025,6 +1032,8 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 un = un + 1
             else:
                 n = n + 1
+                print("4")
+                print(obj.is_submit)
                 obj.is_submit = True
                 for subProject in obj.subProject.all():
                     subProject_old = SubProject.objects.get(id=subProject.id)
