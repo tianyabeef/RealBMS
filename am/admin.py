@@ -1,11 +1,25 @@
 from am.models import AnaExecute, WeeklyReport
-from django.contrib.auth.models import Group
+from am.views import AnaAutocompleteJsonView
+from django.contrib.auth.models import Group, User
+from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
-from django.utils.html import format_html
+
+
+class UserForAutocompleteAdmin(UserAdmin):
+    """User define user admin for the queryset filtration"""
+    
+    def autocomplete_view(self, request):
+        return AnaAutocompleteJsonView.as_view(model_admin=self)(request)
+
+
+BMS_admin_site.unregister(User)
+BMS_admin_site.register(User, UserForAutocompleteAdmin)
+
 
 class AnaExecuteResource(resources.ModelResource):
     """The import_export resource class for model AnaSubmit"""
@@ -34,14 +48,27 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     save_as_continue = False
     save_on_top = False
     list_display = (
-        "ana_submit", "analyst", "notes", "end_date", "file_link",
+        "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
         "depart_data_path", "baidu_link", "is_submit"
     )
     list_display_links = (
         'ana_submit',
     )
+    list_filter = ("is_submit", )
+    search_fields = ("analyst__username", "ana_submit__ana_number", )
+    autocomplete_fields = ("analyst", )
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
+
+    def depart_data_path(self, obj):
+        return obj.ana_submit.depart_data_path
+    depart_data_path.short_description = '数据分析路径'
+    
+    def confirmation_sheet(self, obj):
+        field = obj.ana_submit.confirmation_sheet
+        html = "<a href='%s'>下载</a>" % field.url if field else "未上传"
+        return format_html(html)
+    confirmation_sheet.short_description = '分析确认单'
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
@@ -49,38 +76,18 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
         ) if obj and obj.is_submit else ("ana_submit", )
         return self.readonly_fields
     
-    def depart_data_path(self, obj):
-        return obj.ana_submit.depart_data_path
-    
-    def file_link(self, obj):
-        if obj.ana_submit.confirmation_sheet:
-            return format_html(
-            "<a href='{0}'>下载</a>" .format(obj.ana_submit.confirmation_sheet.url))
-
-        else:
-            return "未上传"
-    
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         if db_field.name == "ana_submit":
             kwargs["queryset"] = AnaExecute.objects.filter(
                 ana_submit__subProject__is_status=11
             )
-        return super(AnaExecuteAdmin, self).formfield_for_dbfield(
-            db_field, request, **kwargs
-        )
-    
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "analyst":
+        elif db_field.name == "analyst":
             analyst_group = Group.objects.get(id=9)
             kwargs["queryset"] = analyst_group.user_set.all()
-        return super(AnaExecuteAdmin, self).formfield_for_foreignkey(
-            db_field, request, **kwargs
-        )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     
     def get_changeform_initial_data(self, request):
-        initial = super(AnaExecuteAdmin, self).get_changeform_initial_data(
-            request
-        )
+        initial = super().get_changeform_initial_data(request)
         initial["analyst"] = request.user.id
         return initial
     
@@ -90,16 +97,18 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
         ana_execute = AnaExecute.objects.get(ana_submit__ana_number=ana_number)
         ana_submit = ana_execute.ana_submit
         if obj.is_submit and obj.baidu_link and obj.end_date:
-            ana_submit.subProject.all().update(is_status=13)
+            ana_submit.subProject.all().update(
+                is_status=13, time_ana=obj.end_date
+            )
             name_list = [n.sub_project for n in ana_submit.subProject.all()]
             content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
             self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
-            if self.send_dingtalk_result:
-                self.message_user(request, "已通知项目管理")
-            else:
-                self.message_user(request, "钉钉通知发送失败")
+            call_back = self.send_dingtalk_result
+            message = "已钉钉通知项目管理进度" if call_back else "钉钉通知失败"
+            self.message_user(request, message)
         else:
             ana_submit.subProject.all().update(is_status=12)
+            self.message_user(request, "项目状态已变更为【分析中】，请及时跟进")
     
 
 class WeeklyReportResource(resources.ModelResource):
