@@ -2,9 +2,10 @@
 db.sqlite3
 */__pycache__/
 */migrations/*
-*/notifications/
+*/notification/
 BMS/settings.py
 media/
 dev.db
 .git/
 settings.py
+*.pyc
