@@ -1,6 +1,6 @@
 from django.contrib.admin.views.autocomplete import AutocompleteJsonView
-from django.contrib.auth.models import Group, User
-from django.db.models import Q, QuerySet
+from django.contrib.auth.models import User
+from django.db.models import Q
 
 
 class AnaAutocompleteJsonView(AutocompleteJsonView):
