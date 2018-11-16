@@ -23,6 +23,7 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         exp_users = self.get_group_users(Q(groups__id=1) | Q(groups__id=11))
         mar_users = self.get_group_users(Q(groups__id=4) | Q(groups__id=12))
         fin_users = self.get_group_users(Q(groups__id=5) | Q(groups__id=14))
+        cop_users = self.get_group_users(Q(groups__id=8))
         if self.request.user in ana_users:
             users_queryset = ana_users
         elif self.request.user in mar_users:
@@ -33,6 +34,8 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
             users_queryset = exp_users
         elif self.request.user in fin_users:
             users_queryset = fin_users
+        elif self.request.user in cop_users:
+            users_queryset = sal_users
         else:
             users_queryset = super().get_queryset()
         return users_queryset
