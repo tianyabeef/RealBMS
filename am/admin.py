@@ -43,22 +43,22 @@ class AnaExecuteResource(resources.ModelResource):
 
 
 class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
-    resource_class = AnaExecuteResource
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
+    autocomplete_fields = ("analyst", )
     list_per_page = 30
-    save_as_continue = False
-    save_on_top = False
     list_display = (
         "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
         "depart_data_path", "baidu_link", "is_submit"
     )
-    list_display_links = (
-        'ana_submit',
-    )
+    list_display_links = ('ana_submit', )
     list_filter = ("is_submit", )
+    resource_class = AnaExecuteResource
+    save_as_continue = False
     search_fields = ("analyst__username", "ana_submit__ana_number", )
-    autocomplete_fields = ("analyst", )
-    appkey = DINGTALK_APPKEY
-    appsecret = DINGTALK_SECRET
+    fields = (
+        "ana_submit", "analyst", "end_date", "baidu_link", "is_submit", "notes"
+    )
 
     def depart_data_path(self, obj):
         return obj.ana_submit.depart_data_path
