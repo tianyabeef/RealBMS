@@ -11,7 +11,7 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         groups = Group.objects.filter(query_condition)
         users_queryset = [u for g in groups for u in g.user_set.all()]
         return users_queryset
-        
+    
     def get_queryset(self):
         # Attention: the hard code of group should be removed in the future,
         # These may cause some problems when the database are going to be
