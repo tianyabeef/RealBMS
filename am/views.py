@@ -8,7 +8,7 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
     the group that the request.user in."""
     
     def get_group_users(self, query_condition=None):
-        users_qs = User.objects.filter(query_condition)
+        users_qs = User.objects.filter(query_condition).order_by("id")
         users_qs, search_use_distinct = self.model_admin.get_search_results(
             self.request, users_qs, self.term
         )
@@ -25,7 +25,9 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         fin_users = self.get_group_users(Q(groups__id=5) | Q(groups__id=14))
         cop_users = self.get_group_users(Q(groups__id=8))
         if self.request.user in ana_users:
-            users_queryset = ana_users
+            current = self.get_group_users(Q(pk=self.request.user.pk))
+            manager = self.get_group_users(Q(groups__id=10))
+            users_queryset = current if current & manager else ana_users
         elif self.request.user in mar_users:
             users_queryset = sal_users
         elif self.request.user in sal_users:
