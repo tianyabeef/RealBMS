@@ -38,7 +38,7 @@ class WeeklyReport(models.Model):
     """
     科技服务生信部门的周报管理
     """
-    reporter = models.OneToOneField(
+    reporter = models.ForeignKey(
         User, verbose_name="汇报人", on_delete=models.CASCADE
     )
     submit_date = models.DateField(
