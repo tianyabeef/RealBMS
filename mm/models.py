@@ -45,7 +45,7 @@ class Contract(models.Model):
     price = models.DecimalField('单价', max_digits=7, decimal_places=2, null=True)
     range = models.IntegerField(
         '价格区间',
-        choices=RANGE_CHOICES, blank=True,null=True
+        choices=RANGE_CHOICES, blank=True,null=True, default=2,
     )
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     fis_amount = models.DecimalField('首款额', max_digits=12, decimal_places=2)
