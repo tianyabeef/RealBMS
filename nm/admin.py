@@ -14,7 +14,7 @@ class DingtalkChatAdmin(admin.ModelAdmin):
     search_fields = ("chat_id", "chat_name", )
     list_filter = ("is_valid", )
     fields = (
-        "chat_name", "chat_id", "chat_owner", "is_valid",
+        "chat_name", "chat_id", "chat_owner", "members", "is_valid",
     )
 
     def get_readonly_fields(self, request, obj=None):
