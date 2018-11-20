@@ -1,6 +1,8 @@
 import datetime
 from django.contrib import admin
 from django.contrib.admin import widgets
+from django.contrib.auth.models import User
+
 from nm.models import DingtalkChat
 from import_export import resources, fields
 from import_export.admin import ImportExportActionModelAdmin
@@ -22,8 +24,8 @@ from sample.models import SampleInfoForm, SampleInfo
 #外键样品
 class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
-    fields = (("extExecute","unique_code","sample_number","sample_name","species","sample_type","sample_used",
-               "sample_rest","density_checked","volume_checked","D260_280","D260_230","DNA_totel","note","quality_control_conclusion","is_rebuild"),)
+    fields = (("extExecute","unique_code","sample_number",),("sample_name","species","sample_type",),("sample_used",
+               "sample_rest",),("density_checked","volume_checked","D260_280","D260_230","DNA_totel","quality_control_conclusion","is_rebuild"),)
     radio_fields = {
         "quality_control_conclusion": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
@@ -33,12 +35,12 @@ class SampleInfoExtInline(admin.StackedInline):
 class SampleInfoLibInline(admin.StackedInline):
     model = SampleInfoLib
     fields = (("libExecute", "unique_code", "sample_number", "sample_name", "lib_code", "index", "lib_volume",
-               "lib_concentration", "lib_total", "lib_result", "lib_note", "is_rebuild"),)
+               "lib_concentration", "lib_total", "lib_result", "is_rebuild"),)
 
 class SampleInfoSeqInline(admin.StackedInline):
     model = SampleInfoSeq
     fields = (("seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
-               "seq_data", "seq_result", "seq_note",  "is_rebuild"),)
+               "seq_data", "seq_result",  "is_rebuild"),)
 
 #抽提的导入
 class SampleInfoExtResource(resources.ModelResource):
@@ -64,12 +66,18 @@ class SampleInfoExtResource(resources.ModelResource):
         # 'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
 
     def get_export_headers(self):
-        return ["id","样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
+        return ["id","sample_number","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def get_diff_headers(self):
-        return ["id","样品编号","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
+        return ["id","sample_number","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+
+    def export(self, queryset=None, *args, **kwargs):
+        queryset_result = SampleInfoExt.objects.filter(id=None)
+        for i in queryset:
+            queryset_result |= SampleInfoExt.objects.filter(extExecute=i)
+        return super().export(queryset=queryset_result, *args, **kwargs)
 
     def get_or_init_instance(self, instance_loader, row):
         """
@@ -100,6 +108,7 @@ class ExtmothodAdmin(admin.ModelAdmin):
 
 class TestmothodAdmin(admin.ModelAdmin):
     search_fields = ("mothod",)
+
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
@@ -153,6 +162,11 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                  file_format.get_extension())
         return filename
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "ext_experimenter":
+            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+        return super().formfield_for_manytomany( db_field, request, **kwargs)
+
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = []
         try:
@@ -168,9 +182,10 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def save_model(self, request, obj, form, change):
         Dinggroupid = DingtalkChat.objects.filter(chat_name="实验钉钉群-BMS").first().chat_id
 
-        id = obj.extSubmit.subProject.id
+        sub_number = obj.extSubmit.subProject.sub_number
 
-        project = SubProject.objects.filter(id=id).first()
+
+        project = SubProject.objects.filter(sub_number=sub_number).first()
 
         if project.is_status < 3:
             project.is_status = 3
@@ -182,7 +197,8 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                                    man),"chat62dbddc59ef51ae0f4a47168bdd2a65b")
         if obj.is_submit:
             if not obj.upload_file:
-                raise Exception("抽提结果报告不能为空")
+                self.message_user(request,"抽提结果不能为空")
+                return None
             if project.is_status < 4:
                 project.is_status = 4
                 project.save()
@@ -200,7 +216,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                i.sample_rest,str(i.density_checked),str(i.volume_checked),str(i.D260_280),str(i.D260_230),
                                str(i.DNA_totel),str(i.Rebulid[i.is_rebuild][1]),str(i.Quality_control_conclusion[i.quality_control_conclusion-1][1]),
                                i.note)))
-                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "已抽提")
+                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "__{}__已抽提".format(sub_number) )
                 #建立重抽提任务单
                 ext = ExtSubmit()
                 ext.project_manager_id = obj.extSubmit.project_manager_id
@@ -216,13 +232,23 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                              str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
                                              str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
                                              i.note)))
-                    if "_" in SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
-                        new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] +\
-                              str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1])+1)
-                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
+                    if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
+                        if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
+                            # print("*******************************************")
+                            if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:-1]) in range(48,58):
+                                new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-2] +\
+                                             str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:])+1)
+                            else:
+                                new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] + \
+                                             str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:])+1)
+                            SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
+                        else:
+                            SampleInfo.objects.filter(unique_code=i.unique_code).update(
+                                color_code=" __{}__重抽提（未执行）1".format(sub_number))
                     else:
-                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="重抽提（未执行）_1")
-                        ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
+                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=" __{}__重抽提（未执行）1".format(sub_number))
+
+                    ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
                 old = obj.extSubmit.ext_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1])+1)
@@ -257,7 +283,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     #     return actions
 
 #建库操作
-class SampleInfoLibResource(resources.ModelResource):
+class SampleInfoLibResource(resources.ModelResource,):
     class Meta:
         model = SampleInfoLib
         skip_unchanged = True
@@ -268,8 +294,18 @@ class SampleInfoLibResource(resources.ModelResource):
         'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["样品编号","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
+        return ["id","sample_number","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
             ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
+
+    def get_diff_headers(self):
+        return ["id","sample_number","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
+                ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
+
+    def export(self, queryset=None, *args, **kwargs):
+        queryset_result = SampleInfoLib.objects.filter(id=None)
+        for i in queryset:
+            queryset_result |= SampleInfoLib.objects.filter(libExecute=i)
+        return super().export(queryset=queryset_result, *args, **kwargs)
 
     def get_or_init_instance(self, instance_loader, row):
         """
@@ -291,9 +327,6 @@ class SampleInfoLibResource(resources.ModelResource):
             # return (self.init_instance(row), True)
 
 
-    def get_diff_headers(self):
-        return ["样品编号","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
-                ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
 
 
@@ -335,12 +368,16 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             return self.readonly_fields
         return self.readonly_fields
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "lib_experimenter":
+            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+        return super().formfield_for_manytomany( db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
 
-        id = obj.libSubmit.subProject.id
+        sub_number = obj.libSubmit.subProject.sub_number
 
-        project = SubProject.objects.filter(id=id)
+        project = SubProject.objects.filter(sub_number=sub_number)
 
         #钉钉
         if project.first().is_status < 6:
@@ -353,7 +390,8 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
         if obj.is_submit:
             if not obj.upload_file:
-                raise Exception("提交时建库报告不能为空")
+                self.message_user(request,"提交时建库报告不能为空")
+                return None
             if project.first().is_status < 7:
                 project.update(is_status=7)
             if not obj.lib_end_date:
@@ -368,7 +406,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
                                       .format(i.sample_number,i.sample_name,i.lib_code,i.index,i.lib_volume,i.lib_concentration,
                                               i.lib_total,i.Lib_result[i.lib_result-1][1],i.lib_note,i.Rebulid[i.is_rebuild][1])))
-                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="已建库")
+                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已建库".format(sub_number))
                 # 建立重建库任务单
                 lib = LibSubmit()
                 lib.project_manager_id = obj.libSubmit.project_manager_id
@@ -382,13 +420,29 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                  j.lib_concentration,
                                                  j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
                                                  j.Rebulid[j.is_rebuild][1])))
-                    if "_" in SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[0:-1] +\
-                              str(int(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1])+1)
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
+                    if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                    48, 58):
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                       -2:-1]) in range(48, 58):
+                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                 0:-2] + \
+                                                 str(int(SampleInfo.objects.filter(
+                                                     unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                else:
+                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                 0:-1] + \
+                                                 str(int(SampleInfo.objects.filter(
+                                                     unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
+                            else:
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                    color_code=" __{}__重建库（未执行）1".format(sub_number))
                     else:
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="重建库（未执行）_1")
-                        lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                            color_code=" __{}__重建库（未执行）1".format(sub_number))
+                    lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
                 old = obj.libSubmit.lib_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1]) + 1)
@@ -431,8 +485,18 @@ class SampleInfoSeqResource(resources.ModelResource):
         'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["样品编号","文库号","Index","数据量要求","测序数据量"
+        return ["sample_number","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
+
+    def get_diff_headers(self):
+        return ["sample_number","文库号","Index","数据量要求","测序数据量"
+            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
+
+    def export(self, queryset=None, *args, **kwargs):
+        queryset_result = SampleInfoSeq.objects.filter(id=None)
+        for i in queryset:
+            queryset_result |= SampleInfoSeq.objects.filter(seqExecute=i)
+        return super().export(queryset=queryset_result, *args, **kwargs)
 
     def get_or_init_instance(self, instance_loader, row):
         """
@@ -452,9 +516,7 @@ class SampleInfoSeqResource(resources.ModelResource):
             raise Exception("请核对样品编号")
             # return (self.init_instance(row), True)
 
-    def get_diff_headers(self):
-        return ["样品编号","文库号","Index","数据量要求","测序数据量"
-            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
+
 
 class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
@@ -492,11 +554,16 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             return self.readonly_fields
         return self.readonly_fields
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "seq_experimenter":
+            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+        return super().formfield_for_manytomany( db_field, request, **kwargs)
+
     def save_model(self, request, obj, form, change):
 
-        id = obj.seqSubmit.subProject.id
+        sub_number = obj.seqSubmit.subProject.sub_number
 
-        project = SubProject.objects.filter(id=id)
+        project = SubProject.objects.filter(sub_number=sub_number)
 
         # 钉钉
         if project.first().is_status < 9:
@@ -509,7 +576,8 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
         if obj.is_submit:
             if not obj.upload_file:
-                raise Exception("pooling表格不能为空")
+                self.message_user(request,"测序结果报告")
+                return None
             if project.first().is_status < 10:
                 project.update(is_status=10)
             if not obj.seq_end_date:
@@ -528,7 +596,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                  i.Seq_result[i.seq_result-1][1], i.seq_note,
                                                  i.Rebulid[i.is_rebuild][1])))
 
-                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="已测序")
+                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已测序".format(sub_number))
                 # 建立重测序任务单
                 seq = SeqSubmit()
                 seq.project_manager_id = obj.seqSubmit.project_manager_id
@@ -542,13 +610,29 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                  j.seq_data,
                                                  j.Seq_result[j.seq_result - 1][1], j.seq_note,
                                                  j.Rebulid[j.is_rebuild][1])))
-                    if "_" in SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[0:-1] +\
-                              str(int(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1])+1)
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
+                    if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                    48, 58):
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                       -2:-1]) in range(48, 58):
+                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                 0:-2] + \
+                                                 str(int(SampleInfo.objects.filter(
+                                                     unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                else:
+                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                 0:-1] + \
+                                                 str(int(SampleInfo.objects.filter(
+                                                     unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
+                            else:
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                    color_code=" __{}__重测序（未执行）1".format(sub_number))
                     else:
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code="重测序（未执行）_1")
-                        seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                            color_code=" __{}__重测序（未执行）1".format(sub_number))
+                    seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
                 old = obj.seqSubmit.seq_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1]) + 1)
@@ -570,14 +654,27 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 pass
         super().save_model(request, obj, form, change)
 
+#样品池管理
+class Extsampleadmin(admin.ModelAdmin):
+    list_display = ["sample_number","sample_name","unique_code","extExecute","quality_control_conclusion","is_rebuild"]
+    list_display_links = ["sample_number"]
+    search_fields = ["is_rebuild","quality_control_conclusion"]
+class Libsampleadmin(admin.ModelAdmin):
+    list_display = ["sample_number", "sample_name", "unique_code", "libExecute", "lib_code",
+                    "lib_note","is_rebuild"]
+    list_display_links = ["sample_number"]
+    search_fields = ["is_rebuild",]
+class Seqsampleadmin(admin.ModelAdmin):
+    list_display = ["sample_number", "sample_name", "unique_code", "seqExecute",
+                 "seq_note","is_rebuild"]
+    list_display_links = ["sample_number"]
+    search_fields = ["is_rebuild",]
 
-
-    # def get_actions(self, request):
-    #     actions = super().get_actions(request)
-    #     del actions['export_admin_action']
-    #     return actions
 BMS_admin_site.register(Extmethod,ExtmothodAdmin)
 BMS_admin_site.register(Testmethod,TestmothodAdmin)
 BMS_admin_site.register(ExtExecute,ExtExecuteAdmin)
 BMS_admin_site.register(LibExecute,LibExecuteAdmin)
 BMS_admin_site.register(SeqExecute,SeqExecuteAdmin)
+BMS_admin_site.register(SampleInfoExt,Extsampleadmin)
+BMS_admin_site.register(SampleInfoLib,Libsampleadmin)
+BMS_admin_site.register(SampleInfoSeq,Seqsampleadmin)
