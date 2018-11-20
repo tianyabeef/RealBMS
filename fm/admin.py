@@ -1,5 +1,5 @@
 from django.contrib import admin
-
+from BMS.notice_mixin import NotificationMixin
 from BMS.admin_bms import BMS_admin_site
 from .models import Bill, Invoice
 from .models import Invoice as fm_Invoice
@@ -18,16 +18,26 @@ from mm.models import Contract
 from notification.signals import notify
 from pm.models import SubProject
 from django import forms
+from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
+from em.models import Employees
+from nm.models import DingtalkChat
 
 class InvoiceForm(forms.ModelForm):
+    '''
+    财务开票的Form
+    '''
     def clean_invoice_code(self):
         invoice_code = self.cleaned_data['invoice_code']
         for invoice in fm_Invoice.objects.all():
-            if invoice.invoice_code == invoice_code:
+            if invoice.invoice_code == invoice_code and invoice.id != self.instance.id:
                 raise forms.ValidationError('发票号码不能重复')
         return self.cleaned_data['invoice_code']
 
+
 class InvoiceChangeList(ChangeList):
+    '''
+    财务开票ChangeList页面的统计
+    '''
     def get_results(self, *args, **kwargs):
         super(InvoiceChangeList, self).get_results(*args, **kwargs)
         self.sum = []
@@ -41,6 +51,9 @@ class InvoiceChangeList(ChangeList):
 
 
 class InvoiceInfoResource(resources.ModelResource):
+    '''
+    财务发票的导出
+    '''
     contract_salesman = fields.Field(column_name='销售人员')
     invoice_contract_number = fields.Field(column_name='合同号',attribute='invoice__contract',widget=ForeignKeyWidget(Contract, 'contract_number'))
     contract_name = fields.Field(column_name='项目',attribute='invoice__contract',widget=ForeignKeyWidget(Contract, 'name'))
@@ -84,24 +97,30 @@ class InvoiceInfoResource(resources.ModelResource):
 
 
 class BillInlineFormSet(BaseInlineFormSet):
+    '''财务发票的进账的FormSet（Inline）'''
     def clean(self):
         super(BillInlineFormSet, self).clean()
         total = 0
         for form in self.forms:
             if not form.is_valid():
                 return
-            if form.cleaned_data and not form.cleaned_data['DELETE']:
+            # if form.cleaned_data and not form.cleaned_data['DELETE']:
+            if form.cleaned_data:
                 total += form.cleaned_data['income']
         self.instance.__total__ = total
 
 
 class BillInline(admin.TabularInline):
+    '''
+    财务发票管理的进账（Inline）
+    '''
     model = Bill
     formset = BillInlineFormSet
     extra = 1
 
 
 class SaleListFilter(admin.SimpleListFilter):
+    '''财务发票管理的过滤器'''
     title = '业务员'
     parameter_name = 'Sale'
 
@@ -125,14 +144,19 @@ class SaleListFilter(admin.SimpleListFilter):
                 return queryset.filter(invoice__contract__salesman=i)
 
 
-class InvoiceAdmin(ExportActionModelAdmin):
+class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
+    '''
+    财务发票的Admin
+    '''
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     form = InvoiceForm
     resource_class = InvoiceInfoResource
     list_display = ('invoice_contract_number', 'invoice_contract_name', 'contract_amount', 'salesman_name',
                     'contract_type', 'invoice_period','invoice_issuingUnit', 'invoice_title', 'invoice_amount', 'income_date',
                     'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date','file_link')
-    list_display_links = ['invoice_title', 'invoice_amount']
-    search_fields = ['invoice__contract__contract_number','invoice__title__title','invoice_code','^invoice__amount','invoice__issuingUnit']
+    list_display_links = ('invoice_title', 'invoice_amount')
+    search_fields = ('invoice__contract__contract_number','invoice__title__title','invoice_code','^invoice__amount','invoice__issuingUnit')
 
     def get_search_results(self, request, queryset, search_term):
         #TODO#先用固定数组，后期修改为调用invoice__issuingUnit的ISSUING_UNIT_CHOICES
@@ -153,7 +177,7 @@ class InvoiceAdmin(ExportActionModelAdmin):
     ]
     fieldsets = (
         ('申请信息', {
-           'fields': ('invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount','invoice_type','invoice_content', 'invoice_note')
+           'fields': (('invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount','invoice_type'),'invoice_content', 'invoice_note')
         }),
         ('开票信息', {
             'fields': ('invoice_code','tax_amount','date','invoice_file')
@@ -230,6 +254,7 @@ class InvoiceAdmin(ExportActionModelAdmin):
     bill_receivable.short_description = '应收金额'
 
     def save_model(self, request, obj, form, change):
+        user_id = False
         if obj.invoice_code and not obj.date:
             obj.date = datetime.now()
         elif not obj.invoice_code:
@@ -240,13 +265,30 @@ class InvoiceAdmin(ExportActionModelAdmin):
             obj.send_date = None
         obj.save()
         #开出发票后，通知相应销售人员。
-        notify.send(request.user, recipient=obj.invoice.contract.salesman, verb='开出发票',description="发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount))
-        #通知市场人员，内容：抬头，金额，对应销售员。
-        for j in User.objects.filter(groups__id=4):
-            notify.send(request.user, recipient=j, verb='开出发票',description="发票抬头：%s\t开票金额：%s\t销售人员：%s%s"
-                                                                           %(obj.invoice.title.title,obj.invoice.amount,
-                                                                             obj.invoice.contract.salesman.first_name,
-                                                                             obj.invoice.contract.salesman.last_name))
+        invoice = Invoice.objects.filter(id=obj.id)
+        if change:
+            if obj.invoice_code and obj.date:
+                if (obj.invoice_code != invoice[0].invoice_code) and invoice:
+                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,修改发票，发票号码：%s 开票金额：%s" % (obj.invoice_code, obj.invoice.amount)
+                    if Employees.objects.filter(user=obj.invoice.contract.salesman):
+                        user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
+                    if user_id:
+                        self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                    # 通知市场人员，内容：抬头，金额，
+                    # TODO 需要添加创建合同的人员，这些的消息反馈给新建合同的人，暂时发给项目管理
+                    self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+        else:
+            if obj.invoice_code and obj.date:
+                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,开出发票，发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount)
+                if Employees.objects.filter(user=obj.invoice.contract.salesman):
+                    user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
+                if user_id:
+                    self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                # 通知市场人员，内容：抬头，金额，
+                # TODO 需要添加创建合同的人员，这些的消息反馈给新建合同的人，暂时发给项目管理
+                self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+                # notify.send(request.user, recipient=obj.invoice.contract.salesman, verb='开出发票',description="发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount))
+            #通知市场人员，内容：抬头，金额，对应销售员。
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -296,27 +338,28 @@ class InvoiceAdmin(ExportActionModelAdmin):
                 if obj_project:
                     obj_project.save()
                 #新的到账 通知财务部5
-                for j in User.objects.filter(groups__id=5):
-                    notify.send(request.user, recipient=j, verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
-                #新到账 通知相应的销售
-                notify.send(request.user,recipient=obj_invoice.invoice.contract.salesman,verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
+                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,有一笔新到账，发票号：%s 到账金额：%s"%(obj_invoice,sum_income)
+                # 新到账 通知相应的销售
+                # if Employees.objects.filter(user=obj.invoice.contract.salesman):
+                #     user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
+                # if user_id:
+                #     self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                # TODO 需要添加创建合同的人员，这些的消息反馈给新建合同的人，暂时发给项目管理
+                self.send_group_message(content, DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id)
+                # for j in User.objects.filter(groups__id=5):?
+                #     notify.send(request.user, recipient=j, verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
+                # notify.send(request.user,recipient=obj_invoice.invoice.contract.salesman,verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
             else:
                 messages.set_level(request, messages.ERROR)
                 self.message_user(request, '进账总额 %.2f 超过开票金额 %.2f' % (sum_income, invoice_amount),
                                   level=messages.ERROR)
-
-    def get_list_display_links(self, request, list_display):
-        # 没有删除发票权限人员，取消入口
-        if not request.user.has_perm('fm.delete_invoice'):
-            return None
-        return ['invoice_title', 'invoice_amount']
 
     def get_changelist(self, request):
         return InvoiceChangeList
 
     def get_actions(self, request):
         # 无删除或新增权限人员取消actions,销售总监有export_admin_action权限
-        actions = super(InvoiceAdmin, self).get_actions(request)
+        actions = super().get_actions(request)
         ##TODO,测试的时候报错，需要修改
         # if not request.user.has_perm('fm.delete_invoice'):
         #     # actions = None
@@ -341,14 +384,14 @@ class InvoiceAdmin(ExportActionModelAdmin):
             self.inlines = [BillInline,]
         return super(InvoiceAdmin, self).get_inline_instances(request, obj)
 
-    def get_formsets_with_inlines(self, request, obj=None):
-        # add page不显示BillInline
-        for inline in self.get_inline_instances(request, obj):
-            if isinstance(inline, BillInline) and obj is None:
-                continue
-            if not obj.invoice_code:
-                continue
-            yield inline.get_formset(request, obj), inline
+    # def get_formsets_with_inlines(self, request, obj=None):
+    #     # add page不显示BillInline
+    #     for inline in self.get_inline_instances(request, obj):
+    #         if isinstance(inline, BillInline) and obj is None:
+    #             continue
+    #         if not obj.invoice_code:
+    #             continue
+    #         yield inline.get_formset(request, obj), inline
 
     def get_queryset(self, request):
         # 只允许管理员和拥有该模型删除权限的人员，销售总监才能查看所有
@@ -365,22 +408,15 @@ class InvoiceAdmin(ExportActionModelAdmin):
         #销售总监，admin，有删除权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7:
+            if group.id == 7 or group.id == 5 or group.id == 14:#财务总监，财务部，市场总监
                 haved_perm=True
-        if request.user.is_superuser or request.user.has_perm('fm.delete_invoice') or haved_perm:
+        if request.user.is_superuser or haved_perm:
             return [
                 SaleListFilter,
                 'invoice__contract__type',
                 ('income_date', DateRangeFilter),
                 ('date', DateRangeFilter)
             ]
-        # elif haved_perm:
-        #     return [
-        #         SaleListFilterSale,
-        #         'invoice__contract__type',
-        #         ('income_date', DateRangeFilter),
-        #         ('date', DateRangeFilter)
-        #     ]
         return [
             'invoice__contract__type',
             ('income_date', DateRangeFilter),
@@ -392,17 +428,22 @@ class InvoiceAdmin(ExportActionModelAdmin):
             return True
         return super(InvoiceAdmin, self).lookup_allowed(lookup, *args, **kwargs)
 
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['show_delete'] = False
-        if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
-            extra_context['show_save'] = False
-            extra_context['show_save_as_new'] = False
-            extra_context['show_save_and_continue'] = False
-        return super(InvoiceAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+    # def change_view(self, request, object_id, form_url='', extra_context=None):
+    #     extra_context = extra_context or {}
+    #     extra_context['show_delete'] = False
+    #     print(extra_context)
+    #     print(request.user.has_perm('fm.add_invoice'))
+    #     # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+    #     #     extra_context['show_save'] = False
+    #     #     extra_context['show_save_as_new'] = False
+    #     #     extra_context['show_save_and_continue'] = False
+    #     return super(InvoiceAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
 
 class BillChangeList(ChangeList):
+    '''
+    进账的ChangeList页面的统计
+    '''
     def get_results(self, *args, **kwargs):
         super(BillChangeList, self).get_results(*args, **kwargs)
         q = self.result_list.aggregate(Sum('income'))
@@ -410,6 +451,7 @@ class BillChangeList(ChangeList):
 
 
 class BillAdmin(admin.ModelAdmin):
+    '''进账的Admin'''
     list_display = ('invoice', 'income', 'date')
     raw_id_fields = ['invoice']
     date_hierarchy = 'date'
