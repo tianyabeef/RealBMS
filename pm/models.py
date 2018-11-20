@@ -142,7 +142,7 @@ class SeqSubmit(models.Model):
     customer_confirmation_time = models.DateField('客户确认上机时间', blank=True, null=True)
     customer_sample_count = models.IntegerField('客户确认上机样品数量', blank=True, null=True)
     # customer_sample_info = models.FileField('客上机样本明细')
-    pooling_excel = models.FileField(verbose_name="Pooling表格", upload_to="uploads/pooling/%Y/%m/%d/")
+    pooling_excel = models.FileField(verbose_name="Pooling表格", upload_to="uploads/pooling/%Y/%m/%d/", null=True, blank=True)
     # 外键一张测序样品表
     note = models.TextField('备注', blank=True, null=True)
     is_submit = models.BooleanField('提交', default=False)

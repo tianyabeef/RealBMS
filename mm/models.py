@@ -73,15 +73,14 @@ class Contract(models.Model):
 
     def file_link(self):
         if self.contract_file:
-            return format_html("<a href='%s'>下载</a>" % (self.contract_file.url,))
+            return format_html("<a href='%s'>下载</a>" % (self.contract_file.url))
         else:
             return "未上传"
-
     file_link.short_description = "附件"
     file_link.allow_tags = True
 
     def __str__(self):
-        return '%s' % self.contract_number
+        return '【%s】-【%s】' % (self.contract_number, self.name)
 
 
 class Invoice(models.Model):
@@ -132,9 +131,20 @@ class BzContract(models.Model):
     send_date = models.DateField('合同寄出日', null=True, blank=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄回日', null=True, blank=True)
+    contract_file = models.FileField('附件', upload_to='uploads/BzContract/%Y/%m', blank=True)
 
-    contract_file = models.FileField('附件', upload_to='uploads/报账/%Y/%m', blank=True)
+
+    def file_link(self):
+        if self.contract_file:
+            return format_html("<a href='%s'>下载</a>" % (self.contract_file.url))
+        else:
+            return "未上传"
+    file_link.short_description = "附件"
+    file_link.allow_tags = True
 
     class Meta:
         verbose_name = '报账合同管理'
         verbose_name_plural = '报账合同管理'
+
+    def __str__(self):
+        return '【%s】-【%s】' % (self.contract_number, self.name)
