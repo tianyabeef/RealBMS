@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.admin import ModelAdmin
 from django.contrib.auth.hashers import make_password, check_password
 from BMS.notice_mixin import NotificationMixin
 from BMS.admin_bms import BMS_admin_site
@@ -20,66 +22,80 @@ from notification.signals import notify
 from operator import is_not
 from functools import partial
 from django.utils import formats
-from BMS import settings
+from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
 from em.models import Employees
 from nm.models import DingtalkChat
-
+import re
 
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
     """
-    Admin class for InvoiceTitle
+    发票抬头的Admin
     """
     list_display = ('title', 'tariffItem')
     fields = ('title', 'tariffItem')
     search_fields = ['title','tariffItem']
+    list_per_page = 50
 
 
 class InvoiceForm(forms.ModelForm):
-    # 开票金额与合同对应款期额校验 #22
-    def clean_amount(self):
-        print(self.cleaned_data)
-        obj_contract = Contract.objects.filter(contract_number=self.cleaned_data['contract']).first()
-        if self.cleaned_data['period'] == 'FIS':
-            q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIS')\
-                .aggregate(Sum('amount'))
-            if q['amount__sum']:
-                if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fis_amount:
-                    raise forms.ValidationError('首款已开票金额%s元，超出可开票总额' % q['amount__sum'])
-        if self.cleaned_data['period'] == 'FIN':
-            q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIN')\
-                .aggregate(Sum('amount'))
-            if q['amount__sum']:
-                if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fin_amount:
-                    raise forms.ValidationError('尾款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+    '''
+    开票申请form
+    '''
+    def clean_amount(self):##clean_data的验证顺序是按照fields顺序
+        contract_match = re.match("【(.*)】-.*", str(self.cleaned_data['contract']))
+        if contract_match:
+            obj_contract = Contract.objects.filter(contract_number=contract_match.group(1)).first()
+            if self.cleaned_data['period'] == 'FIS':
+                q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIS')\
+                    .aggregate(Sum('amount'))
+                if q['amount__sum']:
+                    if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fis_amount:
+                        raise forms.ValidationError('首款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+            if self.cleaned_data['period'] == 'FIN':
+                q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIN')\
+                    .aggregate(Sum('amount'))
+                if q['amount__sum']:
+                    if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fin_amount:
+                        raise forms.ValidationError('尾款已开票金额%s元，超出可开票总额' % q['amount__sum'])
         return self.cleaned_data['amount']
 
 
 class ContractForm(forms.ModelForm):
+    '''
+    合同的from
+    '''
     def clean_contract_file(self):
         if self.cleaned_data['receive_date'] and (not self.cleaned_data["contract_file"]):
             raise forms.ValidationError("合同寄回日期已填入，请把合同文件添加上！！")
+        return self.cleaned_data['contract_file']
 
 
 class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     """
-    Admin class for invoice
+    合同的开票申请Admin
     """
-    form = InvoiceForm
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ('contract', 'title', 'period', 'amount', 'issuingUnit','note', 'submit')
+    list_display_links = ('contract',)
     actions = ['make_invoice_submit']
-    list_display_links = None
-    fields = ('contract','title','issuingUnit','period', 'amount','type','content', 'note')
-    raw_id_fields = ['title',]
-    autocomplete_fields = ('title',)
-    radio_fields = {"issuingUnit": admin.HORIZONTAL, "period": admin.HORIZONTAL, "type": admin.HORIZONTAL}
+    fields = (('contract', 'title'), ('issuingUnit', 'period', 'type'), 'amount',('content', 'note'))
+    # raw_id_fields = ['title',]
+    autocomplete_fields = ('contract', 'title',)
+    radio_fields = {'issuingUnit':admin.HORIZONTAL, 'period': admin.HORIZONTAL, 'type': admin.HORIZONTAL}
+    list_per_page = 50
+    ordering = ['-id']
+    form = InvoiceForm
 
     def make_invoice_submit(self, request, queryset):
         """
         批量提交开票申请
         """
-        i = 0  #
-        n = 0   #
+        i = 0  #提交成功的数量
+        n = 0  #提交过的数量
+        t = 0  #选中的总数量
         for obj in queryset:
+            t += 1
             if not obj.submit:
                 fm_Invoice.objects.create(invoice=obj, tax_amount=6)
                 obj.submit = True
@@ -90,18 +106,31 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
                     obj.contract.save()
                 #新的开票申请 通知财务部5
                 for j in User.objects.filter(groups__id=5):
-                    self.send_work_notice("合同名称：%s %s  提交了开票申请"%(obj.contract.name,obj.period),settings.DINGTALK_AGENT_ID, "00000")
-                    notify.send(request.user, recipient=j, verb='提交了开票申请',description="合同名称：%s %s"%(obj.contract.name,obj.period))
+                    fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
+                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请"%(obj.contract.name, obj.period, obj.amount)
+                    self.send_group_message(content,fm_chat_id)
             else:
                 n += 1
-        if i:
-            self.message_user(request, '%s 个开票申请已成功提交到财务' % i)
-        if n:
-            self.message_user(request, '%s 个开票申请已提交过，不能再次提交' % n, level=messages.ERROR)
+        if i > 0 and n > 0:
+            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交，%s个提交了开票申请' % (t,n,i), level=messages.ERROR)
+        elif i>0 and n==0:
+            self.message_user(request, '您选中了%s个，其中%s个提交了开票申请' % (t, i), level=messages.ERROR)
+        else:
+            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交' % (t, n), level=messages.ERROR)
     make_invoice_submit.short_description = '提交开票申请到财务'
 
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
+                if "make_invoice_submit" in actions:
+                    del actions["make_invoice_submit"]
+        return actions
 
 class InvoiceInlineFormSet(BaseInlineFormSet):
+    '''
+    合同的开票申请的FormSet
+    '''
     def clean(self):
         super().clean()
         total = {}
@@ -118,13 +147,15 @@ class InvoiceInlineFormSet(BaseInlineFormSet):
             self.instance.__total__ = total
 
 
-
 class InvoiceInline(admin.StackedInline):
+    ''''
+        合同管理中的开票申请（Inline）
+    '''
     # form = InvoiceForm # TODO 对发票的总款额和首付款，尾款的限制
     model = Invoice
     formset = InvoiceInlineFormSet
     extra = 1
-    fields = (('title','issuingUnit'),('period', 'amount','type'),('content', 'note'))
+    fields = (('title', 'amount'), ('issuingUnit', 'period', 'type'),('content', 'note'))
     # autocomplete_fields = ('title',)   # TODO 当数据量较多是，下拉框会变得很长，有待优化
     raw_id_fields = ('title',)
     radio_fields = {"period": admin.HORIZONTAL, 'issuingUnit':admin.HORIZONTAL, "type":admin.HORIZONTAL}
@@ -135,6 +166,9 @@ class InvoiceInline(admin.StackedInline):
 
 
 class ContractChangeList(ChangeList):
+    '''
+    合同的ChangeList页面统计
+    '''
     def get_results(self, *args, **kwargs):
         super().get_results(*args, **kwargs)
         fis_amount = self.result_list.aggregate(fis_sum=Sum('fis_amount'))
@@ -148,6 +182,7 @@ class ContractChangeList(ChangeList):
 
 
 class SaleListFilter(admin.SimpleListFilter):
+    '''合同中的过滤器'''
     title = '业务员'
     parameter_name = 'Sale'
 
@@ -172,7 +207,9 @@ class SaleListFilter(admin.SimpleListFilter):
 
 
 class ContractResource(resources.ModelResource):
-    #按照合同号导出
+    """
+    按照合同号导出
+    """
     contract_number = fields.Field(column_name="合同号",attribute="contract_number")
     contract_name = fields.Field(column_name="合同名称",attribute="name")
     invoice_issuingUnit = fields.Field(column_name="开票单位")
@@ -220,39 +257,40 @@ class ContractResource(resources.ModelResource):
 
 
 class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
+    """
+    合同中的Admin
+    """
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     resource_class = ContractResource
-    """
-    Admin class for Contract
-    """
     list_display = ('contract_number', 'name','partner_company_modify', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
                     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     date_hierarchy = 'send_date'
-    inlines = [
-        InvoiceInline,
-    ]
-    radio_fields = {"type": admin.HORIZONTAL, "range": admin.HORIZONTAL, }
+    inlines = [InvoiceInline,]
+    radio_fields = {'type': admin.HORIZONTAL,'range':admin.HORIZONTAL}
     list_per_page = 50
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': ('contract_number', 'name', 'type', 'salesman',('contacts','contact_phone','contacts_email'),('contact_address',"partner_company"), ('price', 'range'), ('fis_amount', 'fin_amount','all_amount'),('contact_note'))
+            'fields': (('contract_number', 'name', 'type'),('contacts','contact_phone', 'contacts_email'),
+                       ('contact_address', 'partner_company', 'salesman'), ('price', 'range'),
+                       ('fis_amount', 'fin_amount', 'all_amount'),( 'contact_note'))
         }),
         ('邮寄信息', {
-            'fields': ('tracking_number', 'send_date', 'receive_date')
+            'fields': (('tracking_number', 'send_date', 'receive_date'),)
         }),
         ('上传合同', {
             'fields': ('contract_file', )
         })
     )
-    # raw_id_fields = ['salesman']
-    autocomplete_fields = ['salesman',]
-    search_fields = ['contract_number', 'name', 'salesman__username']
-    actions = ['make_receive']
+    autocomplete_fields = ('salesman',)
+    search_fields = ('contract_number', 'name', 'salesman__username')
+    actions = ('make_receive',)
     form = ContractForm
 
     def partner_company_modify(self,obj):
+        # 抬头的单位名称
         if obj.partner_company == "":
-            # 抬头的单位名称
             invoices = Invoice.objects.filter(contract=obj)
             return  invoices[0].title.title if invoices else ""
         else:
@@ -312,10 +350,12 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         for obj in queryset:
             if rows_updated:
                 #合同寄到日 通知项目管理2
-                for j in User.objects.filter(groups__id=2):
-                    notify.send(request.user, recipient=j, verb='客户收到新合同',\
-                                description="合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
-                                            (obj.contract_number,obj.name,obj.contacts,obj.contact_phone))
+                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,合同号：%s寄回日期%s已经记录"% (obj.contract_number, obj.receive_date)
+                if Employees.objects.filter(user=obj.salesman):
+                    user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+                if user_id:
+                    self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                    self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
                 self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
             else:
                 self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
@@ -325,12 +365,11 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         return ContractChangeList
 
     def get_actions(self, request):
-        actions = super(ContractAdmin, self).get_actions(request)
-        if not request.user.has_perm('mm.delete_contract'):
-            if "delete_selected" in actions:
-                del actions['delete_selected']
-            if "make_receive" in actions:
-                del actions['make_receive']
+        actions = super().get_actions(request)
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
+                if "make_receive" in actions:
+                    del actions["make_receive"]
         return actions
 
     def get_formsets_with_inlines(self, request, obj=None):
@@ -355,7 +394,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         #销售总监，admin，有新增权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7:
+            if group.id == 7 or group.id == 2 or group.id == 12:  # 市场部总监，项目管理，销售总监
                 haved_perm=True
         if request.user.is_superuser or request.user.has_perm('mm.add_contract') or haved_perm:
             return [SaleListFilter, 'type', ('send_date', DateRangeFilter),('receive_date',DateRangeFilter)]
@@ -366,8 +405,6 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
             if obj.is_status >= 2:
                 return ['contract_number', 'name', 'type', 'salesman','contacts','contact_phone','contacts_email','contact_address','partner_company', 'price', 'range', 'fis_amount', 'fin_amount', 'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file','contact_note']
         return self.readonly_fields
-        # return ['contract_number', 'name', 'type', 'salesman','contacts','contact_phone', 'price', 'range', 'fis_amount', 'fin_amount',
-        #              'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file'] if not request.user.has_perm('mm.delete_contract') else []
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -376,72 +413,136 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         if instances:
             fis_amount = instances[0].contract.fis_amount
             fin_amount = instances[0].contract.fin_amount
-            print(fis_amount)
-            print(formset.instance.__total__['fis'])
-            print(formset.instance.__total__['fin'])
             if (fis_amount < formset.instance.__total__['fis']) or (fin_amount < formset.instance.__total__['fin']):
-                self.message_user(request, '首款已开票金额%s元，超出可开票总额' % fis_amount)
+                self.message_user(request, '首款已开票金额%s元，超出可开票总额，未成功添加开票' % fis_amount)
             else:
                 for instance in instances:
                     instance.save()
                 formset.save_m2m()
-            # else:
-            #     messages.set_level(request, messages.ERROR)
-            #     self.message_user(request, '开票申请总额超过对应款期可开额度,未成功添加开票', level=messages.ERROR)
+
 
     def save_model(self, request, obj, form, change):
         # 新增合同的时候，合作伙伴的email就在用户表中同步新增好了，客户提交样品信息单的时候，登入系统使用 发钉钉通知
-        if not User.objects.filter(username=obj.contacts_email):
-            tt = User.objects.create(username=obj.contacts_email, password=make_password(obj.contacts_email),
-                                     email=obj.contacts_email, is_staff=True)
-            group_info = Group.objects.get(name="合作伙伴")
-            tt.groups.add(group_info)
-        message_content = ""
-        if obj.fis_amount + obj.fin_amount != obj.all_amount:
-            message_content += "  首款额+尾款额≠总款额"
-
+        content = ""
+        contract = Contract.objects.filter(id=obj.id)
+        user = User.objects.filter(username=obj.contacts_email)
+        user_id = False
+        if Employees.objects.filter(user=obj.salesman):
+            user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
         if change:
-            pass
-        else:# 新增的时候,同时初始化账号和密码一样   ##发送钉钉通知，给销售员
-            user_id = False
-            if Employees.objects.filter(user=obj.salesman):
-                user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
-            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息" + obj.contract_number
-            if user_id:
-                self.send_work_notice(content, settings.DINGTALK_AGENT_ID, user_id)
-                # self.send_group_message(content,DingtalkChat.objects.filter(chat_name="财务钉钉群-BMS")[0].chat_id)
-                self.send_group_message(content, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-                if self.send_dingtalk_result:
-                    message_content += "  已通知项目管理"
-                    # self.message_user(request, "已通知项目管理")
-                else:
-                    message_content += "  钉钉通知发送失败"
-                    # self.message_user(request, "钉钉通知发送失败")
+            if obj.contacts_email and (contract[0].salesman.username != obj.contacts_email):
+                if not user:
+                    tt = User.objects.create(username=obj.contacts_email, password=make_password(obj.contacts_email),
+                                             email=obj.contacts_email, is_staff=True)
+                    group_info = Group.objects.get(name="合作伙伴")
+                    tt.groups.add(group_info)
+                    content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
+                        obj.contacts_email)
+                # else:
+                #     content = content + "修改合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (
+                #         obj.contacts_email)
+
+                if contract:
+                    if obj.receive_date and contract[0].receive_date and (obj.receive_date != contract[0].receive_date):
+                        content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                                  (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
+                    elif obj.receive_date and (not contract[0].receive_date):
+                        content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                                  (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
+        else:
+            if not user:#合同联系人的邮箱在系统中没有账号
+                tt = User.objects.create(username=obj.contacts_email, password=make_password(obj.contacts_email),
+                                         email=obj.contacts_email, is_staff=True)
+                group_info = Group.objects.get(name="合作伙伴")
+                tt.groups.add(group_info)
+                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
             else:
-                pass
-        """
-        1、新增快递单号时自动记录时间戳
-        """
+                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
+            if obj.receive_date:
+                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                          (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
+
+            message_content = ""
+            if obj.fis_amount + obj.fin_amount != obj.all_amount:
+                message_content += "  首款额+尾款额≠总款额"
+
+            if user_id:
+                self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                if not self.send_dingtalk_result:
+                    message_content += "  钉钉通知发送失败"
+            else:
+                message_content += "  这个销售的没有钉钉ID号"
+            self.message_user(request, message_content)
+
+        # 1、新增快递单号时自动记录时间戳
         if obj.tracking_number and not obj.send_date:
             obj.send_date = datetime.now()
         elif not obj.tracking_number:
             obj.send_date = None
-        if Contract.objects.filter(id=obj.id):
-            if obj.receive_date and Contract.objects.filter(id=obj.id)[0].receive_date != obj.receive_date:
-                #合同寄到日有变动就 通知项目管理2
-                for j in User.objects.filter(groups__id=2):
-                    notify.send(request.user, recipient=j, verb='客户收到新合同',\
-                                description="合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
-                                            (obj.contract_number,obj.name,obj.contacts,obj.contact_phone))
-        else:
-            if obj.receive_date:
-                # 新增合同时，就有寄到日有变动就 通知项目管理2
-                for j in User.objects.filter(groups__id=2):
-                    notify.send(request.user, recipient=j, verb='客户收到新合同',\
-                                description="合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
-                                            (obj.contract_number,obj.name,obj.contacts,obj.contact_phone))
+        if content!="":
+            self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
         obj.save()
-        self.message_user(request, message_content)
+
+
+
+
+        # if not User.objects.filter(username=obj.contacts_email):
+        #     tt = User.objects.create(username=obj.contacts_email, password=make_password(obj.contacts_email),
+        #                              email=obj.contacts_email, is_staff=True)
+        #     group_info = Group.objects.get(name="合作伙伴")
+        #     tt.groups.add(group_info)
+        #     if change:
+        #         content = "修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
+        #     else:
+        #         content = "新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
+        # else:
+        #     if change and obj.conta:
+        #         content = "修改合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
+        #     else:
+        #         content = "新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
+        # if change:
+        #     pass
+        # else:# 新增的时候,同时初始化账号和密码一样   ##发送钉钉通知，给销售员
+        #     message_content = ""
+        #     if obj.fis_amount + obj.fin_amount != obj.all_amount:
+        #         message_content += "  首款额+尾款额≠总款额"
+        #     user_id = False
+        #
+        #     if Employees.objects.filter(user=obj.salesman):
+        #         user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+        #     if user_id:
+        #         self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+        #         # self.send_group_message(content,DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+        #         if not self.send_dingtalk_result:
+        #             message_content += "  钉钉通知发送失败"
+        #     else:
+        #         pass
+        #     self.message_user(request, message_content)
+        # """
+        # 1、新增快递单号时自动记录时间戳
+        # """
+        # if obj.tracking_number and not obj.send_date:
+        #     obj.send_date = datetime.now()
+        # elif not obj.tracking_number:
+        #     obj.send_date = None
+        # if Contract.objects.filter(id=obj.id):
+        #     if obj.receive_date and Contract.objects.filter(id=obj.id)[0].receive_date and (obj.receive_date != Contract.objects.filter(id=obj.id)[0].receive_date):
+        #         #合同寄到日有变动就 通知项目管理2
+        #         # for j in User.objects.filter(groups__id=2):
+        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
+        #                                     (obj.contract_number,obj.name,obj.contacts,obj.contact_phone)
+        #     elif obj.receive_date and (not Contract.objects.filter(id=obj.id)[0].receive_date):
+        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+        #                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
+        # else:
+        #     if obj.receive_date:
+        #         # 新增合同时，就有寄到日有变动就 通知项目管理2
+        #         # for j in User.objects.filter(groups__id=2):
+        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+        #                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
+        # self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+        # obj.save()
+
 
     def get_changeform_initial_data(self, request):
         initial = super(ContractAdmin,self).get_changeform_initial_data(request)
@@ -457,10 +558,19 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
 
 class BzContractAdmin(admin.ModelAdmin):
+    '''
+    报账合同的Admin
+    '''
+    list_display = ['contract_number', 'name', 'send_date', 'receive_date', 'file_link']
+    list_per_page = 50
+    filter_horizontal = ["contract", ]
+    autocomplete_fields = ('salesman',)
 
-    filter_horizontal = ["contract",]
-
-    list_display = ["contract_number","name","send_date","receive_date"]
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "salesman":
+            sales_group = Group.objects.get(id=3) #获取业务员
+            kwargs["queryset"] =  sales_group.user_set.all()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 BMS_admin_site.register(BzContract, BzContractAdmin)
 BMS_admin_site.register(Contract, ContractAdmin)
