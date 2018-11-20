@@ -75,7 +75,7 @@ class LibExecute(models.Model):
     lib_end_date = models.DateField('建库完成日期',blank=True,null=True)
     upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
-    is_submit = models.BooleanField('提交',default=False)
+
 
     #非必填
     reaction_times = models.IntegerField(verbose_name="反应次数（选填）",blank=True,null=True)
@@ -87,6 +87,7 @@ class LibExecute(models.Model):
     annealing_temperature = models.CharField(verbose_name="退货问题（选填）",max_length=50,blank=True,null=True)
     loop_number = models.IntegerField(verbose_name="循环数",blank=True,null=True)
     gel_recovery_kit = models.CharField(verbose_name="胶回收试剂盒（选填）",max_length=200,blank=True,null=True)
+    is_submit = models.BooleanField('提交', default=False)
     # def save(self, *args, **kwargs):
     #     super(LibSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -115,7 +116,7 @@ class SeqExecute(models.Model):
         # on_delete= models.DO_NOTHING,
     )
     seq_end_date = models.DateField('测序下机日期',blank=True,null=True)
-    upload_file = models.FileField('测序结果报告上传pooling表', upload_to='uploads/seq/%Y/%m/%d/',blank=True,null=True)
+    upload_file = models.FileField('测序结果报告上传', upload_to='uploads/seq/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
     is_submit = models.BooleanField('提交',default=False)
 
@@ -231,8 +232,8 @@ class SampleInfoExt(models.Model):
         return str(self.sample_number)
 
     class Meta:
-        verbose_name = "抽提详细样品信息"
-        verbose_name_plural = "抽提详细样品信息"
+        verbose_name = "样品池---抽提"
+        verbose_name_plural = "样品池---抽提"
 
 
 class SampleInfoLib(models.Model):
@@ -268,8 +269,8 @@ class SampleInfoLib(models.Model):
         return str(self.sample_number)
 
     class Meta:
-        verbose_name = "文库详细样品信息"
-        verbose_name_plural = "文库详细样品信息"
+        verbose_name = "样品池---建库"
+        verbose_name_plural = "样品池---建库"
 
 
 
@@ -306,7 +307,7 @@ class SampleInfoSeq(models.Model):
         return str(self.sample_number)
 
     class Meta:
-        verbose_name = "测序详细样品信息"
-        verbose_name_plural = "测序详细样品信息"
+        verbose_name = "样品池---测序"
+        verbose_name_plural = "样品池---测序"
 
 
