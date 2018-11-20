@@ -158,8 +158,8 @@ class SampleInfoForm(models.Model):
         return self.sampleinfoformid
 
     class Meta:
-        verbose_name = "样品信息"
-        verbose_name_plural = "样品信息"
+        verbose_name = "样品概要"
+        verbose_name_plural = "样品概要"
 
 
     def file_link(self):
@@ -255,18 +255,23 @@ class SampleInfo(models.Model):
     sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
     color_code2 = models.CharField(max_length=16,blank=True,null=True,default="")
 
+    @property
+    def color_diff(self):
+        return self.sample_name == self.sample_receiver_name
+
     def sample_receiver_name_color(self):
         return format_html(
             '<h5 >{}_{}</h5>',
             self.sample_receiver_name,
             self.color_code2)
 
+
     def __str__(self):
         return format_html(
-            '<h5 >{}_{}</h5>',
+            '<h5 >{}{}</h5>',
             self.sample_number,
             self.color_code)
 
     class Meta:
-        verbose_name = "详细样品信息"
-        verbose_name_plural = "详细样品信息"
+        verbose_name = "样品池管理"
+        verbose_name_plural = "样品池管理"
