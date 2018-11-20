@@ -70,6 +70,8 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     list_display_links = None
     fields = ('contract','title','issuingUnit','period', 'amount','type','content', 'note')
     raw_id_fields = ['title',]
+    autocomplete_fields = ('title',)
+    radio_fields = {"issuingUnit": admin.HORIZONTAL, "period": admin.HORIZONTAL, "type": admin.HORIZONTAL}
 
     def make_invoice_submit(self, request, queryset):
         """
@@ -228,7 +230,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     inlines = [
         InvoiceInline,
     ]
-    radio_fields = {"type": admin.HORIZONTAL,}
+    radio_fields = {"type": admin.HORIZONTAL, "range": admin.HORIZONTAL, }
     list_per_page = 50
     ordering = ['-id']
     fieldsets = (
