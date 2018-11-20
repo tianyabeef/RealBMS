@@ -2,11 +2,12 @@ from django.contrib import admin
 
 # Register your models here.
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 from django.template.response import TemplateResponse
 from django.contrib.auth.models import Group, User
 from django.utils.html import format_html
 from import_export import resources
-from import_export.admin import ImportExportActionModelAdmin
+from import_export.admin import ImportExportActionModelAdmin,ExportActionModelAdmin
 from import_export.forms import ConfirmImportForm, ImportForm
 from django.utils.translation import ugettext_lazy as _
 
@@ -53,14 +54,28 @@ get_editable.short_description = "点击查看详情"
 
 Monthchoose = {1:"A",2:"B",3:"C",4:"D",5:"E",6:"F",7:"G",8:"H",9:"I",10:"G",11:"K",12:"L",}
 
+class Sampleadmin(ExportActionModelAdmin):
+    search_fields = ["sample_type",]
+    list_display = ["sampleinfoform","sample_name","unique_code"]
+    list_display_links = ["unique_code"]
 class SampleInline(admin.TabularInline):
     model = SampleInfo
     fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','data_request','remarks']
     # readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
 
 
-    # def get_readonly_fields(self, request, obj=None):
-
+    def get_readonly_fields(self, request, obj=None):
+        readonly_fields = ["",]
+        try:
+            current_group_set = Group.objects.get(user=request.user)
+            if current_group_set.name == "合作伙伴":
+                readonly_fields = ['sampleinfoform', 'sample_name', 'sample_receiver_name', 'tube_number', 'is_extract',
+                                   'remarks', 'data_request', 'sample_type']
+                return readonly_fields
+            else:
+                return ["",]
+        except:
+            return readonly_fields
     # def has_add_permission(self, request):
     #     # try:
     #     #     current_group_set = Group.objects.get(user=request.user)
@@ -114,10 +129,10 @@ class SampleInfoResource(resources.ModelResource):
         if instance:
             instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
             instance.sample_name = row['样品名']
-            if row['样品名'] != row['实际收到样品名']:
-                instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
-            else:
-                instance.sample_receiver_name = row['实际收到样品名']
+            # if row['样品名'] != row['实际收到样品名']:
+            #     instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
+            # else:
+            instance.sample_receiver_name = row['实际收到样品名']
             instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
             instance.tube_number = row['管数']
             instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
@@ -142,10 +157,10 @@ class SampleInfoResource(resources.ModelResource):
             instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
         instance.sample_name = row['样品名']
-        if row['样品名'] != row['实际收到样品名']:
-            instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
-        else:
-            instance.sample_receiver_name = row['实际收到样品名']
+        # if row['样品名'] != row['实际收到样品名']:
+        #     instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
+        # else:
+        instance.sample_receiver_name = row['实际收到样品名']
         instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
         instance.tube_number = row['管数']
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
@@ -157,31 +172,23 @@ class SampleInfoResource(resources.ModelResource):
         instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
 
-    def after_import(self, dataset, result, using_transactions, dry_run, **kwargs):
-        print(dataset)
-        print(result)
-        print(using_transactions)
 
-    # def after_import(self, dataset, result, using_transactions, dry_run, **kwargs):
-    #     # super(SampleInfoResource, self).after_import(dataset, result, using_transactions, dry_run, **kwargs)
-    #     sample = SampleInfoForm.objects.filter(sampleinfoformid=dataset[0][1])[0]
-    #     send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对'.format(sample.sampleinfoformid),
-    #               settings.EMAIL_FROM,
-    #               [sample.partner_email, ],
-    #               # ["love949872618@qq.com", ],
-    #               fail_silently=False)
+    def export(self, queryset=None, *args, **kwargs):
+        queryset_result = SampleInfo.objects.filter(id=None)
+        for i in queryset:
+            queryset_result |= SampleInfo.objects.filter(sampleinfoform=i)
+        return super().export(queryset=queryset_result,*args, **kwargs)
 
 
 #样品概要管理
 class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
-
-
     resource_class = SampleInfoResource
+
 
     inlines = [SampleInline]
 
-    list_per_page = 100
+    list_per_page = 50
 
     search_fields = ("sample_status","partner")
 
@@ -215,11 +222,14 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     # download.short_description = '下载模板'
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
-        send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
-                  settings.EMAIL_FROM,
-                  [sample.partner_email, ],
-                  # ["love949872618@qq.com", ],
-                      fail_silently=False)
+        try:
+            send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
+                      settings.EMAIL_FROM,
+                      [sample.partner_email, ],
+                      # ["love949872618@qq.com", ],
+                          fail_silently=False)
+        except:
+            self.message_user(request,"邮件发送失败")
         return super(SampleInfoFormAdmin, self).process_result(result, request)
 
     actions = ['make_sampleinfoform_submit','insure_sampleinfoform']
@@ -238,7 +248,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         except:
             return qs
 
-
     #可以改变增加表单里的内容
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -247,12 +256,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         extra_context['show_save'] = True
         extra_context['show_save_as_new'] = True
         extra_context['show_save_and_continue'] = False
-        return super(SampleInfoFormAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def has_change_permission(self, request, obj=None):
-    #     if obj.sample_status == 2:
-    #         return False
-    #     return super().has_change_permission(request, obj=None)
+    def has_change_permission(self, request, obj=None):
+        try:
+            if obj.sample_status == 2:
+                return False
+        except:
+            return True
+        return super().has_change_permission(request, obj=None)
 
     def import_action(self, request, *args, **kwargs):
 
@@ -346,33 +358,41 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def save_model(self, request, obj, form, change):
         if not obj.time_to_upload:
             obj.time_to_upload = datetime.datetime.now()
-        current_group_set = Group.objects.get(user=request.user)
-        if current_group_set.name == "合作伙伴":
-            if obj.sample_status == 1 and obj.arrive_time:
-                obj.sample_status = 2
+        try:
+            current_group_set = Group.objects.get(user=request.user)
+            if current_group_set.name == "合作伙伴":
+                if obj.sample_status == 1 and obj.arrive_time:
+                    obj.sample_status = 2
+                    obj.save()
+                    msg = "<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid)
+                    try:
+                        self.send_email("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid),
+                                        settings.EMAIL_FROM,
+                                        ["love949872618@qq.com", ],
+                                        fail_silently=False)
+                        self.send_group_message(msg,"chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                    except:
+                        self.message_user(request,"邮箱发送失败")
+                    if not self.send_dingtalk_result:
+                        self.message_user(request,"钉钉发送失败")
+            if not obj.sampleinfoformid:
+                if SampleInfoForm.objects.all().count() == 0:
+                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
+                                                   '-' + str(datetime.datetime.now().year) + "-"+ \
+                                                   str(datetime.datetime.now().month) + '-' + \
+                                                    str(datetime.datetime.now().day)                  + "_" + \
+                                                     "1"
+                else:
+                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
+                                               '-' +str(datetime.datetime.now().year)+ "-"+ \
+                                               str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
+                                                 "_" + \
+                                               str(int(SampleInfoForm.objects.latest("id").id)+1)
+                obj.partner_email = request.user.username
                 obj.save()
-                msg = "<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid)
-                self.send_email("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid),
-                                settings.EMAIL_FROM,
-                                ["love949872618@qq.com", ],
-                                fail_silently=False)
-                self.send_group_message(msg,"chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        if not obj.sampleinfoformid:
-            if SampleInfoForm.objects.all().count() == 0:
-                obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
-                                               '-' + str(datetime.datetime.now().year) + "-"+ \
-                                               str(datetime.datetime.now().month) + '-' + \
-                                                str(datetime.datetime.now().day)                  + "_" + \
-                                                 "1"
             else:
-                obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
-                                           '-' +str(datetime.datetime.now().year)+ "-"+ \
-                                           str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
-                                             "_" + \
-                                           str(int(SampleInfoForm.objects.latest("id").id)+1)
-            obj.partner_email = request.user.username
-            obj.save()
-        else:
+                obj.save()
+        except:
             obj.save()
          #根据身份获取动作
     def get_actions(self, request):
@@ -383,10 +403,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             # print(actions)
             return None
         if current_group_set.name == "合作伙伴":
-            del actions['export_admin_action']
+            # del actions['export_admin_action']
             return actions
         else:
-            del actions['export_admin_action']
+            # del actions['export_admin_action']
             # del actions['make_sampleinfoform_submit']
             del actions['insure_sampleinfoform']
             # del actions['test1']
@@ -405,10 +425,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             if obj.sample_status == 0:
                 obj.sample_status = 1
                 msg = "<h3>{0}客户的样品概要信息已上传，请核对</h3>".format(obj.partner)
-                send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
-                          ["love949872618@qq.com", ],
-                          fail_silently=False)
+                try:
+                    send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
+                              ["love949872618@qq.com", ],
+                              fail_silently=False)
+                except:
+                    self.message_user(request,"邮箱发送失败")
                 self.send_work_notice(msg, settings.DINGTALK_AGENT_ID, "00000")
+                if not self.send_dingtalk_result:
+                    self.message_user(request,"钉钉发送失败")
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
             else:
@@ -551,6 +576,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     list_filter = ("sample_status",'time_to_upload')
 BMS_admin_site.register(SampleInfoForm,SampleInfoFormAdmin)
+BMS_admin_site.register(SampleInfo,Sampleadmin)
 # admin.site.register(Realbio_User, UserAdmin)
 #全站范围内禁用删权限
 # admin.site.disable_action('delete_selected')
