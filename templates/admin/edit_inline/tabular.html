@@ -29,7 +29,7 @@
             colored_tarbular
         {% endif %}"
              id="{{ inline_admin_formset.formset.prefix }}-{% if not forloop.last %}{{ forloop.counter0 }}{% else %}empty{% endif %}">
-        <td class="original">
+        <td class="original" style="padding: 0">
           {% if inline_admin_form.original or inline_admin_form.show_url %}<p>
           {% if inline_admin_form.original %}
 {#          {{ inline_admin_form.original }}#}
@@ -40,6 +40,7 @@
           {% if inline_admin_form.needs_explicit_pk_field %}{{ inline_admin_form.pk_field.field }}{% endif %}
           {{ inline_admin_form.fk_field.field }}
           {% spaceless %}
+              <h2 style="height: 32px; line-height: 32px;text-align: center;width: 32px;border-radius: 10%;margin: 8px; padding: 0 0 0 0;">{{ forloop.counter }}</h2>
           {% for fieldset in inline_admin_form %}
             {% for line in fieldset %}
               {% for field in line %}
