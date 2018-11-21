@@ -65,7 +65,7 @@ class Contract(models.Model):
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位", default="")
     use_amount = models.DecimalField("已使用的金额", null=True, blank=True, max_digits=12, decimal_places=2, default=0)
     contact_note = models.TextField('合同备注', blank=True,default="")
-    is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
+    is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1) #1初始状态，2首款到齐，3尾款到齐
 
     class Meta:
         verbose_name = '合同管理'
