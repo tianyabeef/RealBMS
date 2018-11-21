@@ -67,12 +67,12 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             actions.pop("delete_selected")
         return actions
     
-    def get_readonly_fields(self, request, obj=None):
-        self.readonly_fields = (
-            "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
-            "notes",
-        ) if obj and obj.is_submit else ("ana_submit", )
-        return self.readonly_fields
+    # def get_readonly_fields(self, request, obj=None):
+    #     self.readonly_fields = (
+    #         "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
+    #         "notes",
+    #     ) if obj and obj.is_submit else ("ana_submit", )
+    #     return self.readonly_fields
     
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -82,17 +82,7 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             condition = Q(analyst=request.user) | Q(analyst=None)
             queryset = queryset.filter(condition)
         return queryset
-    
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
-        if db_field.name == "ana_submit":
-            kwargs["queryset"] = AnaExecute.objects.filter(
-                ana_submit__subProject__is_status=11
-            )
-        elif db_field.name == "analyst":
-            analyst_group = Group.objects.get(id=9)
-            kwargs["queryset"] = analyst_group.user_set.all()
-        return super().formfield_for_dbfield(db_field, request, **kwargs)
-    
+        
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)
         initial["analyst"] = request.user
@@ -114,17 +104,19 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     @staticmethod
     def get_last_30_days_submit(queryset=None):
         count = []
-        for index in range(7, -1, -1):
+        for index in range(30):
             interval = timezone.now() - timezone.timedelta(index)
             count.append(queryset.filter(submit_date=interval).count())
+        count.reverse()
         return count
     
     @staticmethod
     def get_last_30_days_end(queryset=None):
         count = []
-        for index in range(30, -1, -1):
+        for index in range(30):
             interval = timezone.now() - timezone.timedelta(index)
             count.append(queryset.filter(end_date=interval).count())
+        count.reverse()
         return count
     
     @staticmethod
