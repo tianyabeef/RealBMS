@@ -2,6 +2,8 @@
 {% load admin_urls %}
 {% if opts.model_name == "sampleinfoform"  %}
 {#<li><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li>#}
+    {% elif opts.model_name == "subproject" %}
+    <!--<li><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li>-->
     {% else %}
     <li><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li>
 {% endif %}
