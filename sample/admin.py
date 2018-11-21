@@ -58,6 +58,23 @@ class Sampleadmin(ExportActionModelAdmin):
     search_fields = ["sample_type",]
     list_display = ["sampleinfoform","sample_name","unique_code"]
     list_display_links = ["unique_code"]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        try:
+            current_group_set = Group.objects.get(user=request.user)
+            if current_group_set.name == "实验部":
+                return qs
+            elif current_group_set.name == "合作伙伴":
+                return qs.filter(sampleinfoform__partner_email=request.user)
+            else:
+                return qs
+        except:
+            return qs
+
+
+
+
 class SampleInline(admin.TabularInline):
     model = SampleInfo
     fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','data_request','remarks']
@@ -243,8 +260,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 return qs
             elif current_group_set.name == "合作伙伴":
                 return qs.filter(partner_email=request.user)
-            else:
-                return qs
+            elif current_group_set.name == "业务员（销售）":
+                return qs.filter(saler = request.user)
         except:
             return qs
 
@@ -542,11 +559,11 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             elif current_group_set.name == "合作伙伴":
                 fieldsets = (
                 ['物流信息', {
-                    'fields': (('transform_company', 'transform_number',
+                    'fields': (('transform_company', 'transform_number'),(
                                'transform_contact', 'transform_phone',
-                               'transform_status','sender_address'),),
+                               'sender_address',),('transform_status',)),
                 }], ['客户信息', {
-                    'fields': ( ("partner",'partner_company', 'partner_phone',"information_email",'saler'),),
+                    'fields': ( ("partner","information_email"),('partner_company', 'partner_phone'),('saler'),),
                 }], ['项目信息', {
                     'fields': ('project_type',
                                'sample_num', 'extract_to_pollute_DNA',

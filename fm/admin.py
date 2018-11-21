@@ -42,7 +42,7 @@ class InvoiceChangeList(ChangeList):
         super(InvoiceChangeList, self).get_results(*args, **kwargs)
         self.sum = []
         q_income = self.result_list.aggregate(income_sum=Sum('bill__income'))
-        q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__invoice__invoice__amount'))
+        q_amount = self.result_list.aggregate(amount_sum=Sum('invoice__amount'))
         try:
             receivable_sum = (q_amount['amount_sum'] or 0) - (q_income['income_sum'] or 0)
             self.sum = [q_amount['amount_sum'],receivable_sum, q_income['income_sum']]
@@ -99,7 +99,7 @@ class InvoiceInfoResource(resources.ModelResource):
 class BillInlineFormSet(BaseInlineFormSet):
     '''财务发票的进账的FormSet（Inline）'''
     def clean(self):
-        super(BillInlineFormSet, self).clean()
+        super().clean()
         total = 0
         for form in self.forms:
             if not form.is_valid():
@@ -157,21 +157,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date','file_link')
     list_display_links = ('invoice_title', 'invoice_amount')
     search_fields = ('invoice__contract__contract_number','invoice__title__title','invoice_code','^invoice__amount','invoice__issuingUnit')
-
-    def get_search_results(self, request, queryset, search_term):
-        #TODO#先用固定数组，后期修改为调用invoice__issuingUnit的ISSUING_UNIT_CHOICES
-        ISSUING_UNIT_CHOICES ={}
-        ISSUING_UNIT_CHOICES['上海锐翌']='sh'
-        ISSUING_UNIT_CHOICES['杭州拓宏']='hz'
-        ISSUING_UNIT_CHOICES['山东锐翌']='sd'
-        ISSUING_UNIT_CHOICES['金锐生物']='sz'
-        if search_term in ISSUING_UNIT_CHOICES.keys():
-            queryset, use_distinct = super().get_search_results(request, queryset, ISSUING_UNIT_CHOICES[search_term])
-        else:
-            queryset, use_distinct = super().get_search_results(request, queryset, search_term)
-        return queryset, use_distinct
-
-
+    list_per_page = 50
     inlines = [
         BillInline,
     ]
@@ -243,15 +229,24 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
     invoice_note.short_description = '备注'
 
     def bill_receivable(self, obj):
-        """
-        改进：是否可以接收来自于bill_income的计算值，避免重读查询
-        :param obj:
-        :return:
-        """
+        # TODO 改进：是否可以接收来自于bill_income的计算值，避免重读查询
         current_income_amounts = Bill.objects.filter(invoice__id=obj.id).values_list('income', flat=True)
-        receivable = obj.invoice.invoice.invoice.amount - sum(current_income_amounts)
+        receivable = obj.invoice.amount - sum(current_income_amounts)
         return receivable
     bill_receivable.short_description = '应收金额'
+
+    def get_search_results(self, request, queryset, search_term):
+        #TODO#先用固定数组，后期修改为调用invoice__issuingUnit的ISSUING_UNIT_CHOICES
+        ISSUING_UNIT_CHOICES ={}
+        ISSUING_UNIT_CHOICES['上海锐翌']='sh'
+        ISSUING_UNIT_CHOICES['杭州拓宏']='hz'
+        ISSUING_UNIT_CHOICES['山东锐翌']='sd'
+        ISSUING_UNIT_CHOICES['金锐生物']='sz'
+        if search_term in ISSUING_UNIT_CHOICES.keys():
+            queryset, use_distinct = super().get_search_results(request, queryset, ISSUING_UNIT_CHOICES[search_term])
+        else:
+            queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        return queryset, use_distinct
 
     def save_model(self, request, obj, form, change):
         user_id = False
@@ -263,13 +258,13 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
             obj.send_date = datetime.now()
         elif not obj.tracking_number:
             obj.send_date = None
-        obj.save()
+
         #开出发票后，通知相应销售人员。
-        invoice = Invoice.objects.filter(id=obj.id)
+        fm_Invoice = Invoice.objects.filter(id=obj.id)
         if change:
             if obj.invoice_code and obj.date:
-                if (obj.invoice_code != invoice[0].invoice_code) and invoice:
-                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,修改发票，发票号码：%s 开票金额：%s" % (obj.invoice_code, obj.invoice.amount)
+                if (obj.invoice_code != fm_Invoice[0].invoice_code) and fm_Invoice:
+                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,修改发票，原发票号码：%s   发票号码：%s 开票金额：%s" % (fm_Invoice[0].invoice_code,obj.invoice_code, obj.invoice.amount)
                     if Employees.objects.filter(user=obj.invoice.contract.salesman):
                         user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
                     if user_id:
@@ -289,22 +284,19 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                 self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
                 # notify.send(request.user, recipient=obj.invoice.contract.salesman, verb='开出发票',description="发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount))
             #通知市场人员，内容：抬头，金额，对应销售员。
+        obj.save()
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
         for obj in formset.deleted_objects:
             obj.delete()
-        if instances:
+        if instances:#如果到账不做修改，instances为【】的
             sum_income = formset.instance.__total__
-            invoice_amount = instances[0].invoice.invoice.amount
-            obj_invoice = Invoice.objects.get(id=instances[-1].invoice.id)
+            invoice_amount = instances[0].invoice.invoice.amount #开票申请的发票金额
+            obj_invoice = Invoice.objects.get(id=instances[-1].invoice.id) #财务的发票
             invoice_in_contract = Invoice.objects.filter(invoice__contract__id = instances[-1].invoice.invoice.contract.id)
             obj_contract = Contract.objects.get(id=instances[-1].invoice.invoice.contract.id)
-            try:
-                obj_project = SubProject.objects.get(contract__id=instances[-1].invoice.invoice.contract.id)
-            except:
-                obj_project = False
-            if sum_income <= invoice_amount:
+            if sum_income <= invoice_amount: #开票金额和中到账的比较
                 for instance in instances:
                     instance.save()
                 formset.save_m2m()
@@ -312,7 +304,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                 #最后一次到账的日期，更新到财务发票的到款日期
                 obj_invoice.income_date = instances[-1].date
                 obj_invoice.save()
-                #更新合同的首尾款到款日期、到款总额、
+                # 更新合同的首尾款到款日期、到款总额、以最后一次到账为准
                 if instances[-1].invoice.invoice.period == "FIS":
                     obj_contract.fis_date = instances[-1].date
                     #如果首款有多张发票
@@ -321,9 +313,8 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                         sum_income = sum([invoice_temp.income for invoice_temp in invoice_in_contract if invoice_temp.income])
                     obj_contract.fis_amount_in = sum_income
                     #合同的首款<bill金额的总和,在项目管理中的状态为待处理，尾款已到。
-                    if obj_project:
-                        if (sum_income >= obj_contract.fis_amount) and (obj_project.status < 2):
-                            obj_project.status = 2
+                    if (sum_income >= obj_contract.fis_amount) and (obj_contract.is_status < 2):
+                        obj_contract.is_status = 2
                 if instances[-1].invoice.invoice.period == "FIN":
                     obj_contract.fin_date = instances[-1].date
                     # 如果尾款有多张发票
@@ -331,24 +322,18 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     if invoice_in_contract:
                         sum_income = sum([invoice_temp.income for invoice_temp in invoice_in_contract if invoice_temp.income])
                     obj_contract.fin_amount_in = sum_income
-                    if obj_project:
-                        if sum_income >= obj_contract.fin_amount and (obj_project.status < 10):
-                            obj_project.status = 3
+                    if sum_income >= obj_contract.fin_amount and (obj_contract.is_status < 3):
+                        obj_contract.is_status = 3
                 obj_contract.save()
-                if obj_project:
-                    obj_project.save()
                 #新的到账 通知财务部5
-                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,有一笔新到账，发票号：%s 到账金额：%s"%(obj_invoice,sum_income)
+                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,有一笔新到账，发票号：%s 总到账金额：%s"%(obj_invoice,sum_income)
                 # 新到账 通知相应的销售
                 # if Employees.objects.filter(user=obj.invoice.contract.salesman):
                 #     user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
                 # if user_id:
                 #     self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
                 # TODO 需要添加创建合同的人员，这些的消息反馈给新建合同的人，暂时发给项目管理
-                self.send_group_message(content, DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id)
-                # for j in User.objects.filter(groups__id=5):?
-                #     notify.send(request.user, recipient=j, verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
-                # notify.send(request.user,recipient=obj_invoice.invoice.contract.salesman,verb='填写一笔新到账',description="发票号：%s 到账金额：%s"%(obj_invoice,sum_income))
+                self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
             else:
                 messages.set_level(request, messages.ERROR)
                 self.message_user(request, '进账总额 %.2f 超过开票金额 %.2f' % (sum_income, invoice_amount),
@@ -357,23 +342,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
     def get_changelist(self, request):
         return InvoiceChangeList
 
-    def get_actions(self, request):
-        # 无删除或新增权限人员取消actions,销售总监有export_admin_action权限
-        actions = super().get_actions(request)
-        ##TODO,测试的时候报错，需要修改
-        # if not request.user.has_perm('fm.delete_invoice'):
-        #     # actions = None
-        #     del actions['delete_selected']
-        if not request.user.has_perm('fm.add_invoice'):
-            if not actions:
-                actions = None
-            elif 'delete_selected' in actions:
-                del actions['delete_selected']
-        return actions
-
     def get_readonly_fields(self, request, obj=None):
-        # if not request.user.has_perm('fm.add_invoice'):
-        #     return ['invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount','invoice_type','invoice_content', 'invoice_note', 'invoice_code', 'tracking_number','tax_amount','date','invoice_file']
         return ['invoice_issuingUnit','invoice_title','invoice_title_tariffItem', 'invoice_amount', 'invoice_type','invoice_content','invoice_note']
 
     def get_inline_instances(self, request, obj=None):
@@ -382,7 +351,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
             self.inlines = []
         else:
             self.inlines = [BillInline,]
-        return super(InvoiceAdmin, self).get_inline_instances(request, obj)
+        return super().get_inline_instances(request, obj)
 
     # def get_formsets_with_inlines(self, request, obj=None):
     #     # add page不显示BillInline
@@ -426,7 +395,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
     def lookup_allowed(self, lookup, *args, **kwargs):
         if lookup == 'invoice__contract__type__exact':
             return True
-        return super(InvoiceAdmin, self).lookup_allowed(lookup, *args, **kwargs)
+        return super().lookup_allowed(lookup, *args, **kwargs)
 
     # def change_view(self, request, object_id, form_url='', extra_context=None):
     #     extra_context = extra_context or {}
@@ -455,6 +424,7 @@ class BillAdmin(admin.ModelAdmin):
     list_display = ('invoice', 'income', 'date')
     raw_id_fields = ['invoice']
     date_hierarchy = 'date'
+    list_per_page = 50
 
     def get_changelist(self, request):
         return BillChangeList
@@ -481,4 +451,4 @@ class BillAdmin(admin.ModelAdmin):
             obj.save()
 
 BMS_admin_site.register(Invoice, InvoiceAdmin)
-# admin.site.register(Bill, BillAdmin)
+admin.site.register(Bill, BillAdmin)
