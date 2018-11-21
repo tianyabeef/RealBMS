@@ -77,7 +77,9 @@ class Sampleadmin(ExportActionModelAdmin):
 
 class SampleInline(admin.TabularInline):
     model = SampleInfo
-    fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','data_request','remarks']
+    fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','sample_type','is_extract','data_request'
+        ,'remarks'
+              ]
     # readonly_fields = ['sampleinfoform','sample_name','sample_receiver_name','tube_number','is_extract','remarks','data_request','sample_type']
 
 
