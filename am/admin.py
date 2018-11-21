@@ -67,12 +67,12 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             actions.pop("delete_selected")
         return actions
     
-    # def get_readonly_fields(self, request, obj=None):
-    #     self.readonly_fields = (
-    #         "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
-    #         "notes",
-    #     ) if obj and obj.is_submit else ("ana_submit", )
-    #     return self.readonly_fields
+    def get_readonly_fields(self, request, obj=None):
+        self.readonly_fields = (
+            "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
+            "notes",
+        ) if obj and obj.is_submit else ("ana_submit", )
+        return self.readonly_fields
     
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
