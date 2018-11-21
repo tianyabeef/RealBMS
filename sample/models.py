@@ -246,7 +246,7 @@ class SampleInfo(models.Model):
     purity = models.CharField(max_length=200,verbose_name="纯度",blank=True,null=True)
     tube_number = models.IntegerField(verbose_name="管数量") #*
     is_extract = models.NullBooleanField(verbose_name="是否需要提取",default=False)
-    remarks = models.TextField(verbose_name="备注",blank=True,null=True)
+    remarks = models.CharField(max_length=200,verbose_name="备注",blank=True,null=True)
     status = models.IntegerField(choices=Sample_status,verbose_name="样品可用状态",blank=True,default=0)
     sample_species = models.CharField(max_length=200, verbose_name="物种", default='')
     #数据量要求
