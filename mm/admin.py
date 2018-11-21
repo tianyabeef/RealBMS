@@ -18,7 +18,6 @@ from django.contrib.auth.models import User,Group
 from import_export import resources
 from import_export.admin import ImportExportActionModelAdmin,ExportActionModelAdmin
 from import_export import fields
-from notification.signals import notify
 from operator import is_not
 from functools import partial
 from django.utils import formats
@@ -26,6 +25,7 @@ from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
 from em.models import Employees
 from nm.models import DingtalkChat
 import re
+from django.db.models import Q
 
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
     """
@@ -126,6 +126,7 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
                 if "make_invoice_submit" in actions:
                     del actions["make_invoice_submit"]
         return actions
+
 
 class InvoiceInlineFormSet(BaseInlineFormSet):
     '''
@@ -483,67 +484,6 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
             self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
         obj.save()
 
-
-
-
-        # if not User.objects.filter(username=obj.contacts_email):
-        #     tt = User.objects.create(username=obj.contacts_email, password=make_password(obj.contacts_email),
-        #                              email=obj.contacts_email, is_staff=True)
-        #     group_info = Group.objects.get(name="合作伙伴")
-        #     tt.groups.add(group_info)
-        #     if change:
-        #         content = "修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
-        #     else:
-        #         content = "新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
-        # else:
-        #     if change and obj.conta:
-        #         content = "修改合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
-        #     else:
-        #         content = "新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
-        # if change:
-        #     pass
-        # else:# 新增的时候,同时初始化账号和密码一样   ##发送钉钉通知，给销售员
-        #     message_content = ""
-        #     if obj.fis_amount + obj.fin_amount != obj.all_amount:
-        #         message_content += "  首款额+尾款额≠总款额"
-        #     user_id = False
-        #
-        #     if Employees.objects.filter(user=obj.salesman):
-        #         user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
-        #     if user_id:
-        #         self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
-        #         # self.send_group_message(content,DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
-        #         if not self.send_dingtalk_result:
-        #             message_content += "  钉钉通知发送失败"
-        #     else:
-        #         pass
-        #     self.message_user(request, message_content)
-        # """
-        # 1、新增快递单号时自动记录时间戳
-        # """
-        # if obj.tracking_number and not obj.send_date:
-        #     obj.send_date = datetime.now()
-        # elif not obj.tracking_number:
-        #     obj.send_date = None
-        # if Contract.objects.filter(id=obj.id):
-        #     if obj.receive_date and Contract.objects.filter(id=obj.id)[0].receive_date and (obj.receive_date != Contract.objects.filter(id=obj.id)[0].receive_date):
-        #         #合同寄到日有变动就 通知项目管理2
-        #         # for j in User.objects.filter(groups__id=2):
-        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s"%\
-        #                                     (obj.contract_number,obj.name,obj.contacts,obj.contact_phone)
-        #     elif obj.receive_date and (not Contract.objects.filter(id=obj.id)[0].receive_date):
-        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
-        #                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
-        # else:
-        #     if obj.receive_date:
-        #         # 新增合同时，就有寄到日有变动就 通知项目管理2
-        #         # for j in User.objects.filter(groups__id=2):
-        #         content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
-        #                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
-        # self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
-        # obj.save()
-
-
     def get_changeform_initial_data(self, request):
         initial = super(ContractAdmin,self).get_changeform_initial_data(request)
         initial["type"] = 1 #
@@ -552,8 +492,8 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
-            sales_group = Group.objects.get(id=3) #获取业务员
-            kwargs["queryset"] =  sales_group.user_set.all()
+            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7))
+            kwargs["queryset"] =  sales_users
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
@@ -568,8 +508,8 @@ class BzContractAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
-            sales_group = Group.objects.get(id=3) #获取业务员
-            kwargs["queryset"] =  sales_group.user_set.all()
+            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7))
+            kwargs["queryset"] =  sales_users
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 BMS_admin_site.register(BzContract, BzContractAdmin)

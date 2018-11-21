@@ -1,8 +1,7 @@
 import datetime
 from django.contrib import admin
-from django.contrib.admin import widgets
 from django.contrib.auth.models import User
-
+from django import forms
 from nm.models import DingtalkChat
 from import_export import resources, fields
 from import_export.admin import ImportExportActionModelAdmin
@@ -21,6 +20,60 @@ except ImportError:
     from django.utils.encoding import force_unicode as force_text
 from sample.models import SampleInfoForm, SampleInfo
 
+
+
+class ExtExecuteForm(forms.ModelForm):
+
+    class Meta:
+        model = ExtExecute
+        fields = "__all__"
+
+    def clean_is_submit(self):
+        aa = self.cleaned_data['is_submit']
+        file = self.cleaned_data["upload_file"]
+        if aa:
+            if not file:
+                raise forms.ValidationError(
+                    "提交时抽提报告不能为空", code='invalid value'
+                )
+        else:
+            return self.cleaned_data['is_submit']
+        return aa
+class LibExecuteForm(forms.ModelForm):
+
+    class Meta:
+        model = LibExecute
+        fields = "__all__"
+
+    def clean_is_submit(self):
+        aa = self.cleaned_data['is_submit']
+        file = self.cleaned_data["upload_file"]
+        if aa:
+            if not file:
+                raise forms.ValidationError(
+                    "提交时建库报告不能为空", code='invalid value'
+                )
+        else:
+            return self.cleaned_data['is_submit']
+        return aa
+
+class SeqExecuteForm(forms.ModelForm):
+
+    class Meta:
+        model = SeqExecute
+        fields = "__all__"
+
+    def clean_is_submit(self):
+        aa = self.cleaned_data['is_submit']
+        file = self.cleaned_data["upload_file"]
+        if aa:
+            if not file:
+                raise forms.ValidationError(
+                    "提交时测序结果报告不能为空", code='invalid value'
+                )
+        else:
+            return self.cleaned_data['is_submit']
+        return aa
 #外键样品
 class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
@@ -112,6 +165,8 @@ class TestmothodAdmin(admin.ModelAdmin):
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
+    form = ExtExecuteForm
+
     filter_horizontal = ("ext_experimenter",)
 
     resource_class = SampleInfoExtResource
@@ -128,6 +183,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     appsecret = DINGTALK_SECRET
 
+    fields = ("extSubmit","ext_experimenter",("extract_method","test_method"),"note","upload_file","is_submit")
 
     search_fields = ("extract_method","test_method")
 
@@ -195,10 +251,12 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 man.append((i.last_name+i.first_name))
             self.send_group_message("编号{0}的抽提任务执行中------，执行人:{1}".format(obj.extSubmit,
                                                                    man),"chat62dbddc59ef51ae0f4a47168bdd2a65b")
+            if not self.send_dingtalk_result:
+                self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
-            if not obj.upload_file:
-                self.message_user(request,"抽提结果不能为空")
-                return None
+            # if not obj.upload_file:
+            #     self.message_user(request,"抽提结果不能为空")
+            #     return None
             if project.is_status < 4:
                 project.is_status = 4
                 project.save()
@@ -343,6 +401,11 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     save_on_top = False
 
+    fields = ("libSubmit","lib_experimenter",("reaction_times","pcr_system","dna_polymerase"),("model_initiation_mass","enzyme_number",
+             ),("pcr_process","loop_number","gel_recovery_kit"),"annealing_temperature","note","upload_file","is_submit")
+
+    form = LibExecuteForm
+
     appkey = DINGTALK_APPKEY
 
     appsecret = DINGTALK_SECRET
@@ -387,11 +450,12 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的建库任务执行中------，执行人:{1}".format(obj.libSubmit,
                                                                          man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-
+            if not self.send_dingtalk_result:
+                self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
-            if not obj.upload_file:
-                self.message_user(request,"提交时建库报告不能为空")
-                return None
+            # if not obj.upload_file:
+            #     self.message_user(request,"提交时建库报告不能为空")
+            #     return None
             if project.first().is_status < 7:
                 project.update(is_status=7)
             if not obj.lib_end_date:
@@ -530,6 +594,12 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     save_on_top = False
 
+    fields = ("seqSubmit", "seq_experimenter", "note", "upload_file",
+              "is_submit")
+
+
+    form = SeqExecuteForm
+
     appkey = DINGTALK_APPKEY
 
     appsecret = DINGTALK_SECRET
@@ -573,11 +643,12 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的测序任务执行中------，执行人:{1}".format(obj.seqSubmit,
                                                                          man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-
+            if not self.send_dingtalk_result:
+                self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
-            if not obj.upload_file:
-                self.message_user(request,"测序结果报告")
-                return None
+            # if not obj.upload_file:
+            #     self.message_user(request,"测序结果报告")
+            #     return None
             if project.first().is_status < 10:
                 project.update(is_status=10)
             if not obj.seq_end_date:

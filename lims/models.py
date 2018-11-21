@@ -42,8 +42,8 @@ class ExtExecute(models.Model):
     extract_method = models.ForeignKey(Extmethod,verbose_name="提取方法",on_delete=models.CASCADE,null=True)
     test_method = models.ForeignKey(Testmethod,verbose_name="质检方法",on_delete=models.CASCADE,null=True)
     ext_end_date = models.DateField('提取完成日期',blank=True,null=True)
-    upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
+    upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/', blank=True, null=True)
     is_submit = models.BooleanField('提交',default=False)
     # def save(self, *args, **kwargs):
     #     super(ExtSubmit, self).save(*args, **kwargs)
@@ -73,10 +73,7 @@ class LibExecute(models.Model):
 
     )
     lib_end_date = models.DateField('建库完成日期',blank=True,null=True)
-    upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
-
-
     #非必填
     reaction_times = models.IntegerField(verbose_name="反应次数（选填）",blank=True,null=True)
     pcr_system = models.CharField(verbose_name="PCR体系（选填）",max_length=200,blank=True,null=True)
@@ -87,6 +84,7 @@ class LibExecute(models.Model):
     annealing_temperature = models.CharField(verbose_name="退货问题（选填）",max_length=50,blank=True,null=True)
     loop_number = models.IntegerField(verbose_name="循环数",blank=True,null=True)
     gel_recovery_kit = models.CharField(verbose_name="胶回收试剂盒（选填）",max_length=200,blank=True,null=True)
+    upload_file = models.FileField('建库结果报告', upload_to='uploads/lib/%Y/%m/%d/', blank=True, null=True)
     is_submit = models.BooleanField('提交', default=False)
     # def save(self, *args, **kwargs):
     #     super(LibSubmit, self).save(*args, **kwargs)
