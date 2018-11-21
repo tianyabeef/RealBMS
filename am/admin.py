@@ -4,6 +4,7 @@ from am.resources import AnaExecuteResource, WeeklyReportResource
 from am.views import AnaAutocompleteJsonView
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import UserAdmin
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.html import format_html
 from import_export.admin import ImportExportModelAdmin
@@ -34,8 +35,9 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     form = AnaExecuteModelForm
     list_per_page = 30
     list_display = (
-        "ana_submit", "analyst", "notes", "end_date", "confirmation_sheet",
-        "depart_data_path", "baidu_link", "is_submit"
+        "ana_submit", "contract_name", "analyst", "notes", "end_date",
+        "confirmation_sheet", "depart_data_path", "baidu_link", "is_submit",
+        "submit_date",
     )
     list_display_links = ('ana_submit', )
     list_filter = ("is_submit", )
@@ -52,6 +54,12 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
         html = "<a href='%s'>下载</a>" % field.url if field else "未上传"
         return format_html(html)
     confirmation_sheet.short_description = '分析确认单'
+    
+    def contract_name(self, obj):
+        all_projects = obj.ana_submit.subProject.all()
+        contracts = ', '.join(set(["%s" % n.contract for n in all_projects]))
+        return contracts
+    contract_name.short_description = '合同名称'
     
     def get_actions(self, request):
         actions = super().get_actions(request)
@@ -71,9 +79,10 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
         manager_qs = User.objects.filter(groups__id=10)
         current_qs = User.objects.filter(pk=request.user.pk)
         if not request.user.is_superuser and not current_qs & manager_qs:
-            queryset = queryset.filter(analyst=request.user)
+            condition = Q(analyst=request.user) | Q(analyst=None)
+            queryset = queryset.filter(condition)
         return queryset
-        
+    
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         if db_field.name == "ana_submit":
             kwargs["queryset"] = AnaExecute.objects.filter(
@@ -101,24 +110,55 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             request, context, add=add, change=change, form_url=form_url,
             obj=obj
         )
-
+    
+    @staticmethod
+    def get_last_30_days_submit(queryset=None):
+        count = []
+        for index in range(7, -1, -1):
+            interval = timezone.now() - timezone.timedelta(index)
+            count.append(queryset.filter(submit_date=interval).count())
+        return count
+    
+    @staticmethod
+    def get_last_30_days_end(queryset=None):
+        count = []
+        for index in range(30, -1, -1):
+            interval = timezone.now() - timezone.timedelta(index)
+            count.append(queryset.filter(end_date=interval).count())
+        return count
+    
+    @staticmethod
+    def get_figure_label():
+        figure_label = []
+        for index in range(30):
+            interval = timezone.now() - timezone.timedelta(index)
+            figure_label.append(interval.strftime("%Y-%m-%d"))
+        figure_label.reverse()
+        return figure_label
+    
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        queryset = self.get_queryset(request)
+        last_30_days_submit = self.get_last_30_days_submit(queryset=queryset)
+        last_30_days_end = self.get_last_30_days_end(queryset=queryset)
+        extra_context["last_30_days_submit"] = last_30_days_submit
+        extra_context["last_30_days_end"] = last_30_days_end
+        extra_context["figure_label"] = self.get_figure_label()
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def save_model(self, request, obj, form, change):
         super(AnaExecuteAdmin, self).save_model(request, obj, form, change)
-        ana_number = obj.ana_submit.ana_number
-        ana_execute = AnaExecute.objects.get(ana_submit__ana_number=ana_number)
-        ana_submit = ana_execute.ana_submit
         if obj and obj.is_submit:
-            ana_submit.subProject.all().update(
-                is_status=13, time_ana=obj.end_date
-            )
-            name_list = [n.sub_project for n in ana_submit.subProject.all()]
+            all_sub_project = obj.ana_submit.subProject.all()
+            all_sub_project.update(is_status=13, time_ana=obj.end_date)
+            name_list = set([n.sub_project for n in all_sub_project])
             content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
             self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
             call_back = self.send_dingtalk_result
             message = "已钉钉通知项目管理进度" if call_back else "钉钉通知失败"
             self.message_user(request, message)
         else:
-            ana_submit.subProject.all().update(is_status=12)
+            obj.ana_submit.subProject.all().update(is_status=12)
             self.message_user(request, "项目状态已变更为【分析中】，请及时跟进")
     
 
