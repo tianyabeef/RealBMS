@@ -86,66 +86,51 @@
     </div>
 
     {#  这里是测试图表 #}
-    <div class="results" style="position: relative;margin-right: 280px;">
+    <div class="results" style="margin-right: 280px;">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.js"></script>
         <canvas id="weekly_report_statistic_bar"></canvas>
-        <canvas id="weekly_report_statistic_line"></canvas>
         <script>
             var ctx = document.getElementById("weekly_report_statistic_bar").getContext('2d');
             var myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ["Red", "Blue", "Yellow", "Green", "Purple"],
+                    labels: {% autoescape off %}{{ figure_label }}{% endautoescape %},
                     datasets: [{
-                        label: '分析任务统计（每周）',
-                        data: [12, 19, 3, 5, 2, 3],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.2)',
-                            'rgba(54, 162, 235, 0.2)',
-                            'rgba(255, 206, 86, 0.2)',
-                            'rgba(75, 192, 192, 0.2)',
-                            'rgba(153, 102, 255, 0.2)',
-                            'rgba(255, 159, 64, 0.2)'
-                        ],
-                        borderColor: [
-                            'rgba(255,99,132,1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
-                        ],
-                        borderWidth: 1
+                        label: '最近30天【提交】项目统计',
+                        data: {{ last_30_days_submit }},
+                        backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                        type: 'bar',
                     }, {
-                        label: '分析任务统计（每周）',
-                        data: [12, 19, 3, 5, 2, 3],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.2)',
-                            'rgba(54, 162, 235, 0.2)',
-                            'rgba(255, 206, 86, 0.2)',
-                            'rgba(75, 192, 192, 0.2)',
-                            'rgba(153, 102, 255, 0.2)',
-                            'rgba(255, 159, 64, 0.2)'
-                        ],
-                        borderColor: [
-                            'rgba(255,99,132,1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)',
-                            'rgba(75, 192, 192, 1)',
-                            'rgba(153, 102, 255, 1)',
-                            'rgba(255, 159, 64, 1)'
-                        ],
-                        borderWidth: 1,
-                        type: 'line'
+                        label: '最近30天【完成】项目统计',
+                        data: {{ last_30_days_end }},
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255,99,132,1)',
+                        borderWidth: 2,
+                        type: 'line',
                     }]
                 },
                 options: {
+                    title: {
+                        display: true,
+                        text: '分析任务统计',
+                        position: 'top',
+                        fontSize: 16,
+                        padding: 20,
+                    },
                     scales: {
                         yAxes: [{
                             ticks: {
-                                beginAtZero:true
+                                beginAtZero:true,
+                                min: 0,
+                                stepSize: 1,
                             }
                         }]
+                    },
+                    legend: {
+                        display: true,
+                        labels: {
+                            fontColor: 'rgb(255, 99, 132)'
+                        }
                     }
                 }
             });
