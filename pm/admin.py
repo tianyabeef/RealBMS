@@ -82,12 +82,12 @@ def creat_uniq_number(request,instance,name):
     if instance.objects.all().count() == 0:
         uniq_number = request.user.username + \
                                '-' + str(datetime.datetime.now().year) + \
-                               str(datetime.datetime.now().month) + '-'+name+'-' + \
+                               str(datetime.datetime.now().month) + str(datetime.datetime.now().day) + '-'+name+'-' + \
                                "1"
     else:
         uniq_number = request.user.username + \
                                '-' + str(datetime.datetime.now().year) + \
-                               str(datetime.datetime.now().month) + '-'+name+'-' + \
+                               str(datetime.datetime.now().month) + str(datetime.datetime.now().day) + '-'+name+'-' + \
                                str(int(instance.objects.latest("id").id) + 1)
     return uniq_number
 
@@ -132,16 +132,7 @@ def create_submit_table(request,obj, states):
 
 
 class SubProject_Resource(resources.ModelResource):
-    def get_export_headers(self):
-        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
-                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
-                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
-
-    def get_diff_headers(self):
-        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
-                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
-                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
-
+    # pass
     class Meta:
         model = SubProject
         skip_unchanged = True
@@ -153,9 +144,19 @@ class SubProject_Resource(resources.ModelResource):
                         'contract__contacts', 'contract__salesman__username', 'project_manager__username', 'is_submit',
                         'status', 'file_to_start', 'is_status', )
 
+    def get_export_headers(self):
+        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
+                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
+                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
 
-# class SubProjectAdmin(admin.ModelAdmin):
-class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,NotificationMixin):
+    def get_diff_headers(self):
+        return ['合同号', '合同名称', '子项目编号', '子项目的名称', '合同联系人姓名', '销售人员', '项目管理人员',
+                '是否确认(0-否，1-是)', '项目是否提前启动(0-否，1-是)', '已上传信息',
+                '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
+
+
+# class SubProjectAdmin(admin.ModelAdmin,NotificationMixin):
+class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     resource_class = SubProject_Resource
     form = SubProjectForm
 
@@ -167,7 +168,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,Notif
     actions = ['make_submit', 'make_subProject_submit']
     fieldsets = (
         ('合同信息', {
-           'fields': (('contract','contract_number', 'contract_name',),
+           'fields': (('contract','contract_name',),
                       ( 'contacts','contacts_phone', 'saleman','company','project_type'),)
         }),
         ('到款记录', {
@@ -449,6 +450,18 @@ class SubProjectAdmin(ImportExportActionModelAdmin, ImportExportModelAdmin,Notif
         print(self.send_dingtalk_result)
     make_submit.short_description = '设置所选项目为确认可启动状态'
 
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        for group in request.user.groups.all():
+            if group.id == 13:  # 项目管理组之外都不能启动中止项目
+                pass
+            else:
+                if "make_submit" in actions:
+                    del actions["make_submit"]
+                if "make_subProject_submit" in actions:
+                    del actions["make_subProject_submit"]
+        return actions
+
 
 # 提取提交表
 class ExtSubmitForm(forms.ModelForm):
@@ -604,8 +617,9 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     def get_list_filter(self, request):
         # 过滤器，过滤时间
         groups = Group.objects.filter(user__id=request.user.id)
-        if len(groups) >= 1:
-            return [('ext_start_date', DateRangeFilter), ]
+        # if len(groups) >= 1:
+        return [('ext_start_date', DateRangeFilter), ]
+
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -682,12 +696,12 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                       ('subProject','sub_project_name',),)
         }),
         ('任务信息',{
-            'fields':('lib_number', 'sample', 'lib_start_date',
+            'fields':('lib_number', 'sample', 'customer_sample_count', 'lib_start_date',
                       'customer_confirmation_time', ('note', ),)
         })
     )
 
-    readonly_fields =  ['lib_number','contract_number', 'sub_project_name', 'contacts', 'partner_company']
+    readonly_fields =  ['lib_number','contract_number', 'sub_project_name', 'contacts', 'partner_company','customer_sample_count', ]
     search_fields = ['subProject__sub_number', 'lib_number', 'customer_sample_count', 'lib_start_date',
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
@@ -795,8 +809,8 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     def get_list_filter(self, request):
         # 过滤器，过滤时间
         groups = Group.objects.filter(user__id=request.user.id)
-        if len(groups) >= 1:
-            return [('lib_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
+        # if len(groups) >= 1:
+        return [('lib_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -873,12 +887,13 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                       ('subProject','sub_project_name',),)
         }),
         ('任务信息',{
-            'fields':('seq_number', 'sample', 'seq_start_date', 'customer_confirmation_time',
-                      'pooling_excel', ('note', ),)
+            'fields':('seq_number', 'sample', 'customer_sample_count',
+                      ('seq_start_date', 'customer_confirmation_time', 'pooling_excel',),
+                      ('note', ),)
         })
     )
 
-    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number']
+    readonly_fields = ['contract_number', 'sub_project_name', 'contacts', 'partner_company','seq_number', 'customer_sample_count',]
     search_fields = ['subProject__sub_number', 'seq_number', 'customer_sample_count', 'seq_start_date',
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
@@ -994,8 +1009,8 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     def get_list_filter(self, request):
         # 过滤器过滤时间
         groups = Group.objects.filter(user__id=request.user.id)
-        if len(groups) >= 1:
-            return [('seq_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
+        # if len(groups) >= 1:
+        return [('seq_start_date', DateRangeFilter), ('customer_confirmation_time', DateRangeFilter), ]
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -1155,8 +1170,8 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     def get_list_filter(self, request):
         # 过滤器过滤时间
         groups = Group.objects.filter(user__id=request.user.id)
-        if len(groups) >= 1:
-            return [('ana_start_date', DateRangeFilter), ]
+        # if len(groups) >= 1:
+        return [('ana_start_date', DateRangeFilter), ]
 
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
@@ -1179,6 +1194,7 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         if not obj.ana_number:
             ana_number = creat_uniq_number(request, AnaSubmit, 'Ana')
             obj.ana_number = ana_number
+            obj.project_manager = request.user
         super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
         for subProject in obj.subProject.all():
             subProject_status = SubProject.objects.get(id=subProject.id)
