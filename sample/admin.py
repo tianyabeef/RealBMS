@@ -163,6 +163,7 @@ class SampleInfoResource(resources.ModelResource):
         else:
             return (self.init_instance(row), True)
 
+
     def init_instance(self, row=None):
         if not row:
             row = {}
@@ -374,7 +375,35 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         return super(SampleInfoFormAdmin,self).formfield_for_foreignkey(db_field, request, **kwargs)
 
+    # def save_related(self, request, form, formsets, change):
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        if instances:
+            for instance in instances:
+                if not (instance.unique_code and instance.sample_number):
+                    instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+                    instance.sample_number = str(datetime.datetime.now().year) + \
+                                      Monthchoose[datetime.datetime.now().month] + "000" + str(
+                        SampleInfo.objects.latest('id').id + 1)
+                instance.save()
+                formset.save_m2m()
+
+
     def save_model(self, request, obj, form, change):
+        n=0
+        for i in obj.sampleinfo_set.all():
+            if not (i.unique_code and i.sample_number):
+                print(i)
+                i.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+                i.sample_number = str(datetime.datetime.now().year) + \
+                                  Monthchoose[datetime.datetime.now().month] + "000" + str(
+                    SampleInfo.objects.latest('id').id + 1)
+                i.save()
+                n+=1
+        print(n)
         if not obj.time_to_upload:
             obj.time_to_upload = datetime.datetime.now()
         try:
@@ -489,7 +518,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         #     return self.readonly_fields
         try:
             current_group_set = Group.objects.get(user=request.user)
-            print(current_group_set.name)
+            # print(current_group_set.name)
             if current_group_set.name == "实验部":
                 if obj.sample_status==2:
                     self.readonly_fields = ('transform_company',"partner", 'transform_number',
