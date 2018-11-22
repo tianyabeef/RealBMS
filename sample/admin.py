@@ -393,17 +393,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
 
     def save_model(self, request, obj, form, change):
-        n=0
-        for i in obj.sampleinfo_set.all():
-            if not (i.unique_code and i.sample_number):
-                print(i)
-                i.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
-                i.sample_number = str(datetime.datetime.now().year) + \
-                                  Monthchoose[datetime.datetime.now().month] + "000" + str(
-                    SampleInfo.objects.latest('id').id + 1)
-                i.save()
-                n+=1
-        print(n)
         if not obj.time_to_upload:
             obj.time_to_upload = datetime.datetime.now()
         try:
