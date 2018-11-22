@@ -27,7 +27,7 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         if self.request.user in ana_users:
             current = self.get_group_users(Q(pk=self.request.user.pk))
             manager = self.get_group_users(Q(groups__id=10))
-            users_queryset = current if current & manager else ana_users
+            users_queryset = ana_users if current & manager else current
         elif self.request.user in mar_users:
             users_queryset = sal_users
         elif self.request.user in sal_users:
