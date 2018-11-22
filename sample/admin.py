@@ -13,6 +13,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
+from pm.models import SubProject
 
 try:
     from django.utils.encoding import force_text
@@ -265,6 +266,17 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 return qs.filter(partner_email=request.user)
             elif current_group_set.name == "业务员（销售）":
                 return qs.filter(saler = request.user)
+            elif current_group_set.name == "项目管理":
+                subproject = SubProject.objects.filter(project_manager=request.user)
+                result = qs.filter(id = None )
+                for i in subproject:
+                    result |= (qs & i.sampleInfoForm.all())
+                #     for j in qs:
+                #         if i.sampleInfoForm == j:
+                #             result |= qs.filter(subproject_set.all())
+                return result
+            else:
+                return qs
         except:
             return qs
 
@@ -554,7 +566,23 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     #     return super(DataPaperStoreAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def get_fieldsets(self, request, obj=None):
-        fieldsets = ()
+        fieldsets = (
+            ['物流信息', {
+                'fields': (('transform_company', 'transform_number',
+                            'transform_contact', 'transform_phone'),
+                           'transform_status', 'sender_address'),
+            }]
+            , ['客户信息', {
+                'fields': (
+                ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
+            }], ['收货信息', {
+                'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
+            }], ['项目信息', {
+                'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
+                           'sample_num', 'extract_to_pollute_DNA',
+                           'management_to_rest', 'file_teacher',
+                           "sampleinfoformid", "time_to_upload"),
+            }])
         try:
             current_group_set = Group.objects.get(user=request.user)
             if current_group_set.name == "实验部":
