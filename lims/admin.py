@@ -258,7 +258,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             project.is_status = 3
             project.save()
             man = []
-            for i in obj.ext_experimenter.all():
+            for i in form.cleaned_data["ext_experimenter"]:
                 man.append((i.last_name+i.first_name))
             self.send_group_message("编号{0}的抽提任务执行中------，执行人:{1}".format(obj.extSubmit,
                                                                    man),Dinggroupid)
@@ -465,7 +465,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         if project.first().is_status < 6:
             project.update(is_status=6)
             man = []
-            for i in obj.lib_experimenter.all():
+            for i in form.cleaned_data["lib_experimenter"]:
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的建库任务执行中------，执行人:{1}".format(obj.libSubmit,
                                                                          man), Dinggroupid)
@@ -668,7 +668,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         if project.first().is_status < 9:
             project.update(is_status=9)
             man = []
-            for i in obj.seq_experimenter.all():
+            for i in form.cleaned_data["seq_experimenter"]:
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的测序任务执行中------，执行人:{1}".format(obj.seqSubmit,
                                                                          man), Dinggroupid)
