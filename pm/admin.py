@@ -418,7 +418,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
                 for mm_invoice in mm_invoices:
                     fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
-                    contract_income = fm_invoice.income + contract_income
+                    if not fm_invoice.income:
+                        contract_income = contract_income
+                    else:
+                        contract_income = fm_invoice.income + contract_income
                 if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
                     obj.status = True
                 else:
