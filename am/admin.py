@@ -91,7 +91,11 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     def render_change_form(self, request, context, add=False, change=False,
                            form_url='', obj=None):
         initial = context["adminform"].form.initial
-        initial["analyst"] = initial.get("analyst", request.user)
+        if initial.get("analyst", None):
+            analyst = initial.get("analyst")
+        else:
+            analyst = request.user
+        initial["analyst"] = analyst
         if obj and obj.is_submit:
             context['show_save'] = False
             context['show_delete'] = False
