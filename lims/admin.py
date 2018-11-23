@@ -84,31 +84,56 @@ class SampleInfoExtInline(admin.StackedInline):
         "is_rebuild": admin.HORIZONTAL,
         "sample_type": admin.HORIZONTAL,
     }
+    def has_change_permission(self, request, obj=None):
+        try:
+            if obj.is_submit:
+                return False
+        except:
+            pass
+        return super().has_change_permission(request, obj=None)
 
 class SampleInfoLibInline(admin.StackedInline):
     model = SampleInfoLib
     fields = (("libExecute", "unique_code", "sample_number", "sample_name", "lib_code", "index", "lib_volume",
                "lib_concentration", "lib_total", "lib_result", "is_rebuild"),)
+    radio_fields = {
+        "lib_result": admin.HORIZONTAL,
+        "is_rebuild": admin.HORIZONTAL,
+    }
+    def has_change_permission(self, request, obj=None):
+        try:
+            if obj.is_submit:
+                return False
+        except:
+            pass
+        return super().has_change_permission(request, obj=None)
 
 class SampleInfoSeqInline(admin.StackedInline):
     model = SampleInfoSeq
     fields = (("seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
                "seq_data", "seq_result",  "is_rebuild"),)
+    radio_fields = {
+        "seq_result": admin.HORIZONTAL,
+        "is_rebuild": admin.HORIZONTAL,
+    }
+    def has_change_permission(self, request, obj=None):
+        try:
+            if obj.is_submit:
+                return False
+        except:
+            pass
+        return super().has_change_permission(request, obj=None)
+
+#抽提方法注册
+class ExtmothodAdmin(admin.ModelAdmin):
+    search_fields = ("mothod",)
+
+
+class TestmothodAdmin(admin.ModelAdmin):
+    search_fields = ("mothod",)
 
 #抽提的导入
 class SampleInfoExtResource(resources.ModelResource):
-    # sample_number = fields.Field(column_name='样品编号')
-    # sample_used = fields.Field(column_name='样品提取用量')
-    # sample_rest = fields.Field(column_name='样品剩余用量')
-    # density_checked = fields.Field(column_name='浓度ng/uL(公司检测)')
-    # volume_checked = fields.Field(column_name='体积uL(公司检测)')
-    # D260_280 = fields.Field(column_name='D260/280')
-    # D260_230 = fields.Field(column_name='D260/230')
-    # DNA_totel = fields.Field(column_name='DNA总量')
-    # note = fields.Field(column_name='备注')
-    # quality_control_conclusion = fields.Field(column_name='质检结论')
-    # is_rebuild = fields.Field(column_name='选择是否重抽提(0代表不重抽提,1代表重抽提)')
-
     class Meta:
         model = SampleInfoExt
         skip_unchanged = True
@@ -147,6 +172,7 @@ class SampleInfoExtResource(resources.ModelResource):
             instance.DNA_totel = row['DNA总量']
             instance.note = row['备注']
             instance.quality_control_conclusion = row['质检结论']
+            instance.is_rebuild = row['选择是否重抽提(0代表不重抽提,1代表重抽提)']
             instance.save()
             return (instance, False)
         else:
@@ -154,13 +180,7 @@ class SampleInfoExtResource(resources.ModelResource):
             # return (self.init_instance(row), True)
 
 
-#抽提方法注册
-class ExtmothodAdmin(admin.ModelAdmin):
-    search_fields = ("mothod",)
 
-
-class TestmothodAdmin(admin.ModelAdmin):
-    search_fields = ("mothod",)
 
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
@@ -188,10 +208,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     search_fields = ("extract_method","test_method")
 
     autocomplete_fields = ("extract_method","test_method")
-    # raw_id_fields = ("extract_method","test_method")
 
-    #多对多不能显示在列表页面
-    # list_display = ('extSubmit', 'ext_experimenter', 'ext_end_date', 'note')
     list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
 
     exclude = ("ext_end_date",)
@@ -211,12 +228,6 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
         return self.obj
 
-    def get_export_filename(self, file_format):
-        date_str = datetime.datetime.now().strftime('%Y-%m-%d')
-        filename = "%s-%s.%s" % (self.model.__name__,
-                                 date_str,
-                                 file_format.get_extension())
-        return filename
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "ext_experimenter":
@@ -250,7 +261,9 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             for i in obj.ext_experimenter.all():
                 man.append((i.last_name+i.first_name))
             self.send_group_message("编号{0}的抽提任务执行中------，执行人:{1}".format(obj.extSubmit,
-                                                                   man),"chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                                                                   man),Dinggroupid)
+            self.message_user(request,"编号{0}的抽提任务执行中------，执行人:{1}".format(obj.extSubmit,
+                                                                   man))
             if not self.send_dingtalk_result:
                 self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
@@ -264,6 +277,9 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 obj.ext_end_date = datetime.datetime.now()
                 obj.save()
                 qs = obj.sampleinfoext_set.all()
+                if qs.count()==0:
+                    self.message_user(request,"未选择样品！")
+                    return None
                 msg_dingding = "项目{0}的抽提执行{1}结果已上传".format(project.sub_project,obj.extSubmit)
                 msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
                              "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
@@ -290,23 +306,25 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                              str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
                                              str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
                                              i.note)))
-                    if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
-                        if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
-                            # print("*******************************************")
-                            if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:-1]) in range(48,58):
-                                new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-2] +\
-                                             str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:])+1)
+                    try:
+                        if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
+                            if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
+                                if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:-1]) in range(48,58):
+                                    new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-2] +\
+                                                 str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:])+1)
+                                else:
+                                    new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] + \
+                                                 str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:])+1)
+                                SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
                             else:
-                                new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] + \
-                                             str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:])+1)
-                            SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
+                                SampleInfo.objects.filter(unique_code=i.unique_code).update(
+                                    color_code=" __{}__重抽提（未执行）1".format(sub_number))
                         else:
-                            SampleInfo.objects.filter(unique_code=i.unique_code).update(
-                                color_code=" __{}__重抽提（未执行）1".format(sub_number))
-                    else:
-                        SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=" __{}__重抽提（未执行）1".format(sub_number))
+                            SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=" __{}__重抽提（未执行）1".format(sub_number))
 
-                    ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
+                        ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
+                    except:
+                        pass
                 old = obj.extSubmit.ext_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1])+1)
@@ -326,7 +344,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                         recipient_list=["love949872618@qq.com",],
                         fail_silently=False)
                 self.send_group_message(msg_dingding,"chat62dbddc59ef51ae0f4a47168bdd2a65b")
-
+                self.message_user(request,"抽提实验结果导入成功")
             else:
                 pass
         else:
@@ -346,10 +364,10 @@ class SampleInfoLibResource(resources.ModelResource,):
         model = SampleInfoLib
         skip_unchanged = True
         import_id_fields = ("sample_number",)
-        fields = ('sample_number','lib_code',
+        fields = ("id",'sample_number','lib_code',
         'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
-        export_order = ('sample_number','lib_code',
-        'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
+        # export_order = ('sample_number','lib_code',
+        # 'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
 
     def get_export_headers(self):
         return ["id","sample_number","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
@@ -361,8 +379,11 @@ class SampleInfoLibResource(resources.ModelResource,):
 
     def export(self, queryset=None, *args, **kwargs):
         queryset_result = SampleInfoLib.objects.filter(id=None)
+        print(queryset)
         for i in queryset:
+            print(i)
             queryset_result |= SampleInfoLib.objects.filter(libExecute=i)
+        print(queryset_result)
         return super().export(queryset=queryset_result, *args, **kwargs)
 
     def get_or_init_instance(self, instance_loader, row):
@@ -378,15 +399,12 @@ class SampleInfoLibResource(resources.ModelResource,):
             instance.lib_total = row['总量ng(文库)']
             instance.lib_result = row['结论(文库)']
             instance.lib_note = row['备注(文库)']
+            instance.is_rebuild = row['选择是否重建库(0代表不重建库,1代表重建库)']
             instance.save()
             return (instance, False)
         else:
             raise Exception("请核对样品编号")
             # return (self.init_instance(row), True)
-
-
-
-
 
 #
 class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
@@ -409,7 +427,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     appkey = DINGTALK_APPKEY
 
     appsecret = DINGTALK_SECRET
-    # list_display = ('libSubmit', 'lib_experimenter', 'lib_end_date', 'note')
+
     list_display = ('libSubmit', 'lib_end_date', 'note',"is_submit")
 
     exclude = ("lib_end_date",)
@@ -417,7 +435,6 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     list_display_links = ('libSubmit',)
 
     filter_horizontal = ("lib_experimenter",)
-    # actions = ["submit_result", ]
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = []
@@ -438,6 +455,8 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     def save_model(self, request, obj, form, change):
 
+        Dinggroupid = DingtalkChat.objects.filter(chat_name="实验钉钉群-BMS").first().chat_id
+
         sub_number = obj.libSubmit.subProject.sub_number
 
         project = SubProject.objects.filter(sub_number=sub_number)
@@ -449,7 +468,9 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             for i in obj.lib_experimenter.all():
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的建库任务执行中------，执行人:{1}".format(obj.libSubmit,
-                                                                         man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                                                                         man), Dinggroupid)
+            self.message_user(request,"编号{0}的建库任务执行中------，执行人:{1}".format(obj.libSubmit,
+                                                                         man))
             if not self.send_dingtalk_result:
                 self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
@@ -462,6 +483,9 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # 钉钉
                 obj.lib_end_date = datetime.datetime.now()
                 qs = obj.sampleinfolib_set.all()
+                if qs.count()==0:
+                    self.message_user(request,"未选择样品！")
+                    return None
                 msg_dingding = "项目{0}的建库执行{1}结果已上传".format(project.first().sub_project, obj.libSubmit)
                 msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
                              "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
@@ -474,7 +498,6 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # 建立重建库任务单
                 lib = LibSubmit()
                 lib.project_manager_id = obj.libSubmit.project_manager_id
-                print(obj.libSubmit.project_manager)
                 lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
                 lib.subProject = obj.libSubmit.subProject
                 for j in qs.filter(is_rebuild=1):
@@ -484,29 +507,32 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                  j.lib_concentration,
                                                  j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
                                                  j.Rebulid[j.is_rebuild][1])))
-                    if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
-                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
-                                    48, 58):
-                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                       -2:-1]) in range(48, 58):
-                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                 0:-2] + \
-                                                 str(int(SampleInfo.objects.filter(
-                                                     unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                    try:
+                        if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                        48, 58):
+                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                           -2:-1]) in range(48, 58):
+                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                     0:-2] + \
+                                                     str(int(SampleInfo.objects.filter(
+                                                         unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                    else:
+                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                     0:-1] + \
+                                                     str(int(SampleInfo.objects.filter(
+                                                         unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
                                 else:
-                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                 0:-1] + \
-                                                 str(int(SampleInfo.objects.filter(
-                                                     unique_code=j.unique_code).first().color_code[-1:]) + 1)
-                                SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
-                            else:
-                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                    color_code=" __{}__重建库（未执行）1".format(sub_number))
-                    else:
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                            color_code=" __{}__重建库（未执行）1".format(sub_number))
-                    lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                        color_code=" __{}__重建库（未执行）1".format(sub_number))
+                        else:
+                            SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                color_code=" __{}__重建库（未执行）1".format(sub_number))
+                        lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                    except:
+                        pass
                 old = obj.libSubmit.lib_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1]) + 1)
@@ -525,7 +551,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                 recipient_list=["love949872618@qq.com", ],
                                 fail_silently=False)
                 self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-
+                self.message_user(request,"建库实验结果导入成功")
             else:
                 pass
         super().save_model(request, obj, form, change)
@@ -543,17 +569,17 @@ class SampleInfoSeqResource(resources.ModelResource):
         model = SampleInfoSeq
         skip_unchanged = True
         import_id_fields = ("sample_number",)
-        fields = ('sample_number','seq_code',
+        fields = ("id",'sample_number','seq_code',
         'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
-        export_order = ('sample_number','seq_code',
-        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
+        # export_order = ('sample_number','seq_code',
+        # 'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["sample_number","文库号","Index","数据量要求","测序数据量"
+        return ["id","sample_number","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def get_diff_headers(self):
-        return ["sample_number","文库号","Index","数据量要求","测序数据量"
+        return ["id","sample_number","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def export(self, queryset=None, *args, **kwargs):
@@ -574,6 +600,7 @@ class SampleInfoSeqResource(resources.ModelResource):
             instance.seq_data = row['测序数据量']
             instance.seq_result = row['结论(测序)']
             instance.seq_note = row['备注(测序)']
+            instance.is_rebuild = row['选择是否重测序(0代表不重测序,1代表重测序)']
             instance.save()
             return (instance, False)
         else:
@@ -631,6 +658,8 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     def save_model(self, request, obj, form, change):
 
+        Dinggroupid = DingtalkChat.objects.filter(chat_name="实验钉钉群-BMS").first().chat_id
+
         sub_number = obj.seqSubmit.subProject.sub_number
 
         project = SubProject.objects.filter(sub_number=sub_number)
@@ -642,7 +671,9 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             for i in obj.seq_experimenter.all():
                 man.append((i.last_name + i.first_name))
             self.send_group_message("编号{0}的测序任务执行中------，执行人:{1}".format(obj.seqSubmit,
-                                                                         man), "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                                                                         man), Dinggroupid)
+            self.message_user(request,"编号{0}的测序任务执行中------，执行人:{1}".format(obj.seqSubmit,
+                                                                         man))
             if not self.send_dingtalk_result:
                 self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
@@ -655,6 +686,9 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # 钉钉
                 obj.seq_end_date = datetime.datetime.now()
                 qs = obj.sampleinfoseq_set.all()
+                if qs.count()==0:
+                    self.message_user(request,"未选择样品！")
+                    return None
                 msg_dingding = "项目{0}的测序执行{1}结果已上传".format(project.first().sub_project, obj.seqSubmit)
                 msg_email = [
                     "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
@@ -681,29 +715,32 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                                  j.seq_data,
                                                  j.Seq_result[j.seq_result - 1][1], j.seq_note,
                                                  j.Rebulid[j.is_rebuild][1])))
-                    if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
-                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
-                                    48, 58):
-                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                       -2:-1]) in range(48, 58):
-                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                 0:-2] + \
-                                                 str(int(SampleInfo.objects.filter(
-                                                     unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                    try:
+                        if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                        48, 58):
+                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                           -2:-1]) in range(48, 58):
+                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                     0:-2] + \
+                                                     str(int(SampleInfo.objects.filter(
+                                                         unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                    else:
+                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                     0:-1] + \
+                                                     str(int(SampleInfo.objects.filter(
+                                                         unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
                                 else:
-                                    new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                 0:-1] + \
-                                                 str(int(SampleInfo.objects.filter(
-                                                     unique_code=j.unique_code).first().color_code[-1:]) + 1)
-                                SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
-                            else:
-                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                    color_code=" __{}__重测序（未执行）1".format(sub_number))
-                    else:
-                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                            color_code=" __{}__重测序（未执行）1".format(sub_number))
-                    seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                        color_code=" __{}__重测序（未执行）1".format(sub_number))
+                        else:
+                            SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                color_code=" __{}__重测序（未执行）1".format(sub_number))
+                        seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                    except:
+                        pass
                 old = obj.seqSubmit.seq_number
                 if "_" in old:
                     new = old[0:-1] + str(int(old[-1]) + 1)
@@ -721,6 +758,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                                 recipient_list=["love949872618@qq.com", ],
                                 fail_silently=False)
                 self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                self.message_user(request,"测序实验结果已导入")
             else:
                 pass
         super().save_model(request, obj, form, change)

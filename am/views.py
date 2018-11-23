@@ -31,9 +31,13 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
         elif self.request.user in mar_users:
             users_queryset = sal_users
         elif self.request.user in sal_users:
-            users_queryset = sal_users
+            current = self.get_group_users(Q(pk=self.request.user.pk))
+            manager = self.get_group_users(Q(groups__id=7))
+            users_queryset = sal_users if current & manager else current
         elif self.request.user in exp_users:
-            users_queryset = exp_users
+            current = self.get_group_users(Q(pk=self.request.user.pk))
+            manager = self.get_group_users(Q(groups__id=11))
+            users_queryset = exp_users if current & manager else current
         elif self.request.user in fin_users:
             users_queryset = fin_users
         elif self.request.user in cop_users:

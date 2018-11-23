@@ -108,7 +108,7 @@ class SampleInfoForm(models.Model):
 
 
     #客户信息
-    partner = models.CharField(max_length=200,verbose_name="客户姓名",blank=True,null=True)
+    partner = models.CharField(max_length=200,verbose_name="客户姓名",default="")
     information_email = models.EmailField(verbose_name="消息接收邮箱",default='')
     partner_company = models.CharField(max_length=200, verbose_name="合作伙伴单位")
     partner_phone = models.BigIntegerField(verbose_name="合作人联系电话")
@@ -129,19 +129,13 @@ class SampleInfoForm(models.Model):
 
     #上传信息
     # download_model = models.CharField(max_length=200,verbose_name="点击下载表格",default="www.")
-    # path_partner = models.CharField(max_length=200,verbose_name="客户上传路径",blank=True,null=True,default='')
     file_teacher = models.FileField(upload_to=upload_to,verbose_name='客户上传文件',default='')
     # file_tester = models.FileField(upload_to=upload_to1,verbose_name='实验室上传文件',blank=True,null=True,default='')
     man_to_upload = models.ForeignKey(User,related_name="上传文件人", verbose_name="公司上传者",blank=True,null=True,
                                                         on_delete=models.SET_NULL)
     time_to_upload = models.DateField(verbose_name="上传时间",blank=True,null=True)
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
-    # download_teacher =  models.CharField(max_length=200,verbose_name='客户上传文件模板下载',default="""
-    #                         <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
-    #                         """)
-    # download_tester = models.FileField(max_length=200,verbose_name='实验室上传文件模板下载',default="""
-    #                         <a href="{% static 'modelform/实验室上传样品详情.xlsx' %}" style="color: #c9302c">实验室信息模板下载</a>
-    #                         """)
+
     #样品接收信息
     arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
@@ -199,6 +193,9 @@ class SampleInfoForm(models.Model):
             self.Sample_jindu[self.sample_jindu][1],)
 
     jindu_status.short_description = "进度"
+
+Monthchoose = {1:"A",2:"B",3:"C",4:"D",5:"E",6:"F",7:"G",8:"H",9:"I",10:"G",11:"K",12:"L",}
+
 class SampleInfo(models.Model):
     #样品种类
     Type_of_Sample = (
@@ -264,7 +261,6 @@ class SampleInfo(models.Model):
             '<h5 >{}_{}</h5>',
             self.sample_receiver_name,
             self.color_code2)
-
 
     def __str__(self):
         return format_html(

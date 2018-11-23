@@ -13,6 +13,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
+from pm.models import SubProject
 
 try:
     from django.utils.encoding import force_text
@@ -163,6 +164,7 @@ class SampleInfoResource(resources.ModelResource):
         else:
             return (self.init_instance(row), True)
 
+
     def init_instance(self, row=None):
         if not row:
             row = {}
@@ -186,9 +188,14 @@ class SampleInfoResource(resources.ModelResource):
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
         instance.sample_species = row["物种"]
-        instance.sample_number = str(datetime.datetime.now().year) + \
+        if SampleInfo.objects.all().count() == 0:
+            instance.sample_number = str(datetime.datetime.now().year) + \
+                                     Monthchoose[datetime.datetime.now().month] + "0001"
+            instance.unique_code = 'RY_Sample_1'
+        else:
+            instance.sample_number = str(datetime.datetime.now().year) + \
                                  Monthchoose[datetime.datetime.now().month] + "000" + str(SampleInfo.objects.latest('id').id + 1)
-        instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+            instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
 
 
@@ -264,6 +271,17 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 return qs.filter(partner_email=request.user)
             elif current_group_set.name == "业务员（销售）":
                 return qs.filter(saler = request.user)
+            elif current_group_set.name == "项目管理":
+                subproject = SubProject.objects.filter(project_manager=request.user)
+                result = qs.filter(id = None )
+                for i in subproject:
+                    result |= (qs & i.sampleInfoForm.all())
+                #     for j in qs:
+                #         if i.sampleInfoForm == j:
+                #             result |= qs.filter(subproject_set.all())
+                return result
+            else:
+                return qs
         except:
             return qs
 
@@ -274,7 +292,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
         extra_context['show_save'] = True
         extra_context['show_save_as_new'] = True
-        extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def has_change_permission(self, request, obj=None):
@@ -374,6 +392,23 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         return super(SampleInfoFormAdmin,self).formfield_for_foreignkey(db_field, request, **kwargs)
 
+    # def save_related(self, request, form, formsets, change):
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        if instances:
+            for instance in instances:
+                if not (instance.unique_code and instance.sample_number):
+                    instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+                    instance.sample_number = str(datetime.datetime.now().year) + \
+                                      Monthchoose[datetime.datetime.now().month] + "000" + str(
+                        SampleInfo.objects.latest('id').id + 1)
+                instance.save()
+                formset.save_m2m()
+
+
     def save_model(self, request, obj, form, change):
         if not obj.time_to_upload:
             obj.time_to_upload = datetime.datetime.now()
@@ -394,6 +429,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                         self.message_user(request,"邮箱发送失败")
                     if not self.send_dingtalk_result:
                         self.message_user(request,"钉钉发送失败")
+                    self.message_user(request,"审核成功！")
             if not obj.sampleinfoformid:
                 if SampleInfoForm.objects.all().count() == 0:
                     obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
@@ -455,8 +491,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"钉钉发送失败")
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
-            else:
                 n += 1
+            elif obj.sample_status == 1:
+                self.message_user(request,"该概要表已经提交，请勿重复提交")
+            else:
+                self.message_user(request,"不可提交已审核内容")
+
 
     insure_sampleinfoform.short_description = '样品信息表单提交（并发送邮件）'
 
@@ -489,7 +529,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         #     return self.readonly_fields
         try:
             current_group_set = Group.objects.get(user=request.user)
-            print(current_group_set.name)
+            # print(current_group_set.name)
             if current_group_set.name == "实验部":
                 if obj.sample_status==2:
                     self.readonly_fields = ('transform_company',"partner", 'transform_number',
@@ -536,7 +576,23 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     #     return super(DataPaperStoreAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
     def get_fieldsets(self, request, obj=None):
-        fieldsets = ()
+        fieldsets = (
+            ['物流信息', {
+                'fields': (('transform_company', 'transform_number',
+                            'transform_contact', 'transform_phone'),
+                           'transform_status', 'sender_address'),
+            }]
+            , ['客户信息', {
+                'fields': (
+                ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
+            }], ['收货信息', {
+                'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
+            }], ['项目信息', {
+                'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
+                           'sample_num', 'extract_to_pollute_DNA',
+                           'management_to_rest', 'file_teacher',
+                           "sampleinfoformid", "time_to_upload"),
+            }])
         try:
             current_group_set = Group.objects.get(user=request.user)
             if current_group_set.name == "实验部":
