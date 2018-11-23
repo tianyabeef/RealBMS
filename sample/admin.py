@@ -429,6 +429,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                         self.message_user(request,"邮箱发送失败")
                     if not self.send_dingtalk_result:
                         self.message_user(request,"钉钉发送失败")
+                    self.message_user(request,"审核成功！")
             if not obj.sampleinfoformid:
                 if SampleInfoForm.objects.all().count() == 0:
                     obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
@@ -490,8 +491,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"钉钉发送失败")
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
-            else:
                 n += 1
+            elif obj.sample_status == 1:
+                self.message_user(request,"该概要表已经提交，请勿重复提交")
+            else:
+                self.message_user(request,"不可提交已审核内容")
+
 
     insure_sampleinfoform.short_description = '样品信息表单提交（并发送邮件）'
 
