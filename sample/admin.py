@@ -188,9 +188,14 @@ class SampleInfoResource(resources.ModelResource):
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
         instance.sample_species = row["物种"]
-        instance.sample_number = str(datetime.datetime.now().year) + \
+        if SampleInfo.objects.all().count() == 0:
+            instance.sample_number = str(datetime.datetime.now().year) + \
+                                     Monthchoose[datetime.datetime.now().month] + "0001"
+            instance.unique_code = 'RY_Sample_1'
+        else:
+            instance.sample_number = str(datetime.datetime.now().year) + \
                                  Monthchoose[datetime.datetime.now().month] + "000" + str(SampleInfo.objects.latest('id').id + 1)
-        instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+            instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
 
 
@@ -287,7 +292,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
         extra_context['show_save'] = True
         extra_context['show_save_as_new'] = True
-        extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def has_change_permission(self, request, obj=None):
@@ -424,6 +429,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                         self.message_user(request,"邮箱发送失败")
                     if not self.send_dingtalk_result:
                         self.message_user(request,"钉钉发送失败")
+                    self.message_user(request,"审核成功！")
             if not obj.sampleinfoformid:
                 if SampleInfoForm.objects.all().count() == 0:
                     obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
@@ -485,8 +491,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"钉钉发送失败")
                 obj.time_to_upload = datetime.datetime.now()
                 obj.save()
-            else:
                 n += 1
+            elif obj.sample_status == 1:
+                self.message_user(request,"该概要表已经提交，请勿重复提交")
+            else:
+                self.message_user(request,"不可提交已审核内容")
+
 
     insure_sampleinfoform.short_description = '样品信息表单提交（并发送邮件）'
 

@@ -160,6 +160,17 @@ class SeqSubmit(models.Model):
     def __str__(self):
         return '%s' % self.seq_number
 
+    def file_link(self):
+        if self.pooling_excel:
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(self.pooling_excel.url))
+
+        else:
+            return "未上传"
+
+    file_link.allow_tags = True
+    file_link.short_description = "已上传信息"
+
 
 # 分析提交
 class AnaSubmit(models.Model):
