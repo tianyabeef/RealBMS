@@ -188,9 +188,14 @@ class SampleInfoResource(resources.ModelResource):
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
         instance.sample_species = row["物种"]
-        instance.sample_number = str(datetime.datetime.now().year) + \
+        if SampleInfo.objects.all().count() == 0:
+            instance.sample_number = str(datetime.datetime.now().year) + \
+                                     Monthchoose[datetime.datetime.now().month] + "0001"
+            instance.unique_code = 'RY_Sample_1'
+        else:
+            instance.sample_number = str(datetime.datetime.now().year) + \
                                  Monthchoose[datetime.datetime.now().month] + "000" + str(SampleInfo.objects.latest('id').id + 1)
-        instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
+            instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
 
 
@@ -287,7 +292,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
         # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
         extra_context['show_save'] = True
         extra_context['show_save_as_new'] = True
-        extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def has_change_permission(self, request, obj=None):
