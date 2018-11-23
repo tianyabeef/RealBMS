@@ -180,7 +180,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                        ('sample_receiver','arrive_time',)),
         }),
         ('子项目信息', {
-            'fields': ('sub_number','sub_project','sample_count','file_to_start',)
+            'fields': (('sub_number','sub_project','sample_count', ), 'file_to_start',)
         }),
         ('任务信息', {
                 'fields': (('is_ext', 'is_lib','is_seq', 'is_ana'),
@@ -195,7 +195,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
                      'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
     autocomplete_fields = ('contract',)
-    ordering = ['-sub_number', ]
+    ordering = ['-sub_number', '-sampleInfoForm', ]
     # change_list_template = "pm/chang_list_custom.html"
     list_per_page = 50
     def make_subProject_submit(self, request,queryset):
@@ -240,12 +240,13 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     project_type.short_description = '项目类型'
 
     def income_notes(self, obj):
-        return_content = "款期\t到账日期\t到账金额\t合同金额\n"
+        return_content = "款期\t------到账日期\t------到账金额\t------合同金额\n"
         mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
         for mm_invoice in mm_invoices:
             fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
-            return_content = "%s%s\t%s\t%s\t%s\n" % (
-            return_content, mm_invoice.get_period_display(), fm_invoice.income_date, fm_invoice.income, Contract.all_amount)
+            mm_contract = Contract.objects.get(id=obj.contract.id)
+            return_content = "%s\t%s\t----%s\t----%s\t----%s\n" % (
+            return_content, mm_invoice.get_period_display(), fm_invoice.income_date, fm_invoice.income, mm_contract.all_amount)
         return return_content
     income_notes.short_description = '到款的记录'
 
@@ -289,7 +290,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return ["%s %s"%(sampleInfoForm.sample_receiver.last_name,sampleInfoForm.sample_receiver.first_name) for sampleInfoForm in sampleInfoForms]
+            return [sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms]
     sample_receiver.short_description = '样品接收人'
 
     def arrive_time(self, obj):
@@ -453,7 +454,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     def get_actions(self, request):
         actions = super().get_actions(request)
         for group in request.user.groups.all():
-            if group.id == 13:  # 项目管理组之外都不能启动中止项目
+            if group.id == 2:  # 项目管理组之外都不能启动中止项目
                 pass
             else:
                 if "make_submit" in actions:
@@ -493,8 +494,8 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                       ('subProject','sub_project_name','sample_receiver','arrive_time',),)
         }),
         ('任务信息',{
-            'fields':('ext_number', 'sample', 'sample_count',
-              'ext_start_date',('note',),)
+            'fields':('ext_number', 'sample', ('sample_count',
+              'ext_start_date', ), ('note',),)
         })
     )
     readonly_fields = ['sample_receiver', 'contract_number', 'sub_project_name', 'contacts', 'partner_company', 'arrive_time','ext_number','sample_count',]
@@ -517,9 +518,13 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         return obj.subProject.contract.partner_company
     partner_company.short_description = '合同单位'
 
+    # def sample_receiver(self, obj):
+    #     sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
+    #     return ["%s %s"%(sampleInfoForm.sample_receiver.last_name,sampleInfoForm.sample_receiver.first_name) for sampleInfoForm in sampleInfoForms]
+    # sample_receiver.short_description = '样品接收人'
     def sample_receiver(self, obj):
         sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
-        return ["%s %s"%(sampleInfoForm.sample_receiver.last_name,sampleInfoForm.sample_receiver.first_name) for sampleInfoForm in sampleInfoForms]
+        return [sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms]
     sample_receiver.short_description = '样品接收人'
 
     def arrive_time(self, obj):
@@ -696,8 +701,8 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                       ('subProject','sub_project_name',),)
         }),
         ('任务信息',{
-            'fields':('lib_number', 'sample', 'customer_sample_count', 'lib_start_date',
-                      'customer_confirmation_time', ('note', ),)
+            'fields':('lib_number', 'sample', ('customer_sample_count', 'lib_start_date',
+                      'customer_confirmation_time', ), ('note', ),)
         })
     )
 
@@ -839,6 +844,7 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         if LibSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
+            obj.save()
         else:
             obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
@@ -887,8 +893,8 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                       ('subProject','sub_project_name',),)
         }),
         ('任务信息',{
-            'fields':('seq_number', 'sample', 'customer_sample_count',
-                      ('seq_start_date', 'customer_confirmation_time', 'pooling_excel',),
+            'fields':('seq_number', 'sample', ('customer_sample_count',
+                      'seq_start_date', 'customer_confirmation_time', 'pooling_excel',),
                       ('note', ),)
         })
     )
@@ -1039,6 +1045,7 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         if SeqSubmit.objects.all().count() == 0:
             obj.id = "1"
             obj.customer_sample_count = obj.sample.all().count()
+            obj.save()
         else:
             obj.id = obj.id
             obj.customer_sample_count = obj.sample.all().count()
@@ -1082,8 +1089,8 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             'fields':(('contacts','contract_number','partner_company',),)
         }),
         ('任务信息',{
-            'fields':('ana_number', ('subProject',), 'ana_start_date',
-              'depart_data_path', 'confirmation_sheet',('note'),)
+            'fields':('ana_number', ('subProject',), ('ana_start_date',
+              'depart_data_path', 'confirmation_sheet', ), ('note'),)
         })
     )
     readonly_fields = ['contract_number', 'contacts', 'partner_company', 'ana_number',]
