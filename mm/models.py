@@ -28,6 +28,7 @@ class Contract(models.Model):
         (3, '单菌'),
         (4, '转录组'),
         (5, '其它'),
+        (6, '无'),
     )
     # 选项
     STATUS_CHOICES = (
@@ -57,8 +58,9 @@ class Contract(models.Model):
     send_date = models.DateField('合同寄出日', null=True, blank=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄回日', null=True, blank=True)
-    contract_file = models.FileField('附件', upload_to='uploads/%Y/%m', blank=True)
-    contacts = models.CharField('合同联系人', max_length=15, blank=True,default="")
+    contract_file = models.FileField('附件', upload_to='uploads/%Y/%m')
+    contract_file_scanning = models.FileField('扫描件', upload_to='uploads/contractScanning/%Y/%m', blank=True, null=True)
+    contacts = models.CharField('合同联系人', max_length=15, default="")
     contacts_email = models.EmailField(verbose_name="合同联系人邮箱", default='')
     contact_phone = models.CharField('合同联系人电话', max_length=30, blank=True,default="")
     contact_address = models.CharField('合同联系人地址', max_length=30, blank=True)
@@ -78,6 +80,14 @@ class Contract(models.Model):
             return "未上传"
     file_link.short_description = "附件"
     file_link.allow_tags = True
+
+    def file_link_scanning(self):
+        if self.contract_file_scanning:
+            return format_html("<a href='%s'>下载</a>" % (self.contract_file_scanning.url))
+        else:
+            return "未上传"
+    file_link_scanning.short_description = "附件"
+    file_link_scanning.allow_tags = True
 
     def __str__(self):
         return '【%s】-【%s】' % (self.contract_number, self.name)
@@ -108,7 +118,7 @@ class Invoice(models.Model):
     period = models.CharField('款期', max_length=3, choices=PERIOD_CHOICES, default='FIS')
     amount = models.DecimalField('发票金额', max_digits=9, decimal_places=2)
     type = models.CharField('发票类型', max_length=3, choices=INVOICE_TYPE_CHOICES, default='CC')
-    content = models.TextField('发票内容', null=True)
+    content = models.CharField('发票内容', max_length=200, null=True)
     note = models.TextField('备注', null=True)
     submit = models.NullBooleanField('提交开票', null=True)
 

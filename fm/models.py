@@ -30,6 +30,18 @@ class Invoice(models.Model):
     def __str__(self):
         return '%s' % self.invoice_code
 
+    @property
+    def income_set(self):
+        if Bill.objects.filter(invoice=self.id):
+            return [float(i.income) for i in Bill.objects.filter(invoice=self.id)]
+        return ""
+
+    @property
+    def income_date_set(self):
+        if Bill.objects.filter(invoice=self.id):
+            return [format(i.date,"%Y-%m-%d") for i in Bill.objects.filter(invoice=self.id)]
+        return ""
+
 
 class Bill(models.Model):
     invoice = models.ForeignKey(Invoice, verbose_name='发票',on_delete=models.SET_NULL,null=True)

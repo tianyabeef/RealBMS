@@ -70,16 +70,19 @@ class InvoiceInfoResource(resources.ModelResource):
     invoice_tax_amount = fields.Field(column_name='开票税率',attribute='tax_amount')
     invoice_content = fields.Field(column_name='开票内容',attribute='invoice__content')
     invoice_issuingUnit = fields.Field(column_name='开票单位')
+    income_set = fields.Field(column_name='到账金额集', attribute="income_set")
+    income_date_set = fields.Field(column_name='到账时间集', attribute="income_date_set")
+
 
     class Meta:
         model = Invoice
         skip_unchanged = True
         fields = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                   'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit')
+                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set')
         export_order = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                         'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit')
+                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set')
     def dehydrate_contract_amount(self, invoice):
         return '%.2f' % (invoice.invoice.contract.fis_amount+invoice.invoice.contract.fin_amount)
     def dehydrate_contract_salesman(self,invoice):
@@ -95,6 +98,11 @@ class InvoiceInfoResource(resources.ModelResource):
     def dehydrate_invoice_issuingUnit(self,invoice):
         return invoice.invoice.get_issuingUnit_display()
 
+    # def export(self, queryset=None, *args, **kwargs):
+    #     queryset_result = Bill.objects.filter(id=None)
+    #     for i in queryset:
+    #         queryset_result |= Bill.objects.filter(invoice=i)
+    #     return super().export(queryset=queryset_result,*args, **kwargs)
 
 class BillInlineFormSet(BaseInlineFormSet):
     '''财务发票的进账的FormSet（Inline）'''
@@ -312,9 +320,9 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     if invoice_in_contract:
                         sum_income = sum([invoice_temp.income for invoice_temp in invoice_in_contract if invoice_temp.income])
                     obj_contract.fis_amount_in = sum_income
-                    #合同的首款<bill金额的总和,在项目管理中的状态为待处理，尾款已到。
-                    if (sum_income >= obj_contract.fis_amount) and (obj_contract.is_status < 2):
-                        obj_contract.is_status = 2
+                    #TODO 与市场部方华琦沟通（沟通不做任何限制）。
+                    # if (sum_income >= obj_contract.fis_amount) and (obj_contract.is_status < 2):
+                    #     obj_contract.is_status = 2
                 if instances[-1].invoice.invoice.period == "FIN":
                     obj_contract.fin_date = instances[-1].date
                     # 如果尾款有多张发票
@@ -322,8 +330,9 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     if invoice_in_contract:
                         sum_income = sum([invoice_temp.income for invoice_temp in invoice_in_contract if invoice_temp.income])
                     obj_contract.fin_amount_in = sum_income
-                    if sum_income >= obj_contract.fin_amount and (obj_contract.is_status < 3):
-                        obj_contract.is_status = 3
+                    #TODO 与市场部方华琦沟通（沟通不做任何限制）。
+                    # if sum_income >= obj_contract.fin_amount and (obj_contract.is_status < 3):
+                    #     obj_contract.is_status = 3
                 obj_contract.save()
                 #新的到账 通知财务部5
                 content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,有一笔新到账，发票号：%s 总到账金额：%s"%(obj_invoice,sum_income)
@@ -366,10 +375,10 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
         # 只允许管理员和拥有该模型删除权限的人员，销售总监才能查看所有
         haved_perm = False
         for group in request.user.groups.all():
-            if (group.id == 7) or (group.id == 14) or (group.id == 5):  #财务总监，销售总监,财务部
+            if (group.id == 7) or (group.id == 14) or (group.id == 5) or (group.id == 4):  #财务总监，销售总监,财务部,商务部
                 haved_perm=True
-        qs = super(InvoiceAdmin, self).get_queryset(request)
-        if request.user.is_superuser or request.user.has_perm('fm.delete_invoice') or haved_perm:
+        qs = super().get_queryset(request)
+        if request.user.is_superuser or haved_perm:
             return qs
         return qs.filter(invoice__contract__salesman=request.user)
 
