@@ -42,11 +42,14 @@ class BMSAdminSite(AdminSite):
         #     group_context = Group.objects.get(id = request.user.id).id
         # else:
         #     group_context = 0
-        try:
-            group_context = Group.objects.get(user=request.user).name
-        except:
-            group_context = 0
-
+        groups = Group.objects.filter(user=request.user)
+        if groups:
+            group_context = [i.name for i in groups]
+        else:
+            if request.user.is_superuser:
+                group_context = [1, ]
+            else:
+                group_context = [0, ]   #此类用户没有分组
 
         return {
             'site_title': self.site_title,
