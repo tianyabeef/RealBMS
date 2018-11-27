@@ -101,9 +101,9 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
                 obj.submit = True
                 obj.save()
                 i += 1
-                if obj.contract.is_status != 2:
-                    obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
-                    obj.contract.save()
+                # if obj.contract.is_status != 2:  #与市场部（方华琦）沟通不做任何限制
+                #     obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
+                #     obj.contract.save()
                 #新的开票申请 通知财务部5
                 for j in User.objects.filter(groups__id=5):
                     fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
@@ -127,6 +127,11 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
                     del actions["make_invoice_submit"]
         return actions
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            if obj.submit:
+                return ('contract', 'title', 'issuingUnit', 'period', 'type', 'amount', 'content', 'note')
+        return self.readonly_fields
 
 class InvoiceInlineFormSet(BaseInlineFormSet):
     '''
@@ -264,7 +269,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     resource_class = ContractResource
-    list_display = ('contract_number', 'name','partner_company_modify', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
+    list_display = ('contract_number', 'name','partner_company_modify', 'contacts', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
                     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     date_hierarchy = 'send_date'
     inlines = [InvoiceInline,]
@@ -281,7 +286,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
             'fields': (('tracking_number', 'send_date', 'receive_date'),)
         }),
         ('上传合同', {
-            'fields': ('contract_file', )
+            'fields': ('contract_file', 'contract_file_scanning')
         })
     )
     autocomplete_fields = ('salesman',)
