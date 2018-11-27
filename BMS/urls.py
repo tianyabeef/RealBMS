@@ -20,11 +20,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from BMS.admin_bms import BMS_admin_site
-
+from lims.views import getData
 urlpatterns = [
     path(r'', BMS_admin_site.urls),
     path(r'notification/inbox/', include('notification.urls', namespace='notifications')),
-    # path(r'^lims/',include('lims.urls',namespace='lims')),
+    # path(r"lims/display/",)
+    path('lims/getdata/',getData),
 ]
 
 if settings.DEBUG:
