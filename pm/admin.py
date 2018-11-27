@@ -5,7 +5,6 @@ from sample.models import SampleInfoForm
 from mm.models import Contract
 from mm.models import Invoice as mm_Invoice
 from fm.models import Invoice as fm_Invoice
-from decimal import Decimal
 from django.contrib import messages
 from sample.models import SampleInfo
 from django.contrib.auth.models import Group,User
@@ -19,13 +18,11 @@ from lims.models import SampleInfoExt as lims_SampleInfoExt
 from lims.models import SampleInfoLib as lims_SampleInfoLib
 from lims.models import SampleInfoSeq as lims_SampleInfoSeq
 from import_export import resources
-from import_export.admin import ImportExportModelAdmin, ImportExportActionModelAdmin
+from import_export.admin import ImportExportActionModelAdmin
 from datetime import date
 from daterange_filter.filter import DateRangeFilter
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET
 from BMS.notice_mixin import NotificationMixin
-from django.forms import fields
-from django.db import models
 
 
 class SubProjectForm(forms.ModelForm):
@@ -132,7 +129,6 @@ def create_submit_table(request,obj, states):
 
 
 class SubProject_Resource(resources.ModelResource):
-    # pass
     class Meta:
         model = SubProject
         skip_unchanged = True
@@ -155,15 +151,13 @@ class SubProject_Resource(resources.ModelResource):
                 '状态（1-已立项，2-待抽提，3-抽提中，4-抽提完成：待客户反馈建库，5-待建库，6-建库中，7-建库完成：待客户反馈测序，8-待测序，9-测序中，10-测序完成：待客户反馈分析，11-待分析，12-分析中，13-完成，14-终止）',]
 
 
-# class SubProjectAdmin(admin.ModelAdmin,NotificationMixin):
 class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     resource_class = SubProject_Resource
     form = SubProjectForm
-
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
-                    'project_manager',  'project_start_time', 'time_ext', 'time_lib', 'time_ana', 'file_link','is_status', 'status',  'is_submit',)
+                    'project_manager',  'project_start_time', 'time_ext_start', 'time_lib_start', 'time_ext', 'time_lib', 'time_ana', 'file_link','is_status', 'status',  'is_submit',)
     list_display_links = ['sub_number', ]
     actions = ['make_submit', 'make_subProject_submit']
     fieldsets = (
@@ -186,6 +180,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 'fields': (('is_ext', 'is_lib','is_seq', 'is_ana'),
                            ('sub_project_note',),)
         }),
+        ('结算信息', {
+            'fields': (('start_up_amount', 'settlement_amount', 'is_balance', ), )
+        }),
     )
     readonly_fields = ['contract_number', 'contract_name', 'contacts','contacts_phone', 'saleman','company',
                        'project_type','income_notes','customer_name', 'customer_phone', 'service_types',
@@ -196,8 +193,8 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                      'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
     autocomplete_fields = ('contract',)
     ordering = ['-sub_number', '-sampleInfoForm', ]
-    # change_list_template = "pm/chang_list_custom.html"
     list_per_page = 50
+
     def make_subProject_submit(self, request,queryset):
         """
         终止任务
@@ -249,16 +246,6 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
             return_content, mm_invoice.get_period_display(), fm_invoice.income_date, fm_invoice.income, mm_contract.all_amount)
         return return_content
     income_notes.short_description = '到款的记录'
-
-    # def income_notes(self, obj):
-    #     return_content = "款期\t到账日期\t到账金额\n"
-    #     mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
-    #     for mm_invoice in mm_invoices:
-    #         fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
-    #         return_content = "%s%s\t%s\t%s\n" % (
-    #         return_content, mm_invoice.get_period_display(), fm_invoice.income_date, fm_invoice.income)
-    #     return return_content
-    # income_notes.short_description = '到款的记录'
 
     # 样品表相关信息（样品寄样人，样品寄样人电话，项目类型）
     def customer_name(self, obj):
@@ -354,7 +341,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 if obj.is_submit:
                     extra_context['show_delete'] = False
                     extra_context['show_save_and_add_another'] = False
-                    extra_context['show_save'] = False
+                    # extra_context['show_save'] = False
                     extra_context['show_save_as_new'] = False
                     extra_context['show_save_and_continue'] = False
 
@@ -373,10 +360,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 contract_income = contract_income
             else:
                 contract_income = fm_invoice.income + contract_income
-        if project_amount * Decimal(0.7) > (contract_income-obj.contract.use_amount):
-            obj.status = True
-        else:
-            obj.status = False
+        # if project_amount * Decimal(0.7) > (contract_income-obj.contract.use_amount):
+        #     obj.status = True
+        # else:
+        #     obj.status = False
         obj.project_manager = request.user
         if obj.status:
             if obj.file_to_start:
@@ -404,6 +391,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 # 新建执行表单
                 create_submit_table(request, obj, states)
             obj.save()
+        if obj.is_balance:
+            obj.is_status = 15
+            obj.save()
         super().save_model(request, obj, form, change)
 
     def make_submit(self, request, queryset):
@@ -422,10 +412,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                         contract_income = contract_income
                     else:
                         contract_income = fm_invoice.income + contract_income
-                if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
-                    obj.status = True
-                else:
-                    obj.status = False
+                # if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
+                #     obj.status = True
+                # else:
+                #     obj.status = False
                 obj.project_manager = request.user
                 if obj.status:
                     if obj.file_to_start:
@@ -472,7 +462,6 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
 # 提取提交表
 class ExtSubmitForm(forms.ModelForm):
-    # pass
     class Meta:
         model = ExtSubmit
         fields = "__all__"
@@ -483,6 +472,8 @@ class ExtSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
         elif subProject.is_status == 14:
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
+        elif subProject.is_status == 15:
+            raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -490,7 +481,6 @@ class ExtSubmitForm(forms.ModelForm):
         if not sample:
             raise forms.ValidationError("样品表单需要添加抽提样品")
         return self.cleaned_data['sample']
-
 
 
 # 提取提交管理
@@ -514,6 +504,7 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     search_fields = ['subProject__sub_number', 'ext_number', 'sample_count', 'ext_start_date', 'note', ]
     autocomplete_fields = ('subProject',)
     list_per_page = 50
+
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -530,10 +521,6 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         return obj.subProject.contract.partner_company
     partner_company.short_description = '合同单位'
 
-    # def sample_receiver(self, obj):
-    #     sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
-    #     return ["%s %s"%(sampleInfoForm.sample_receiver.last_name,sampleInfoForm.sample_receiver.first_name) for sampleInfoForm in sampleInfoForms]
-    # sample_receiver.short_description = '样品接收人'
     def sample_receiver(self, obj):
         sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
         return [sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms]
@@ -586,10 +573,6 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 if project.is_status < 2:
                     project.is_status = 2
                     project.save()
-                # if obj.subProject.is_status < 2:
-                #     SubProject.objects.filter(sub_number = obj.subProject).update(is_status = 2)
-                # obj.subProject.save()
-                # print(obj.subProject.is_status)
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -603,13 +586,15 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.sample_type = sampleInfo.sample_type
                     sampleInfoExt.save()
                 obj.save()
-        # self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s'%(queryset.count(),n,un,sn), level=messages.ERROR)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,), level=messages.ERROR)
-
         # 新增抽提的时候，给实验发钉钉通知
         self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
                                 "chat62dbddc59ef51ae0f4a47168bdd2a65b")
         print(self.send_dingtalk_result)
+        sub_number = obj.subProject.sub_number
+        project = SubProject.objects.filter(sub_number=sub_number).first()
+        project.time_ext_start = datetime.datetime.now()
+        project.save()
     make_ExtSubmit_submit.short_description = '提交提取任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -639,7 +624,6 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         # if len(groups) >= 1:
         return [('ext_start_date', DateRangeFilter), ]
 
-
         # 更改修改表单里的按钮
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -658,23 +642,6 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
         return super(ExtSubmitAdmin, self).change_view(request, object_id, form_url, extra_context=extra_context)
 
-    # def save_formset(self, request, form, formset, change):
-    #     instances = formset.save(commit=False)
-    #     for obj in formset.deleted_objects:
-    #         obj.delete()
-    #     print('***********')
-    #     if instances:
-    #         n = 0
-    #         print(n)
-    #         for instance in instances:
-    #             n += 1
-    #             print(n)
-    #             if ExtSubmit.objects.sample_count:
-    #                 ExtSubmit.objects.sample_count = n
-    #             ExtSubmit.objects.sample_count.save()
-    #             instance.save()
-    #             formset.save_m2m()
-
     def save_model(self, request, obj, form, change):
         if not obj.ext_number:
             ext_number = creat_uniq_number(request, ExtSubmit, 'Ext')
@@ -690,18 +657,11 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             obj.id = obj.id
             obj.sample_count = form.cleaned_data["sample"].count()
             obj.save()
-        # if obj.subProject.is_status < 13:
-        #     obj.save()
-        # elif obj.subProject.is_status == 13:
-        #     raise Exception("该子项目已经完成，请选择其他子项目")
-        # else:
-        #     raise Exception("该子项目已经中止，请选择其他子项目")
         super().save_model(request, obj, form, change)
 
 
 # 建库提交表
 class LibSubmitForm(forms.ModelForm):
-    # pass
     class Meta:
         model = LibSubmit
         fields = "__all__"
@@ -712,6 +672,8 @@ class LibSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
         elif subProject.is_status == 14:
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
+        elif subProject.is_status == 15:
+            raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -746,6 +708,7 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
     list_per_page = 50
+
     def contacts(self, obj):
         return obj.subProject.contract.contacts
     contacts.short_description = '合同联系人姓名'
@@ -803,9 +766,6 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 if project.is_status < 5:
                     project.is_status = 5
                     project.save()
-                # if obj.subProject.is_status < 5:
-                #     SubProject.objects.filter(sub_number=obj.subProject).update(is_status=5)
-                # obj.subProject.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -817,14 +777,16 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.sample_name = sampleInfo.sample_name
                     sampleInfoLib.save()
                 obj.save()
-        # self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
-        #                   level=messages.ERROR)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # 新增建库的时候，给实验发钉钉通知
         self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
                                 "chat62dbddc59ef51ae0f4a47168bdd2a65b")
         print(self.send_dingtalk_result)
+        sub_number = obj.subProject.sub_number
+        project = SubProject.objects.filter(sub_number=sub_number).first()
+        project.time_lib_start = datetime.datetime.now()
+        project.save()
     make_LibSubmit_submit.short_description = '提交建库任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -886,18 +848,11 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             obj.id = obj.id
             obj.customer_sample_count = form.cleaned_data["sample"].count()
             obj.save()
-        # if obj.subProject.is_status < 13:
-        #     obj.save()
-        # elif obj.subProject.is_status == 13:
-        #     raise Exception("该子项目已经完成，请选择其他子项目")
-        # else:
-        #     raise Exception("该子项目已经中止，请选择其他子项目")
         super().save_model(request, obj, form, change)
 
 
 # 测序提交表
 class SeqSubmitForm(forms.ModelForm):
-    # pass
     class Meta:
         model = SeqSubmit
         fields = "__all__"
@@ -908,6 +863,8 @@ class SeqSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
         elif subProject.is_status == 14:
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
+        elif subProject.is_status == 15:
+            raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -947,6 +904,7 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                      'customer_confirmation_time', 'note', ]
     autocomplete_fields = ('subProject',)
     list_per_page = 50
+
     def contacts(self, obj):
         return obj.subProject.contract.contacts
 
@@ -997,7 +955,6 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         sn = 0  # 已经确认
         for obj in queryset:
             if not obj.pooling_excel:
-                # raise forms.ValidationError('请上传pooling表')
                 self.message_user(request, '子项目编号：%s。测序号：%s。必须上传pooling表' % (obj.subProject, obj.seq_number), level=messages.ERROR)
             else:
                 if obj.is_submit:
@@ -1012,9 +969,6 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     if project.is_status < 8:
                         project.is_status = 8
                         project.save()
-                    # if obj.subProject.is_status < 8:
-                    #     SubProject.objects.filter(sub_number=obj.subProject).update(is_status=8)
-                    # obj.subProject.save()
                     seqExecute = lims_SeqExecute.objects.create(seqSubmit=obj)
                     sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                     for sampleInfo in sampleInfos:
@@ -1026,8 +980,6 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.sample_name = sampleInfo.sample_name
                         sampleInfoseq.save()
                     obj.save()
-                # self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
-                #                   level=messages.ERROR)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # 新增测序的时候，给实验发钉钉通知
@@ -1095,12 +1047,6 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             obj.id = obj.id
             obj.customer_sample_count = form.cleaned_data["sample"].count()
             obj.save()
-        # if obj.subProject.is_status < 13:
-        #     obj.save()
-        # elif obj.subProject.is_status == 13:
-        #     raise Exception("该子项目已经完成，请选择其他子项目")
-        # else:
-        #     raise Exception("该子项目已经中止，请选择其他子项目")
         super().save_model(request, obj, form, change)
 
 
@@ -1110,17 +1056,6 @@ class AnaSubmitForm(forms.ModelForm):
         if not subProject:
             raise forms.ValidationError("子项目表单需要添加分析子项目")
         return self.cleaned_data['subProject']
-    # class Meta:
-    #     model = AnaSubmit
-    #     fields = "__all__"
-    #
-    # def clean_subProject(self):
-    #     subProject = self.cleaned_data['subProject']
-    #     if subProject.is_status == 13:
-    #         raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
-    #     elif subProject.is_status == 14:
-    #         raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
-    #     return self.cleaned_data['subProject']
 
 
 # 分析提交管理
@@ -1146,6 +1081,7 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
     filter_horizontal = ('subProject',)
     search_fields = ['ana_number', 'ana_start_date', 'note', ]
     list_per_page = 50
+
     def contacts(self, obj):
         contracts = Contract.objects.filter(pk__in = [i.contract.id for i in obj.subProject.all()])
         return "\t".join([contract.contacts for contract in contracts])
@@ -1194,8 +1130,6 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     subProject_old.save()
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
-        # self.message_user(request, '选中数量：%s, 完成确定的数量：%s, 无法完成确定的数量：%s, 已经确定过的数量：%s' % (queryset.count(), n, un, sn),
-        #                   level=messages.ERROR)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # 新增分析的时候，给实验发钉钉通知
@@ -1254,15 +1188,6 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
             obj.ana_number = ana_number
             obj.project_manager = request.user
         super(AnaSubmitAdmin, self).save_model(request, obj, form, change)
-        for subProject in obj.subProject.all():
-            subProject_status = SubProject.objects.get(id=subProject.id)
-            if obj.subProject.is_status < 13:
-                obj.save()
-            elif obj.subProject.is_status == 13:
-                raise Exception("该子项目已经完成，请选择其他子项目")
-            elif obj.subProject.is_status == 14:
-                raise Exception("该子项目已经中止，请选择其他子项目")
-            subProject_status.save()
 
 
 BMS_admin_site.register(SubProject, SubProjectAdmin)
