@@ -4,6 +4,7 @@ from django.contrib.auth.admin import User, UserAdmin, Group, GroupAdmin
 from django.views.decorators.cache import never_cache
 from django.template.response import TemplateResponse
 from django.utils.translation import ugettext_lazy
+from django.contrib.auth.models import AnonymousUser
 
 class BMSAdminSite(AdminSite):
 
@@ -42,14 +43,19 @@ class BMSAdminSite(AdminSite):
         #     group_context = Group.objects.get(id = request.user.id).id
         # else:
         #     group_context = 0
-        groups = Group.objects.filter(user=request.user)
-        if groups:
-            group_context = [i.name for i in groups]
-        else:
-            if request.user.is_superuser:
-                group_context = [1, ]
+        # group_context = [0, ]
+#        if not isinstance(request.user,AnonymousUser):
+        try:
+            groups = Group.objects.filter(user=request.user)
+            if groups:
+                group_context = [i.name for i in groups]
             else:
-                group_context = [0, ]   #此类用户没有分组
+                if request.user.is_superuser:
+                    group_context = [1, ]
+                else:
+                    group_context = [0, ]   #此类用户没有分组
+        except:
+            group_context = [0, ]
 
         return {
             'site_title': self.site_title,
