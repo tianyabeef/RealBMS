@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>锐翌生物科技</title>
+</head>
+<body>
+{% if error %}
+    <h1>{{ error }}</h1>
+{% endif %}
+{% if type %}
+    {% if type == 1 %}
+
+        <h1>{{ sub_number }}抽提结果</h1>
+        <br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量
+        </th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>
+        <th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>
+    {% for i in data %}
+        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.species }}</td><td>{{ i.type_sample }}</td><td>{{ i.sample_used }}</td><td>{{ i.sample_rest }}</td><td>{{ i.density_checked }}</td><td>{{ i.volume_checked }}</td>
+            <td>{{ i.D260_280 }}</td><td>{{ i.D260_230 }}</td><td>{{ i.DNA_totel }}</td><td>{{ i.rebuild }}</td><td>{{ i.quality }}</td><td>{{ i.note }}</td>></tr>
+    {% endfor %}
+    </table>
+
+    {% elif type == 2 %}
+
+        <h1>{{ sub_number }}建库结果</h1>
+        <br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)
+        </th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>选择是否重建库</th><th>备注(文库)</th>
+        </tr>
+    {% for i in data %}
+        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.lib_code }}</td><td>{{ i.index }}</td><td>{{ i.lib_volume }}</td><td>{{ i.lib_concentration }}</td><td>{{ i.lib_total }}</td><td>{{ i.result }}</td>
+            <td>{{ i.rebuild }}</td><td>{{ i.lib_note }}</td></tr>
+    {% endfor %}
+    </table>
+
+    {% elif type == 3 %}
+
+    <h1>{{ sub_number }}测序结果</h1>
+        <br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求
+        </th><th>测序数据量</th><th>结论(测序)</th><th>选择是否重测序</th><th>备注(测序)</th>
+        </tr>
+    {% for i in data %}
+        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.seq_code }}</td><td>{{ i.seq_index }}</td><td>{{ i.data_request }}</td><td>{{ i.seq_data }}</td><td>{{ i.result }}</td><td>{{ i.rebuild }}</td>
+            <td>{{ i.seq_note }}</td></tr>
+    {% endfor %}
+    </table>
+{% endif %}
+{% endif %}
+</body>
+</html>

@@ -45,6 +45,7 @@ class ExtExecute(models.Model):
     note = models.TextField('实验结果备注',blank=True,null=True)
     upload_file = models.FileField('抽提结果报告', upload_to='uploads/ext/%Y/%m/%d/', blank=True, null=True)
     is_submit = models.BooleanField('提交',default=False)
+    query_code = models.CharField("查询码",max_length=50,blank=True,null=True)
     # def save(self, *args, **kwargs):
     #     super(ExtSubmit, self).save(*args, **kwargs)
     #     if not self.slug:
@@ -74,6 +75,7 @@ class LibExecute(models.Model):
     )
     lib_end_date = models.DateField('建库完成日期',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
+    query_code = models.CharField("查询码", max_length=50, blank=True, null=True)
     #非必填
     reaction_times = models.IntegerField(verbose_name="反应次数（选填）",blank=True,null=True)
     pcr_system = models.CharField(verbose_name="PCR体系（选填）",max_length=200,blank=True,null=True)
@@ -113,6 +115,7 @@ class SeqExecute(models.Model):
         verbose_name='测序实验员',
         # on_delete= models.DO_NOTHING,
     )
+    query_code = models.CharField("查询码", max_length=50, blank=True, null=True)
     seq_end_date = models.DateField('测序下机日期',blank=True,null=True)
     upload_file = models.FileField('测序结果报告上传', upload_to='uploads/seq/%Y/%m/%d/',blank=True,null=True)
     note = models.TextField('实验结果备注',blank=True,null=True)
@@ -229,6 +232,15 @@ class SampleInfoExt(models.Model):
     def __str__(self):
         return str(self.sample_number)
 
+    def type_sample(self):
+        return self.Type_of_Sample[self.sample_type - 1][1]
+
+    def rebuild(self):
+        return self.Rebulid[self.is_rebuild][1]
+
+    def quality(self):
+        return self.Quality_control_conclusion[self.quality_control_conclusion - 1][1]
+
     class Meta:
         verbose_name = "样品池---抽提"
         verbose_name_plural = "样品池---抽提"
@@ -270,7 +282,10 @@ class SampleInfoLib(models.Model):
         verbose_name = "样品池---建库"
         verbose_name_plural = "样品池---建库"
 
-
+    def result(self):
+        return self.Lib_result[self.lib_result - 1][1]
+    def rebuild(self):
+        return self.Rebulid[self.is_rebuild][1]
 
 class SampleInfoSeq(models.Model):
     Seq_result = (
@@ -308,4 +323,8 @@ class SampleInfoSeq(models.Model):
         verbose_name = "样品池---测序"
         verbose_name_plural = "样品池---测序"
 
+    def result(self):
+        return self.Seq_result[self.seq_result-1][1]
 
+    def rebuild(self):
+        return self.Rebulid[self.is_rebuild][1]
