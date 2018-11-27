@@ -1,72 +1,23 @@
-# from django.shortcuts import render
-# from django.views.generic.list import ListView
-# from pm.models import SubProject
-# import operator
-# from functools import partial, reduce, update_wrapper
-# from django.db.models import Q
-# from sample.models import SampleInfoForm
-#
-#
-#
-# class ProjectListView(ListView):
-#     model = SubProject
-#     def get_context_data(self, **kwargs):
-#         context = super(ProjectListView,self).get_context_data(**kwargs)
-#         context["opts"] = SubProject._meta
-#         context['has_permission'] = True
-#         context['has_filters'] = True
-#         context['site_url'] = '/'
-#         query =  self.request.GET.get('q')
-#         if query:
-#             query = query.strip()
-#             context['queryq'] = query
-#         return context
-#
-#     def get_queryset(self):
-#         result = super(ProjectListView, self).get_queryset()
-#         print(self.request)
-#         query = self.request.GET.get('q')
-#         if query:
-#             query = query.strip()
-#             #模糊检索合同号，和检索项目id
-#             result = SubProject.objects.filter(reduce(operator.or_, [Q(contract__contract_number__icontains=query),Q(id__icontains=query)]))
-#             return result
-#         querystatus = self.request.GET.get('status')
-#         if querystatus:
-#             querystatus = querystatus.strip()
-#             #模糊检索合同号，和检索项目id
-#             result = SubProject.objects.filter(status=querystatus)
-#             return result
-#         return result
-#
-#
-# class SampleInfoFormListView(ListView):
-#     model = SampleInfoForm
-#     def get_context_data(self, **kwargs):
-#         context = super(SampleInfoFormListView,self).get_context_data(**kwargs)
-#         context["opts"] = SampleInfoForm._meta
-#         context['has_permission'] = True
-#         context['has_filters'] = True
-#         context['site_url'] = '/'
-#         query = self.request.GET.get('q')
-#         if query:
-#             query = query.strip()
-#             context['queryq'] = query
-#         return context
-#
-#     def get_queryset(self):
-#         result = super(SampleInfoFormListView, self).get_queryset()
-#         print(self.request)
-#         query = self.request.GET.get('q')
-#         if query:
-#             query = query.strip()
-#             #模糊检索合同号，和检索项目id
-#             result = SampleInfoForm.objects.filter(reduce(operator.or_, [Q(contract__contract_number__icontains=query),Q(id__icontains=query)]))
-#             return result
-#         querystatus = self.request.GET.get('status')
-#         if querystatus:
-#             querystatus = querystatus.strip()
-#             #模糊检索合同号，和检索项目id
-#             result = SampleInfoForm.objects.filter(status=querystatus)
-#             return result
-#         return result
+from django.shortcuts import render
+
+from lims.models import *
+from hashlib import md5
+
+def getData(request):
+    index = request.GET.get("index")
+    msg = "未查找到数据"
+    if ExtExecute.objects.filter(query_code=index):
+        sub_number = ExtExecute.objects.filter(query_code=index).first().extSubmit.subProject.sub_number
+        dataset = ExtExecute.objects.filter(query_code=index).first().sampleinfoext_set.all()
+        type = 1
+    elif LibExecute.objects.filter(query_code=index):
+        sub_number = LibExecute.objects.filter(query_code=index).first().libSubmit.subProject.sub_number
+        dataset = LibExecute.objects.filter(query_code=index).first().sampleinfolib_set.all()
+        type = 2
+    elif SeqExecute.objects.filter(query_code=index):
+        sub_number = SeqExecute.objects.filter(query_code=index).first().seqSubmit.subProject.sub_number
+        dataset = SeqExecute.objects.filter(query_code=index).first().sampleinfoseq_set.all()
+        type = 3
+    else:
+        return render(request,"Showdata.html",{"error":msg})
+    return render(request,"Showdata.html",{"data":dataset,"type":type,"sub_number":sub_number})

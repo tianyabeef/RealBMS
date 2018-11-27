@@ -63,12 +63,20 @@ class Sampleadmin(ExportActionModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         try:
-            current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
-                return qs
-            elif current_group_set.name == "合作伙伴":
-                return qs.filter(sampleinfoform__partner_email=request.user)
+            current_group_set = Group.objects.filter(user=request.user)
+            if len(current_group_set) == 1:
+                if current_group_set[0].name == "实验部":
+                    return qs
+                elif current_group_set[0].name == "合作伙伴":
+                    return qs.filter(sampleinfoform__partner_email=request.user)
+                else:
+                    return qs
             else:
+                names = [i.name for i in current_group_set]
+                # if "实验部" in names:
+                #     return qs
+                # elif "项目管理" in names:
+                #     return qs
                 return qs
         except:
             return qs
@@ -93,18 +101,9 @@ class SampleInline(admin.TabularInline):
                                    'remarks', 'data_request', 'sample_type']
                 return readonly_fields
             else:
-                return ["",]
+                return readonly_fields
         except:
             return readonly_fields
-    # def has_add_permission(self, request):
-    #     # try:
-    #     #     current_group_set = Group.objects.get(user=request.user)
-    #     # except:
-    #     #     return False
-    #     # if current_group_set.name == "合作伙伴" or current_group_set.name == "实验部" :
-    #     #     return False
-    #     # else:
-    #         return False
 
     #设置不能修改确认后的样品详情列表
     def has_change_permission(self, request, obj=None):
@@ -149,9 +148,6 @@ class SampleInfoResource(resources.ModelResource):
         if instance:
             instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
             instance.sample_name = row['样品名']
-            # if row['样品名'] != row['实际收到样品名']:
-            #     instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
-            # else:
             instance.sample_receiver_name = row['实际收到样品名']
             instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
             instance.tube_number = row['管数']
@@ -169,7 +165,6 @@ class SampleInfoResource(resources.ModelResource):
         if not row:
             row = {}
         instance = self._meta.model()
-        # instance = SampleInfo()
         for attr, value in row.items():
             setattr(instance, attr, value)
         if SampleInfo.objects.all().count() == 0:
@@ -178,9 +173,6 @@ class SampleInfoResource(resources.ModelResource):
             instance.id = str(int(SampleInfo.objects.latest('id').id)+1)
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
         instance.sample_name = row['样品名']
-        # if row['样品名'] != row['实际收到样品名']:
-        #     instance.sample_receiver_name = row['实际收到样品名'] + "【与样品名不符】"
-        # else:
         instance.sample_receiver_name = row['实际收到样品名']
         instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
         instance.tube_number = row['管数']
@@ -226,7 +218,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     raw_id_fields = ("saler",)
 
-    ordering = ('sample_status',)
+    ordering = ('-id',)
 
     radio_fields = {
         "transform_status": admin.HORIZONTAL,
@@ -237,22 +229,15 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     }
 
     list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link', 'jindu_status')
-    # list_display = ('sampleinfoformid',get_editable,'time_to_upload','color_status','file_link','jindu_status')
 
     list_display_links = ('sampleinfoformid',)
 
-    # def download(self,obj):
-    #     return format_html("""
-    #             <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
-    #     """)
-    # download.short_description = '下载模板'
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
         try:
             send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
                       settings.EMAIL_FROM,
                       [sample.partner_email, ],
-                      # ["love949872618@qq.com", ],
                           fail_silently=False)
         except:
             self.message_user(request,"邮件发送失败")
@@ -264,24 +249,34 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def get_queryset(self, request):
         qs = super(SampleInfoFormAdmin, self).get_queryset(request)
         try:
-            current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
-                return qs
-            elif current_group_set.name == "合作伙伴":
-                return qs.filter(partner_email=request.user)
-            elif current_group_set.name == "业务员（销售）":
-                return qs.filter(saler = request.user)
-            elif current_group_set.name == "项目管理":
-                subproject = SubProject.objects.filter(project_manager=request.user)
-                result = qs.filter(id = None )
-                for i in subproject:
-                    result |= (qs & i.sampleInfoForm.all())
-                #     for j in qs:
-                #         if i.sampleInfoForm == j:
-                #             result |= qs.filter(subproject_set.all())
-                return result
+            current_group_set = Group.objects.filter(user=request.user)
+            if len(current_group_set) == 1:
+                if current_group_set[0].name == "实验部":
+                    return qs
+                elif current_group_set[0].name == "合作伙伴":
+                    return qs.filter(partner_email=request.user)
+                elif current_group_set[0].name == "业务员（销售）":
+                    return qs.filter(saler=request.user)
+                elif current_group_set.name == "项目管理":
+                    subproject = SubProject.objects.filter(project_manager=request.user)
+                    result = qs.filter(id=None)
+                    for i in subproject:
+                        result |= (qs & i.sampleInfoForm.all())
+                    return result
             else:
-                return qs
+                names = [i.name for i in current_group_set]
+                if "业务员（销售）" in names:
+                    return qs.filter(saler=request.user)
+                elif "项目管理" in names:
+                    subproject = SubProject.objects.filter(project_manager=request.user)
+                    result = qs.filter(id=None)
+                    for i in subproject:
+                        result |= (qs & i.sampleInfoForm.all())
+                    return result
+                elif "实验部" in names:
+                    return qs
+                else:
+                    return qs
         except:
             return qs
 
@@ -414,6 +409,21 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
             obj.time_to_upload = datetime.datetime.now()
         try:
             current_group_set = Group.objects.get(user=request.user)
+            if not obj.sampleinfoformid:
+                if SampleInfoForm.objects.all().count() == 0:
+                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
+                                                   '-' + str(datetime.datetime.now().year) + "-"+ \
+                                                   str(datetime.datetime.now().month) + '-' + \
+                                                    str(datetime.datetime.now().day)                  + "_" + \
+                                                     "1"
+                else:
+                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
+                                               '-' +str(datetime.datetime.now().year)+ "-"+ \
+                                               str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
+                                                 "_" + \
+                                               str(int(SampleInfoForm.objects.latest("id").id)+1)
+                obj.partner_email = request.user.username
+                obj.save()
             if current_group_set.name == "合作伙伴":
                 if obj.sample_status == 1 and obj.arrive_time:
                     obj.sample_status = 2
@@ -430,30 +440,17 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     if not self.send_dingtalk_result:
                         self.message_user(request,"钉钉发送失败")
                     self.message_user(request,"审核成功！")
-            if not obj.sampleinfoformid:
-                if SampleInfoForm.objects.all().count() == 0:
-                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
-                                                   '-' + str(datetime.datetime.now().year) + "-"+ \
-                                                   str(datetime.datetime.now().month) + '-' + \
-                                                    str(datetime.datetime.now().day)                  + "_" + \
-                                                     "1"
-                else:
-                    obj.sampleinfoformid = request.user.username + "-" + obj.partner +\
-                                               '-' +str(datetime.datetime.now().year)+ "-"+ \
-                                               str(datetime.datetime.now().month) + '-'+ str(datetime.datetime.now().day) +\
-                                                 "_" + \
-                                               str(int(SampleInfoForm.objects.latest("id").id)+1)
-                obj.partner_email = request.user.username
-                obj.save()
             else:
                 obj.save()
         except:
             obj.save()
          #根据身份获取动作
+
     def get_actions(self, request):
         actions = super().get_actions(request)
         try:
-            current_group_set = Group.objects.get(user=request.user)
+            current_group_set = Group.objects.filter(user=request.user)
+            names = [i.name for i in current_group_set]
         except:
             # print(actions)
             return None
@@ -594,8 +591,9 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                            "sampleinfoformid", "time_to_upload"),
             }])
         try:
-            current_group_set = Group.objects.get(user=request.user)
-            if current_group_set.name == "实验部":
+            current_group_set = Group.objects.filter(user=request.user)
+            names = [s.name for s in current_group_set]
+            if current_group_set[0].name == "实验部" or "实验部" in names:
                 fieldsets = (
             ['物流信息', {
                 'fields': ('transform_company','transform_number',
@@ -614,7 +612,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin,NotificationMixin):
                             'sample_diwenzhuangtai',"note_receive"),
             }])
 
-            elif current_group_set.name == "合作伙伴":
+            elif current_group_set[0].name == "合作伙伴":
                 fieldsets = (
                 ['物流信息', {
                     'fields': (('transform_company', 'transform_number'),(

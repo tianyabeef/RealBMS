@@ -27,13 +27,14 @@
                     {% endif %}
                     {% if opts.model_name == "sampleinfoform" %}
                     {% if field.field.name == "file_teacher" %}
-                        {% if group_id == "合作伙伴" %}
+                        {% if "合作伙伴" in group_id %}
                          <a href="{% static 'modelform/老师上传信息单.docx' %}" style="color: #54a3ff">老师信息模板下载</a>
                             {% endif %}
                     {% endif %}
                     {% endif %}
                     {% if field.field.name == "note_receive" %}
-                    {% if group_id == "实验部" %}
+                        {{ group_id }}
+                    {% if "实验部"  in group_id %}
                         <hr>
                         <li style="padding:4px;height: 26px;line-height: 66px"><a href="{% static 'modelform/实验室上传样品详情.xls' %}" style="color: #c9302c">实验室信息模板下载</a></li>
                         <ul class="object-tools"><li style="padding:4px;height: 26px;line-height: 26px;left: 30px" ><a href='{% url opts|admin_urlname:"import" %}' class="import_link">{% trans "Import" %}</a></li></ul>
