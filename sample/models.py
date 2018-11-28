@@ -158,7 +158,6 @@ class SampleInfoForm(models.Model):
 
     def file_link(self):
         if self.file_teacher:
-            print(self.file_teacher.url)
             return format_html(
             "<a href='{0}'>下载</a>" .format(self.file_teacher.url))
 
@@ -237,7 +236,7 @@ class SampleInfo(models.Model):
     sampleinfoform = models.ForeignKey(SampleInfoForm,verbose_name="对应样品概要编号",blank=True,null=True,on_delete=models.CASCADE)
     sample_number = models.CharField(max_length=50,verbose_name="样品编号", blank=True,null=True)
     sample_name = models.CharField(max_length=50,verbose_name="样品名称")
-    sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称") #*
+    sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称(与客户所给名称不同时标红)") #*
     density = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3, blank=True,null=True)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3,blank=True, null=True)
     purity = models.CharField(max_length=200,verbose_name="纯度",blank=True,null=True)

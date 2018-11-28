@@ -1,7 +1,11 @@
 import datetime
+import time
+
 from django.contrib import admin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django import forms
+from django.utils.html import format_html
+from hashlib import md5
 from nm.models import DingtalkChat
 from import_export import resources, fields
 from import_export.admin import ImportExportActionModelAdmin
@@ -56,7 +60,6 @@ class LibExecuteForm(forms.ModelForm):
         else:
             return self.cleaned_data['is_submit']
         return aa
-
 class SeqExecuteForm(forms.ModelForm):
 
     class Meta:
@@ -185,6 +188,8 @@ class SampleInfoExtResource(resources.ModelResource):
 
 class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
+
+
     form = ExtExecuteForm
 
     filter_horizontal = ("ext_experimenter",)
@@ -211,10 +216,11 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
 
-    exclude = ("ext_end_date",)
+    exclude = ("ext_end_date","query_code")
 
     list_display_links = ('extSubmit',)
 
+    ordering = ('-id',)
     # actions = ["submit_result",]
 
     # def export_action(self, request, *args, **kwargs):
@@ -281,15 +287,22 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"未选择样品！")
                     return None
                 msg_dingding = "项目{0}的抽提执行{1}结果已上传".format(project.sub_project,obj.extSubmit)
-                msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
-                             "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
-                             "<th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>".format(msg_dingding),]
+                # msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
+                #              "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
+                #              "<th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>".format(msg_dingding),]
+                md = md5()
+                md.update(("ext" + str(time.time())).encode())
+                key = md.hexdigest()
+                obj.query_code = key
+                data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
+                print(data_url)
+                msg_email = "编号：{0} 的抽提实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number,data_url)
                 for i in qs.filter(is_rebuild=0):
-                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
-                                      "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(i.sample_number,i.sample_name,i.species,i.Type_of_Sample[i.sample_type-1][1],i.sample_used,
-                               i.sample_rest,str(i.density_checked),str(i.volume_checked),str(i.D260_280),str(i.D260_230),
-                               str(i.DNA_totel),str(i.Rebulid[i.is_rebuild][1]),str(i.Quality_control_conclusion[i.quality_control_conclusion-1][1]),
-                               i.note)))
+                    # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
+                    #                   "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(i.sample_number,i.sample_name,i.species,i.Type_of_Sample[i.sample_type-1][1],i.sample_used,
+                    #            i.sample_rest,str(i.density_checked),str(i.volume_checked),str(i.D260_280),str(i.D260_230),
+                    #            str(i.DNA_totel),str(i.Rebulid[i.is_rebuild][1]),str(i.Quality_control_conclusion[i.quality_control_conclusion-1][1]),
+                    #            i.note)))
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "__{}__已抽提".format(sub_number) )
                 #建立重抽提任务单
                 ext = ExtSubmit()
@@ -297,15 +310,15 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
                 ext.subProject = obj.extSubmit.subProject
                 for i in qs.filter(is_rebuild=1):
-                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
-                                         "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(
-                                             i.sample_number, i.sample_name, i.species,
-                                             i.Type_of_Sample[i.sample_type - 1][1], i.sample_used,
-                                             i.sample_rest, str(i.density_checked), str(i.volume_checked),
-                                             str(i.D260_280), str(i.D260_230),
-                                             str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
-                                             str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
-                                             i.note)))
+                    # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
+                    #                      "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(
+                    #                          i.sample_number, i.sample_name, i.species,
+                    #                          i.Type_of_Sample[i.sample_type - 1][1], i.sample_used,
+                    #                          i.sample_rest, str(i.density_checked), str(i.volume_checked),
+                    #                          str(i.D260_280), str(i.D260_230),
+                    #                          str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
+                    #                          str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
+                    #                          i.note)))
                     try:
                         if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
                             if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
@@ -333,13 +346,14 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 ext.ext_number = new
                 ext.save()
                 del ext
+                del md
                 project.time_ext = datetime.datetime.now()
                 project.save()
-                content = ""
-                for x in msg_email:
-                    content += x
-                content += "</table>"
-                self.send_email(content="内容",html_message=content,
+                # content = ""
+                # for x in msg_email:
+                #     content += x
+                # content += "</table>"
+                self.send_email(content="内容",html_message = msg_email,
                         sender=settings.EMAIL_FROM,
                         recipient_list=["love949872618@qq.com",],
                         fail_silently=False)
@@ -392,8 +406,14 @@ class SampleInfoLibResource(resources.ModelResource,):
         """
         instance = self.get_instance(instance_loader, row)
         if instance:
-            instance.lib_code = row['文库号']
-            instance.index = row['Index']
+            try:
+                a = str(int(row["文库号"]))
+                b = str(int(row["Index"]))
+                instance.lib_code = a
+                instance.index = b
+            except:
+                instance.lib_code = row['文库号']
+                instance.index = row['Index']
             instance.lib_volume = row['体积uL(文库)']
             instance.lib_concentration = row['浓度ng/uL(文库)']
             instance.lib_total = row['总量ng(文库)']
@@ -430,11 +450,13 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     list_display = ('libSubmit', 'lib_end_date', 'note',"is_submit")
 
-    exclude = ("lib_end_date",)
+    exclude = ("lib_end_date","query_code")
 
     list_display_links = ('libSubmit',)
 
     filter_horizontal = ("lib_experimenter",)
+
+    ordering = ('-id',)
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = []
@@ -487,13 +509,20 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"未选择样品！")
                     return None
                 msg_dingding = "项目{0}的建库执行{1}结果已上传".format(project.first().sub_project, obj.libSubmit)
-                msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
-                             "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
-                             "</tr>".format(msg_dingding), ]
+                # # msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
+                #              "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
+                #              "</tr>".format(msg_dingding), ]
+                md = md5()
+                md.update(("lib" + str(time.time())).encode())
+                key = md.hexdigest()
+                obj.query_code = key
+                data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
+                msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+
                 for i in qs.filter(is_rebuild=0):
-                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
-                                      .format(i.sample_number,i.sample_name,i.lib_code,i.index,i.lib_volume,i.lib_concentration,
-                                              i.lib_total,i.Lib_result[i.lib_result-1][1],i.lib_note,i.Rebulid[i.is_rebuild][1])))
+                    # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
+                    #                   .format(i.sample_number,i.sample_name,i.lib_code,i.index,i.lib_volume,i.lib_concentration,
+                    #                           i.lib_total,i.Lib_result[i.lib_result-1][1],i.lib_note,i.Rebulid[i.is_rebuild][1])))
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已建库".format(sub_number))
                 # 建立重建库任务单
                 lib = LibSubmit()
@@ -501,12 +530,12 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
                 lib.subProject = obj.libSubmit.subProject
                 for j in qs.filter(is_rebuild=1):
-                    msg_email.append((
-                                         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
-                                         .format(j.sample_number, j.sample_name, j.lib_code, j.index, j.lib_volume,
-                                                 j.lib_concentration,
-                                                 j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
-                                                 j.Rebulid[j.is_rebuild][1])))
+                    # msg_email.append((
+                    #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
+                    #                      .format(j.sample_number, j.sample_name, j.lib_code, j.index, j.lib_volume,
+                    #                              j.lib_concentration,
+                    #                              j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
+                    #                              j.Rebulid[j.is_rebuild][1])))
                     try:
                         if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
                             if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
@@ -541,12 +570,13 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 lib.lib_number = new
                 lib.save()
                 del lib
+                del md
                 project.update(time_lib=datetime.datetime.now())
-                content = ""
-                for x in msg_email:
-                    content += x
-                content += "</table>"
-                self.send_email(content="内容", html_message=content,
+                # content = ""
+                # for x in msg_email:
+                #     content += x
+                # content += "</table>"
+                self.send_email(content="内容", html_message=msg_email,
                                 sender=settings.EMAIL_FROM,
                                 recipient_list=["love949872618@qq.com", ],
                                 fail_silently=False)
@@ -633,13 +663,35 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     filter_horizontal = ("seq_experimenter",)
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
-    list_display = ('seqSubmit', 'seq_end_date', 'note',"is_submit")
+    list_display = ('seqSubmit', 'seq_end_date', 'note',"pooling","is_submit")
 
-    exclude = ("seq_end_date",)
+    exclude = ("seq_end_date","query_code")
 
     list_display_links = ('seqSubmit',)
 
-    # actions = ["submit_result", ]
+    ordering = ('-id',)
+    actions = ["processing_experiment", ]
+
+    def processing_experiment(self,request,queryset):
+        i = 0
+        for obj in queryset:
+            if obj.seq_experimenter.count()==0:
+                i += 1
+                for j in User.objects.filter(groups__id=13).all():
+                    obj.seq_experimenter.add(j)
+                obj.save()
+        self.message_user(request,"{}个测序执行成功分配实验员".format(i))
+
+    processing_experiment.short_description = "为所选中执行任务分配实验员" \
+                                              ""
+    def pooling(self,obj):
+        if obj.seqSubmit.pooling_excel:
+            return format_html(
+            "<a href='{0}'>下载</a>" .format(obj.seqSubmit.pooling_excel.url))
+
+        else:
+            return "未上传"
+    pooling.short_description = "Pooling表下载"
 
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = []
@@ -653,7 +705,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "seq_experimenter":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+            kwargs["queryset"] = User.objects.filter(groups__name="测序组")
         return super().formfield_for_manytomany( db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
@@ -690,16 +742,23 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     self.message_user(request,"未选择样品！")
                     return None
                 msg_dingding = "项目{0}的测序执行{1}结果已上传".format(project.first().sub_project, obj.seqSubmit)
-                msg_email = [
-                    "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
-                    "</th><th>测序数据量</th><th>结论(测序)</th><th>备注(测序)</th><th>选择是否重测序</th>"
-                    "</tr>".format(msg_dingding), ]
+                # msg_email = [
+                #     "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
+                #     "</th><th>测序数据量</th><th>结论(测序)</th><th>备注(测序)</th><th>选择是否重测序</th>"
+                #     "</tr>".format(msg_dingding), ]
+                md = md5()
+                md.update(("lib" + str(time.time())).encode())
+                key = md.hexdigest()
+                obj.query_code = key
+                data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
+                msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+
                 for i in qs.filter(is_rebuild=0):
-                    msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
-                                         .format(i.sample_number, i.sample_name, i.seq_code, i.seq_index, i.data_request,
-                                                 i.seq_data,
-                                                 i.Seq_result[i.seq_result-1][1], i.seq_note,
-                                                 i.Rebulid[i.is_rebuild][1])))
+                    # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
+                    #                      .format(i.sample_number, i.sample_name, i.seq_code, i.seq_index, i.data_request,
+                    #                              i.seq_data,
+                    #                              i.Seq_result[i.seq_result-1][1], i.seq_note,
+                    #                              i.Rebulid[i.is_rebuild][1])))
 
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已测序".format(sub_number))
                 # 建立重测序任务单
@@ -708,13 +767,13 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
                 seq.subProject = obj.seqSubmit.subProject
                 for j in qs.filter(is_rebuild=1):
-                    msg_email.append((
-                                         "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
-                                         .format(j.sample_number, j.sample_name, j.seq_code, j.seq_index,
-                                                 j.data_request,
-                                                 j.seq_data,
-                                                 j.Seq_result[j.seq_result - 1][1], j.seq_note,
-                                                 j.Rebulid[j.is_rebuild][1])))
+                    # msg_email.append((
+                    #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
+                    #                      .format(j.sample_number, j.sample_name, j.seq_code, j.seq_index,
+                    #                              j.data_request,
+                    #                              j.seq_data,
+                    #                              j.Seq_result[j.seq_result - 1][1], j.seq_note,
+                    #                              j.Rebulid[j.is_rebuild][1])))
                     try:
                         if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
                             if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
@@ -749,11 +808,12 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 seq.seq_number = new
                 seq.save()
                 del seq
-                content = ""
-                for x in msg_email:
-                    content += x
-                content += "</table>"
-                self.send_email(content="内容", html_message=content,
+                del md
+                # content = ""
+                # for x in msg_email:
+                #     content += x
+                # content += "</table>"
+                self.send_email(content="内容", html_message=msg_email,
                                 sender=settings.EMAIL_FROM,
                                 recipient_list=["love949872618@qq.com", ],
                                 fail_silently=False)

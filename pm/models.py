@@ -19,6 +19,7 @@ class SubProject(models.Model):
         (12, '分析中'),  # ANA(analysis)#生信管理添加了分析员
         (13, "完成"),
         (14, "中止"),
+        (15, "结算"),
     )
     contract = models.ForeignKey('mm.Contract', verbose_name='合同号', on_delete=models.SET_NULL, null=True)
     sampleInfoForm = models.ManyToManyField('sample.SampleInfoForm', verbose_name='样品概要表',
@@ -55,8 +56,13 @@ class SubProject(models.Model):
     # data_amount = models.CharField('数据量要求', max_length=10)
     file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
+    is_balance = models.BooleanField('结算', default=False)
+    start_up_amount = models.DecimalField('启动金额', max_digits=12, decimal_places=2, null=True, blank=True)
+    settlement_amount = models.DecimalField('结算金额', max_digits=12, decimal_places=2, null=True, blank=True)
     # 流程时间节点
+    time_ext_start = models.DateField("抽提开始时间", null=True,)
     time_ext = models.DateField("抽提完成时间", null=True,)
+    time_lib_start = models.DateField("建库开始时间", null=True,)
     time_lib = models.DateField("建库完成时间", null=True,)
     time_ana = models.DateField("分析完成时间", null=True,)
 
