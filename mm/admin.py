@@ -373,7 +373,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     def get_actions(self, request):
         actions = super().get_actions(request)
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
+            if not group.id == 4:  # 除了市场部都没有登记所选合同的权限
                 if "make_receive" in actions:
                     del actions["make_receive"]
         return actions
