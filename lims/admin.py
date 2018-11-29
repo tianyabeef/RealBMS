@@ -1,6 +1,5 @@
 import datetime
 import time
-
 from django.contrib import admin
 from django.contrib.auth.models import User, Group
 from django import forms
@@ -9,15 +8,13 @@ from hashlib import md5
 from nm.models import DingtalkChat
 from import_export import resources, fields
 from import_export.admin import ImportExportActionModelAdmin
-from django.db import models
 from BMS import settings
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_SECRET, DINGTALK_APPKEY
 from lims.models import SampleInfoExt, ExtExecute, LibExecute, SampleInfoLib, SampleInfoSeq, SeqExecute, Extmethod, \
     Testmethod
-from pm.models import LibSubmit,SeqSubmit,ExtSubmit,AnaSubmit,SubProject
-
+from pm.models import LibSubmit,SeqSubmit,ExtSubmit,SubProject
 try:
     from django.utils.encoding import force_text
 except ImportError:
@@ -87,6 +84,7 @@ class SampleInfoExtInline(admin.StackedInline):
         "is_rebuild": admin.HORIZONTAL,
         "sample_type": admin.HORIZONTAL,
     }
+
     def has_change_permission(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -103,6 +101,7 @@ class SampleInfoLibInline(admin.StackedInline):
         "lib_result": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
     }
+
     def has_change_permission(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -119,6 +118,7 @@ class SampleInfoSeqInline(admin.StackedInline):
         "seq_result": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
     }
+
     def has_change_permission(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -126,11 +126,9 @@ class SampleInfoSeqInline(admin.StackedInline):
         except:
             pass
         return super().has_change_permission(request, obj=None)
-
 #抽提方法注册
 class ExtmothodAdmin(admin.ModelAdmin):
     search_fields = ("mothod",)
-
 
 class TestmothodAdmin(admin.ModelAdmin):
     search_fields = ("mothod",)
@@ -182,13 +180,7 @@ class SampleInfoExtResource(resources.ModelResource):
             raise Exception("请核对样品编号")
             # return (self.init_instance(row), True)
 
-
-
-
-
 class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
-
-
 
     form = ExtExecuteForm
 
@@ -221,12 +213,6 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     list_display_links = ('extSubmit',)
 
     ordering = ('-id',)
-    # actions = ["submit_result",]
-
-    # def export_action(self, request, *args, **kwargs):
-
-    # def change_view(self, request, object_id, form_url='', extra_context=None):
-
 
     def get_object(self, request, object_id, from_field=None):
 
@@ -234,6 +220,15 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
         return self.obj
 
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_delete'] = False
+        # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+        if ExtExecute.objects.get(id=object_id).is_submit:
+            extra_context['show_save'] = False
+            extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "ext_experimenter":
@@ -253,10 +248,10 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         return self.readonly_fields
 
     def save_model(self, request, obj, form, change):
+
         Dinggroupid = DingtalkChat.objects.filter(chat_name="实验钉钉群-BMS").first().chat_id
 
         sub_number = obj.extSubmit.subProject.sub_number
-
 
         project = SubProject.objects.filter(sub_number=sub_number).first()
 
@@ -273,9 +268,6 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             if not self.send_dingtalk_result:
                 self.message_user(request,"钉钉发送失败")
         if obj.is_submit:
-            # if not obj.upload_file:
-            #     self.message_user(request,"抽提结果不能为空")
-            #     return None
             if project.is_status < 4:
                 project.is_status = 4
                 project.save()
@@ -363,14 +355,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 pass
         else:
             pass
-
         super().save_model(request, obj, form, change)
-
-
-    # def get_actions(self, request):
-    #     actions = super().get_actions(request)
-    #     del actions['export_admin_action']
-    #     return actions
 
 #建库操作
 class SampleInfoLibResource(resources.ModelResource,):
@@ -469,6 +454,17 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         except:
             return self.readonly_fields
         return self.readonly_fields
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_delete'] = False
+        # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+        if LibExecute.objects.get(id=object_id).is_submit:
+            extra_context['show_save'] = False
+            extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "lib_experimenter":
@@ -587,11 +583,6 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         super().save_model(request, obj, form, change)
 
 
-    # def get_actions(self, request):
-    #     actions = super().get_actions(request)
-    #     del actions['export_admin_action']
-    #     return actions
-
 
 #测序操作
 class SampleInfoSeqResource(resources.ModelResource):
@@ -624,8 +615,14 @@ class SampleInfoSeqResource(resources.ModelResource):
         """
         instance = self.get_instance(instance_loader, row)
         if instance:
-            instance.seq_code = row['文库号']
-            instance.seq_index = row['Index']
+            try:
+                a = str(int(row["文库号"]))
+                b = str(int(row["Index"]))
+                instance.seq_code = a
+                instance.seq_index = b
+            except:
+                instance.seq_code = row['文库号']
+                instance.seq_index = row['Index']
             instance.data_request = row['数据量要求']
             instance.seq_data = row['测序数据量']
             instance.seq_result = row['结论(测序)']
@@ -683,7 +680,18 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         self.message_user(request,"{}个测序执行成功分配实验员".format(i))
 
     processing_experiment.short_description = "为所选中执行任务分配实验员" \
-                                              ""
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_delete'] = False
+        # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+        if SeqExecute.objects.get(id=object_id).is_submit:
+            extra_context['show_save'] = False
+            extra_context['show_save_and_continue'] = False
+        # extra_context['show_save_and_continue'] = False
+        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+
     def pooling(self,obj):
         if obj.seqSubmit.pooling_excel:
             return format_html(
