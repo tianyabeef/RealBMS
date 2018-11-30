@@ -443,8 +443,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                         self.send_group_message(msg, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
                     except:
                         self.message_user(request, "邮箱发送失败")
-                    if not self.send_dingtalk_result:
-                        self.message_user(request, "钉钉发送失败")
+                    # if not self.send_dingtalk_result:
+                    #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")
             else:
                 obj.save()

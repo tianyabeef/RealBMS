@@ -737,7 +737,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 readonly_fields = ('seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
                 return readonly_fields
             if "实验部" in names:
-                return ["",]
+                return ["is_submit",]
             elif "项目管理" in names:
                 readonly_fields = ('seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note',)
                 return readonly_fields
