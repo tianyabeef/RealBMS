@@ -413,37 +413,38 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.time_to_upload:
             obj.time_to_upload = datetime.datetime.now()
         try:
-            current_group_set = Group.objects.get(user=request.user)
-            if not obj.sampleinfoformid:
-                if SampleInfoForm.objects.all().count() == 0:
-                    obj.sampleinfoformid = request.user.username + "-" + obj.partner + \
-                                           '-' + str(datetime.datetime.now().year) + "-" + \
-                                           str(datetime.datetime.now().month) + '-' + \
-                                           str(datetime.datetime.now().day) + "_" + \
-                                           "1"
-                else:
-                    obj.sampleinfoformid = request.user.username + "-" + obj.partner + \
-                                           '-' + str(datetime.datetime.now().year) + "-" + \
-                                           str(datetime.datetime.now().month) + '-' + str(datetime.datetime.now().day) + \
-                                           "_" + \
-                                           str(int(SampleInfoForm.objects.latest("id").id) + 1)
-                obj.partner_email = request.user.username
-                obj.save()
-            if current_group_set.name == "合作伙伴":
+            current_group_set = Group.objects.filter(user=request.user)
+            names = [i.name for i in current_group_set]
+            if names[0] =="合作伙伴":
+                if not obj.sampleinfoformid:
+                    if SampleInfoForm.objects.all().count() == 0:
+                        obj.sampleinfoformid = request.user.username + "-" + obj.partner + \
+                                               '-' + str(datetime.datetime.now().year) + "-" + \
+                                               str(datetime.datetime.now().month) + '-' + \
+                                               str(datetime.datetime.now().day) + "_" + \
+                                               "1"
+                    else:
+                        obj.sampleinfoformid = request.user.username + "-" + obj.partner + \
+                                               '-' + str(datetime.datetime.now().year) + "-" + \
+                                               str(datetime.datetime.now().month) + '-' + str(datetime.datetime.now().day) + \
+                                               "_" + \
+                                               str(int(SampleInfoForm.objects.latest("id").id) + 1)
+                    obj.partner_email = request.user.username
+                    obj.save()
                 if obj.sample_status == 1 and obj.arrive_time:
                     obj.sample_status = 2
                     obj.save()
                     msg = "<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid)
                     try:
                         self.send_email("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid),
-                                        settings.EMAIL_FROM,
-                                        ["love949872618@qq.com", ],
-                                        fail_silently=False)
+                                            settings.EMAIL_FROM,
+                                            ["love949872618@qq.com", ],
+                                            fail_silently=False)
                         self.send_group_message(msg, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
                     except:
                         self.message_user(request, "邮箱发送失败")
-                    if not self.send_dingtalk_result:
-                        self.message_user(request, "钉钉发送失败")
+                    # if not self.send_dingtalk_result:
+                    #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")
             else:
                 obj.save()

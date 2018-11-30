@@ -119,6 +119,10 @@ class SampleInfoSeqInline(admin.StackedInline):
         "is_rebuild": admin.HORIZONTAL,
     }
 
+    readonly_fields = ["seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
+               "seq_data", "seq_result",  "is_rebuild"]
+
+
     def has_change_permission(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -583,7 +587,6 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         super().save_model(request, obj, form, change)
 
 
-
 #测序操作
 class SampleInfoSeqResource(resources.ModelResource):
     class Meta:
@@ -635,7 +638,6 @@ class SampleInfoSeqResource(resources.ModelResource):
             # return (self.init_instance(row), True)
 
 
-
 class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     resource_class = SampleInfoSeqResource
@@ -667,7 +669,32 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     list_display_links = ('seqSubmit',)
 
     ordering = ('-id',)
-    actions = ["processing_experiment", ]
+
+    actions = ["processing_experiment","submit" ]
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        current_group_set = Group.objects.filter(user=request.user)
+        names = [i.name for i in current_group_set]
+        if "项目管理" in names:
+            del actions["processing_experiment"]
+            return actions
+        elif "实验部" in names:
+            del actions["submit"]
+            return actions
+
+    def submit(self,request,queryset):
+        i = 0
+        n = 0
+        for obj in queryset:
+            n += 1
+            if obj.seq_experimenter.count()!=0 and obj.sampleinfoseq_set.count()!=0:
+                i += 1
+                obj.is_submit = True
+                obj.save()
+        self.message_user(request,"{}个测序执行成功提交,{}个测序执行提交失败".format(i,n-i))
+
+    submit.short_description = "----提交所选的任务----"
 
     def processing_experiment(self,request,queryset):
         i = 0
@@ -679,7 +706,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 obj.save()
         self.message_user(request,"{}个测序执行成功分配实验员".format(i))
 
-    processing_experiment.short_description = "为所选中执行任务分配实验员" \
+    processing_experiment.short_description = "----为所选中执行任务分配实验员----"
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -702,14 +729,23 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     pooling.short_description = "Pooling表下载"
 
     def get_readonly_fields(self, request, obj=None):
-        self.readonly_fields = []
+        current_group_set = Group.objects.filter(user=request.user)
+        names = [i.name for i in current_group_set]
+        readonly_fields = []
         try:
             if obj.is_submit:
-                self.readonly_fields = ('seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
-                return self.readonly_fields
+                readonly_fields = ('seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
+                return readonly_fields
+            if "实验部" in names:
+                return ["is_submit",]
+            elif "项目管理" in names:
+                readonly_fields = ('seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note',)
+                return readonly_fields
+            else:
+                readonly_fields = ('seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note', "is_submit",)
+                return readonly_fields
         except:
-            return self.readonly_fields
-        return self.readonly_fields
+            return readonly_fields
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "seq_experimenter":
