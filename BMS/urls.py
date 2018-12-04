@@ -14,18 +14,21 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 
-from django.conf.urls import url,include
+from django.conf.urls import url, include
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from BMS.admin_bms import BMS_admin_site
 from lims.views import getData
+from BMS.views import dingtalk_auth
+
+
 urlpatterns = [
     path(r'', BMS_admin_site.urls),
+    path(r'dingtalk_auth/', dingtalk_auth),
     path(r'notification/inbox/', include('notification.urls', namespace='notifications')),
-    # path(r"lims/display/",)
-    path('lims/getdata/',getData),
+    path('lims/getdata/', getData),
 ]
 
 if settings.DEBUG:

@@ -5,6 +5,7 @@ db.sqlite3
 */notification/
 BMS/settings.py
 media/
+static/
 dev.db
 .git/
 settings.py

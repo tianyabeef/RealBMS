@@ -205,6 +205,12 @@
         background-color: #ffc1bd;
         border-radius: 10px;
     }
+    .login_container {
+        width: 400px;
+        margin: 100px auto;
+        box-shadow: 2px 2px 30px lightgrey;
+        border: 0;
+    }
 </style>
 
 {% block extrastyle %}{% endblock %}
@@ -219,12 +225,11 @@
   data-admin-utc-offset="{% now "Z" %}">
 
 <!-- Container -->
-<div id="container">
-
+<div class="login_container" id="container" style="width: 420px">
     {% if not is_popup %}
     <!-- Header -->
     <div id="header">
-        <div id="branding">
+        <div id="branding" style="margin: 20px auto;text-align: center;float: none; font-size: 20px">
         {% block branding %}{% endblock %}
         </div>
         {% block usertools %}
