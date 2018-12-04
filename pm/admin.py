@@ -485,16 +485,20 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     obj.is_submit = True
                     obj.save()
                     n = n + 1
+                # 新增立项的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
             else:
                 sn = sn + 1
 
         # self.message_user(request, "所选项目立项的子项目数量：%s,已经立项过的子项目数量：%s" % (n, sn), level=messages.ERROR)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增立项的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增立项的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_submit.short_description = '设置所选项目为确认可启动状态'
 
     def get_actions(self, request):
@@ -524,6 +528,8 @@ class ExtSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -636,11 +642,15 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.sample_type = sampleInfo.sample_type
                     sampleInfoExt.save()
                 obj.save()
+                # 新增抽提的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,), level=messages.ERROR)
-        # 新增抽提的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增抽提的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
         sub_number = obj.subProject.sub_number
         project = SubProject.objects.filter(sub_number=sub_number).first()
         project.time_ext_start = datetime.datetime.now()
@@ -724,6 +734,8 @@ class LibSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -827,12 +839,16 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.sample_name = sampleInfo.sample_name
                     sampleInfoLib.save()
                 obj.save()
+                # 新增建库的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增建库的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增建库的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
         sub_number = obj.subProject.sub_number
         project = SubProject.objects.filter(sub_number=sub_number).first()
         project.time_lib_start = datetime.datetime.now()
@@ -915,6 +931,8 @@ class SeqSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -1030,12 +1048,16 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.sample_name = sampleInfo.sample_name
                         sampleInfoseq.save()
                     obj.save()
+                    # 新增测序的时候，给实验发钉钉通知
+                    self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+                                            "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                    print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增测序的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增测序的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_SeqSubmit_submit.short_description = '提交测序任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -1105,6 +1127,16 @@ class AnaSubmitForm(forms.ModelForm):
         subProject = self.cleaned_data['subProject']
         if not subProject:
             raise forms.ValidationError("子项目表单需要添加分析子项目")
+        else:
+            for i in range(len(subProject)):
+                if not subProject[0].is_submit:
+                    raise forms.ValidationError("该子项目未立项提交")
+                if subProject[0].is_status == 13:
+                    raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
+                elif subProject[0].is_status == 14:
+                    raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
+                elif subProject[0].is_status == 15:
+                    raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
         return self.cleaned_data['subProject']
 
 
@@ -1180,12 +1212,16 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     subProject_old.save()
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
+                # 新增分析的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增分析的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增分析的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_AnaSubmit_submit.short_description = '提交分析任务'
 
     def get_readonly_fields(self, request, obj=None):
