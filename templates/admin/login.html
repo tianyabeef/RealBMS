@@ -7,9 +7,13 @@
 
 {% block bodyclass %}{{ block.super }} login{% endblock %}
 
-{% block usertools %}{% endblock %}
-
-{% block nav-global %}{% endblock %}
+{% block global_header %}
+    <div id="header">
+        <div id="branding" style="margin: 20px auto;text-align: center;float: none; font-size: 20px">
+            <p id="site-name"><a href="{% url 'admin:index' %}">锐翌生物BMS系统</a></p>
+        </div>
+    </div>
+{% endblock %}
 
 {% block content_title %}{% endblock %}
 
