@@ -41,7 +41,7 @@ class BMSAdminSite(AdminSite):
         """
         script_name = request.META['SCRIPT_NAME']
         site_url = script_name if self.site_url == '/' and script_name else self.site_url
-        ##把用户的groupID传给template
+        # 把用户的groupID传给template
         # if Group.objects.filter(id = request.user.id):
         #     group_context = Group.objects.get(id = request.user.id).id
         # else:
@@ -56,7 +56,8 @@ class BMSAdminSite(AdminSite):
                 if request.user.is_superuser:
                     group_context = [1, ]
                 else:
-                    group_context = [0, ]   #此类用户没有分组
+                    # 此类用户没有分组
+                    group_context = [0, ]
         except:
             group_context = [0, ]
 
@@ -65,7 +66,7 @@ class BMSAdminSite(AdminSite):
             'site_header': self.site_header,
             'site_url': site_url,
             'has_permission': self.has_permission(request),
-            'group_id' : group_context,
+            'group_id': group_context,
             'available_apps': self.get_app_list(request),
         }
     
@@ -93,4 +94,3 @@ class BMSAdminSite(AdminSite):
 BMS_admin_site = BMSAdminSite()
 BMS_admin_site.register(User, UserAdmin)
 BMS_admin_site.register(Group, GroupAdmin)
-
