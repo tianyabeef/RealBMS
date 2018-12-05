@@ -58,7 +58,7 @@ class BMSAdminSite(AdminSite):
                 else:
                     # 此类用户没有分组
                     group_context = [0, ]
-        except Group.DoesNotExist:
+        except:
             group_context = [0, ]
 
         return {
