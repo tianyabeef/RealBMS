@@ -582,7 +582,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                 if not self.send_dingtalk_result:
                     message_content += "  钉钉通知发送失败"
             else:
-                message_content += "  这个销售的没有钉钉ID号"
+                message_content += "  这个销售没有钉钉ID号"
             self.message_user(request, message_content)
 
         # 1、新增快递单号时自动记录时间戳
