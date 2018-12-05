@@ -456,18 +456,19 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         actions = super().get_actions(request)
         try:
             current_group_set = Group.objects.filter(user=request.user)
-            names = [i.name for i in current_group_set]
+            # names = [i.name for i in current_group_set]
+            if current_group_set[0].name == "合作伙伴":
+                # del actions['export_admin_action']
+                return actions
+            else:
+                # del actions['export_admin_action']
+                # del actions['make_sampleinfoform_submit']
+                del actions['insure_sampleinfoform']
+                # del actions['test1']
+                return actions
         except:
             return actions
-        if current_group_set[0].name == "合作伙伴":
-            # del actions['export_admin_action']
-            return actions
-        else:
-            # del actions['export_admin_action']
-            # del actions['make_sampleinfoform_submit']
-            del actions['insure_sampleinfoform']
-            # del actions['test1']
-            return actions
+
 
     # 提交并发送邮件
     def insure_sampleinfoform(self, request, queryset):

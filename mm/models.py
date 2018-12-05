@@ -30,6 +30,10 @@ class Contract(models.Model):
         (5, '其它'),
         (6, '无'),
     )
+    CONTRACT_TYPE = (
+        (1, '流程合同'),
+        (2, '预付款合同'),
+    )
     # 选项
     STATUS_CHOICES = (
         (1, '新合同'),  #创建新合同默认的状态
@@ -69,6 +73,9 @@ class Contract(models.Model):
     contact_note = models.TextField('合同备注', blank=True,default="")
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1) #1初始状态，2首款到齐，3尾款到齐
 
+    consume_money = models.DecimalField('预存款合同已消耗金额', max_digits=12, decimal_places=2, default=0)
+    contract_type = models.IntegerField('合同类型', choices=CONTRACT_TYPE, default=1)
+
     class Meta:
         verbose_name = '合同管理'
         verbose_name_plural = '合同管理'
@@ -91,6 +98,20 @@ class Contract(models.Model):
 
     def __str__(self):
         return '【%s】-【%s】' % (self.contract_number, self.name)
+
+class Contract_execute(models.Model):
+    contract = models.ManyToManyField(Contract, verbose_name="对应预存款合同")
+    all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
+    contract_number = models.CharField('执行合同号', max_length=30, unique=True)
+    contact_note = models.TextField('执行合同备注', blank=True)
+
+
+    def __str__(self):
+        return self.contract_number
+
+    class Meta:
+        verbose_name = '执行合同管理'
+        verbose_name_plural = '执行合同管理'
 
 
 class Invoice(models.Model):
@@ -120,7 +141,7 @@ class Invoice(models.Model):
     type = models.CharField('发票类型', max_length=3, choices=INVOICE_TYPE_CHOICES, default='CC')
     content = models.CharField('发票内容', max_length=200, null=True)
     note = models.TextField('备注', null=True)
-    submit = models.NullBooleanField('提交开票', null=True)
+    submit = models.BooleanField('提交开票',default=False)
 
     class Meta:
         verbose_name = '开票申请'
