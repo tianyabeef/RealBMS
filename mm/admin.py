@@ -4,7 +4,7 @@ from django.contrib.admin import ModelAdmin
 from django.contrib.auth.hashers import make_password, check_password
 from BMS.notice_mixin import NotificationMixin
 from BMS.admin_bms import BMS_admin_site
-from .models import Invoice, Contract, InvoiceTitle, BzContract
+from .models import Invoice, Contract, InvoiceTitle, BzContract,Contract_execute
 from fm.models import Invoice as fm_Invoice
 from django.contrib import messages
 from datetime import datetime
@@ -60,6 +60,68 @@ class InvoiceForm(forms.ModelForm):
         return self.cleaned_data['amount']
 
 
+class ContractExecuteForm(forms.ModelForm):
+    """
+    执行合同的form
+    """
+    class Meta:
+        model = Contract_execute
+        # fields = "__all__"
+        exclude = ["",]
+
+    def clean_all_amount(self):
+        contract = self.cleaned_data["contract"]
+        income = 0
+        for i in contract:
+            income += (i.fis_amount_in + i.fin_amount_in) - i.consume_money
+        if income < self.cleaned_data["all_amount"]:
+            raise forms.ValidationError("余额不足：预存款合同可用{}元，本项目花费{}元".format(income, self.cleaned_data["all_amount"]))
+        return self.cleaned_data["all_amount"]
+
+class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
+    """
+    执行合同的admin
+    """
+    form = ContractExecuteForm
+    list_display_links = ("contract_number",)
+    list_display = ("contract_number","income","all_amount","contact_note")
+    filter_horizontal = ["contract", ]
+
+    def income(self, obj):
+        income = 0
+        consume = 0
+        for i in obj.contract.all():
+            income += (i.fis_amount_in + i.fin_amount_in)
+            consume += i.consume_money
+        return income-consume
+    income.short_description = "预存款合同内剩余金额"
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "contract":
+            con = Contract.objects.filter(contract_type=2)
+            kwargs["queryset"] = con
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        consume = obj.all_amount
+        income = {}
+        for i in obj.contract.all():
+            income[i.id] = i.fis_amount_in + i.fin_amount_in - i.consume_money
+        income_ = sorted(income.items(),key=lambda x:x[1])
+        for i in income_:
+            if consume > i[1]:
+                consume = consume - i[1]
+                contract = Contract.objects.get(id=i[0])
+                contract.consume_money += i[1]
+                contract.save()
+            else:
+                contract = Contract.objects.get(id=i[0])
+                contract.consume_money += consume
+                contract.save()
+                break
+        obj.save()
+
+
 class ContractForm(forms.ModelForm):
     '''
     合同的from
@@ -78,54 +140,97 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     appsecret = DINGTALK_SECRET
     list_display = ('contract', 'title', 'period', 'amount', 'issuingUnit','note', 'submit')
     list_display_links = ('contract',)
-    actions = ['make_invoice_submit']
-    fields = (('contract', 'title'), ('issuingUnit', 'period', 'type'), 'amount',('content', 'note'))
+    actions = ['',]
+    fields = (('contract', 'title'), ('issuingUnit', 'period', 'type'), 'amount',('content', 'note'),"submit")
     # raw_id_fields = ['title',]
     autocomplete_fields = ('contract', 'title',)
     radio_fields = {'issuingUnit':admin.HORIZONTAL, 'period': admin.HORIZONTAL, 'type': admin.HORIZONTAL}
     list_per_page = 50
     ordering = ['-id']
-    form = InvoiceForm
+    readonly_fields = ["amount",]
+    # form = InvoiceForm
 
-    def make_invoice_submit(self, request, queryset):
-        """
-        批量提交开票申请
-        """
-        i = 0  #提交成功的数量
-        n = 0  #提交过的数量
-        t = 0  #选中的总数量
-        for obj in queryset:
-            t += 1
-            if not obj.submit:
-                fm_Invoice.objects.create(invoice=obj, tax_amount=6)
-                obj.submit = True
-                obj.save()
-                i += 1
-                # if obj.contract.is_status != 2:  #与市场部（方华琦）沟通不做任何限制
-                #     obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
-                #     obj.contract.save()
-                #新的开票申请 通知财务部5
-                for j in User.objects.filter(groups__id=5):
-                    fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
-                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请"%(obj.contract.name, obj.period, obj.amount)
-                    self.send_group_message(content,fm_chat_id)
-            else:
-                n += 1
-        if i > 0 and n > 0:
-            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交，%s个提交了开票申请' % (t,n,i), level=messages.ERROR)
-        elif i>0 and n==0:
-            self.message_user(request, '您选中了%s个，其中%s个提交了开票申请' % (t, i), level=messages.ERROR)
+    # def make_invoice_submit(self, request, queryset):
+    #     """
+    #     批量提交开票申请
+    #     """
+    #     i = 0  #提交成功的数量
+    #     n = 0  #提交过的数量
+    #     t = 0  #选中的总数量
+    #     for obj in queryset:
+    #         t += 1
+    #         if not obj.submit:
+    #             fm_Invoice.objects.create(invoice=obj, tax_amount=6)
+    #             obj.submit = True
+    #             obj.save()
+    #             i += 1
+    #             # if obj.contract.is_status != 2:  #与市场部（方华琦）沟通不做任何限制
+    #             #     obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
+    #             #     obj.contract.save()
+    #             #新的开票申请 通知财务部5
+    #             for j in User.objects.filter(groups__id=5):
+    #                 fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
+    #                 content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请"%(obj.contract.name, obj.period, obj.amount)
+    #                 self.send_group_message(content,fm_chat_id)
+    #         else:
+    #             n += 1
+    #     if i > 0 and n > 0:
+    #         self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交，%s个提交了开票申请' % (t,n,i), level=messages.ERROR)
+    #     elif i>0 and n==0:
+    #         self.message_user(request, '您选中了%s个，其中%s个提交了开票申请' % (t, i), level=messages.ERROR)
+    #     else:
+    #         self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交' % (t, n), level=messages.ERROR)
+    # make_invoice_submit.short_description = '提交开票申请到财务'
+
+    # def get_form(self, request, obj=None, change=False, **kwargs):
+    #     if not change:
+    #         self.form = InvoiceForm
+    #     else:
+    #         super().get_form(request, obj=obj, change=change, **kwargs)
+    # def get_actions(self, request):
+    #     actions = super().get_actions(request)
+    #     for group in request.user.groups.all():
+    #         if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
+    #             if "make_invoice_submit" in actions:
+    #                 del actions["make_invoice_submit"]
+    #     return actions
+
+    # def change_view(self, request, object_id, form_url='', extra_context=None):
+    #     extra_context = extra_context or {}
+    #     extra_context['show_delete'] = False
+    #     # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
+    #     if Invoice.objects.get(id=object_id).submit:
+    #         extra_context['show_save'] = False
+    #         extra_context['show_save_and_continue'] = False
+    #     # extra_context['show_save_and_continue'] = False
+    #     return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+    def save_model(self, request, obj, form, change):
+        #TODO 验证金额
+        # contract_match = re.match("【(.*)】-.*", str(obj.contract))
+        # obj_contract = Contract.objects.filter(contract_number=contract_match.group(1)).first()
+        # if obj.period == 'FIS':
+        #     q = Invoice.objects.filter(contract=obj.contract).filter(period='FIS') \
+        #         .aggregate(Sum('amount'))
+        #     if q['amount__sum']:
+        #         if q['amount__sum'] + obj.amount > obj_contract.fis_amount:
+        #             self.message_user(request,'首款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+        # if self.cleaned_data['period'] == 'FIN':
+        #     q = Invoice.objects.filter(contract=self.cleaned_data['contract']).filter(period='FIN') \
+        #         .aggregate(Sum('amount'))
+        #     if q['amount__sum']:
+        #         if q['amount__sum'] + self.cleaned_data['amount'] > obj_contract.fin_amount:
+        #             raise forms.ValidationError('尾款已开票金额%s元，超出可开票总额' % q['amount__sum'])
+        if obj.submit:
+            fm_Invoice.objects.create(invoice=obj, tax_amount=6)
+            obj.submit = True
+            obj.save()
+            fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id  # TODO改为财务的钉钉群
+            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请" % (
+            obj.contract.name, obj.period, obj.amount)
+            self.send_group_message(content, fm_chat_id)
         else:
-            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交' % (t, n), level=messages.ERROR)
-    make_invoice_submit.short_description = '提交开票申请到财务'
-
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        for group in request.user.groups.all():
-            if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
-                if "make_invoice_submit" in actions:
-                    del actions["make_invoice_submit"]
-        return actions
+            obj.save()
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -269,7 +374,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     resource_class = ContractResource
-    list_display = ('contract_number', 'name','partner_company_modify', 'contacts', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
+    list_display = ('contract_number','contract_type', 'name','partner_company_modify', 'contacts', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
                     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     date_hierarchy = 'send_date'
     inlines = [InvoiceInline,]
@@ -278,9 +383,9 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
-            'fields': (('contract_number', 'name', 'type'),('contacts','contact_phone', 'contacts_email'),
+            'fields': (("contract_type",),('contract_number', 'name', 'type'),('contacts','contact_phone', 'contacts_email'),
                        ('contact_address', 'partner_company', 'salesman'), ('price', 'range'),
-                       ('fis_amount', 'fin_amount', 'all_amount'),( 'contact_note'))
+                       ('fis_amount', 'fin_amount', 'all_amount'),( 'contact_note'),"consume_money")
         }),
         ('邮寄信息', {
             'fields': (('tracking_number', 'send_date', 'receive_date'),)
@@ -293,7 +398,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     search_fields = ('contract_number', 'name', 'salesman__username')
     actions = ('make_receive',)
     form = ContractForm
-
+    readonly_fields = ["consume_money",]
     def partner_company_modify(self,obj):
         # 抬头的单位名称
         if obj.partner_company == "":
@@ -409,7 +514,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         if obj:
             if obj.is_status >= 2:
-                return ['contract_number', 'name', 'type', 'salesman','contacts','contact_phone','contacts_email','contact_address','partner_company', 'price', 'range', 'fis_amount', 'fin_amount', 'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file','contact_note']
+                return ['contract_number', "contract_type","consume_money",'name', 'type', 'salesman','contacts','contact_phone','contacts_email','contact_address','partner_company', 'price', 'range', 'fis_amount', 'fin_amount', 'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file','contact_note']
         return self.readonly_fields
 
     def save_formset(self, request, form, formset, change):
@@ -521,3 +626,4 @@ BMS_admin_site.register(BzContract, BzContractAdmin)
 BMS_admin_site.register(Contract, ContractAdmin)
 BMS_admin_site.register(Invoice, InvoiceAdmin)
 BMS_admin_site.register(InvoiceTitle,InvoiceTitleAdmin)
+BMS_admin_site.register(Contract_execute,ContractExecuteAdmin)
