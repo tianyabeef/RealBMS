@@ -11,6 +11,10 @@ from BMS.settings import (
 
 
 def dingtalk_auth(request):
+    """This view is responsible for the dingtalk authentication, as these users
+    recorded within the user-model coupled with model "Employees" scan the
+    qrcode, who exists in that table AND matches the dingtalk_id could be
+    logged in."""
     # STEP 1. Get sns access_token
     params_1 = {"appid": DINGTALK_APPID, "appsecret": DINGTALK_APPSECRET}
     req_sns_access_token = SnsAccessTokenRequest(params=params_1)
@@ -54,5 +58,3 @@ def dingtalk_auth(request):
     if user_check is not None:
         login(request, user_check)
     return HttpResponseRedirect("/")
-
-
