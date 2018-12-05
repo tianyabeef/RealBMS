@@ -192,7 +192,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
                      'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
     autocomplete_fields = ('contract',)
-    ordering = ['-sub_number', '-sampleInfoForm', ]
+    ordering = ['-project_start_time', ]
     list_per_page = 50
 
     def make_subProject_submit(self, request,queryset):
@@ -253,7 +253,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return "\t".join([sampleInfoForm.transform_contact for sampleInfoForm in sampleInfoForms])
+            return "\t/".join([sampleInfoForm.transform_contact for sampleInfoForm in sampleInfoForms])
     customer_name.short_description = '寄样人姓名'
 
     def customer_phone(self, obj):
@@ -261,7 +261,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return [sampleInfoForm.transform_phone for sampleInfoForm in sampleInfoForms]
+            phone_numbers=[sampleInfoForm.transform_phone for sampleInfoForm in sampleInfoForms]
+            return "\t/".join('%s' % phone_number for phone_number in phone_numbers)
+            # return "\t".join([sampleInfoForm.transform_phone for sampleInfoForm in sampleInfoForms])
     customer_phone.short_description = '寄样联系人电话'
 
     def service_types(self, obj):
@@ -269,7 +271,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return "\t".join([sampleInfoForm.get_project_type_display() for sampleInfoForm in sampleInfoForms])
+            return "\t/".join([sampleInfoForm.get_project_type_display() for sampleInfoForm in sampleInfoForms])
     service_types.short_description = '项目类型'
 
     def sample_receiver(self, obj):
@@ -277,7 +279,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return [sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms]
+            return "\t/".join([sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms])
     sample_receiver.short_description = '样品接收人'
 
     def arrive_time(self, obj):
@@ -285,7 +287,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if not obj.sub_number:
             return "-"
         else:
-            return [sampleInfoForm.arrive_time for sampleInfoForm in sampleInfoForms]
+            return "\t/".join([sampleInfoForm.arrive_time.isoformat() for sampleInfoForm in sampleInfoForms])
     arrive_time.short_description = '样品接收时间'
 
 
@@ -347,106 +349,156 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
         return super(SubProjectAdmin,self).change_view(request, object_id, form_url, extra_context=extra_context)
 
+    # def save_model(self, request, obj, form, change):
+    #     if not obj.project_start_time:
+    #         obj.project_start_time = date.today()
+    #     states =[obj.is_ext , obj.is_lib ,obj.is_seq, obj.is_ana]
+    #     project_amount = obj.sample_count * obj.contract.price
+    #     contract_income = 0
+    #     mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
+    #     for mm_invoice in mm_invoices:
+    #         fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
+    #         if not fm_invoice.income:
+    #             contract_income = contract_income
+    #         else:
+    #             contract_income = fm_invoice.income + contract_income
+    #     # TODO 经过和商务方华琦沟通去点70%的到款判断，不做限制，改为人为的控制
+    #     # if project_amount * Decimal(0.7) > (contract_income-obj.contract.use_amount):
+    #     #     obj.status = True
+    #     # else:
+    #     #     obj.status = False
+    #     obj.project_manager = request.user
+    #     if obj.status:
+    #         if obj.file_to_start:
+    #             if obj.is_submit:
+    #                 contract = Contract.objects.get(id=obj.contract.id)
+    #                 contract.use_amount = contract.use_amount + project_amount
+    #                 contract.save()
+    #                 #新建执行表单
+    #                 create_submit_table(request, obj, states)
+    #             obj.save()
+    #         else:
+    #             if change:
+    #                 self.message_user(request, '子项目编号：%s属于提取启动，必须上传审批文件'%(obj.sub_number),level=messages.ERROR)
+    #             else:
+    #                 obj.status=False
+    #                 obj.is_submit=False
+    #                 obj.sample_count=0
+    #                 self.message_user(request, '子项目编号：%s，属于提取启动，必须上传审批文件'%(obj.sub_number), level=messages.ERROR)
+    #                 obj.save()
+    #     else:
+    #         if obj.is_submit:
+    #             contract = Contract.objects.get(id=obj.contract.id)
+    #             contract.use_amount = contract.use_amount + project_amount
+    #             contract.save()
+    #             # 新建执行表单
+    #             create_submit_table(request, obj, states)
+    #         obj.save()
+    #     if obj.is_balance:
+    #         obj.is_status = 15
+    #         obj.save()
+    #     super().save_model(request, obj, form, change)
+
     def save_model(self, request, obj, form, change):
+        # 创建立项时间
         if not obj.project_start_time:
             obj.project_start_time = date.today()
-        states =[obj.is_ext , obj.is_lib ,obj.is_seq, obj.is_ana]
-        project_amount = obj.sample_count * obj.contract.price
-        contract_income = 0
-        mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
-        for mm_invoice in mm_invoices:
-            fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
-            if not fm_invoice.income:
-                contract_income = contract_income
-            else:
-                contract_income = fm_invoice.income + contract_income
-        # TODO 经过和商务方华琦沟通去点70%的到款判断，不做限制，改为人为的控制
-        # if project_amount * Decimal(0.7) > (contract_income-obj.contract.use_amount):
-        #     obj.status = True
-        # else:
-        #     obj.status = False
         obj.project_manager = request.user
-        if obj.status:
-            if obj.file_to_start:
-                if obj.is_submit:
-                    contract = Contract.objects.get(id=obj.contract.id)
-                    contract.use_amount = contract.use_amount + project_amount
-                    contract.save()
-                    #新建执行表单
-                    create_submit_table(request, obj, states)
-                obj.save()
-            else:
-                if change:
-                    self.message_user(request, '子项目编号：%s属于提取启动，必须上传审批文件'%(obj.sub_number),level=messages.ERROR)
-                else:
-                    obj.status=False
-                    obj.is_submit=False
-                    obj.sample_count=0
-                    self.message_user(request, '子项目编号：%s，属于提取启动，必须上传审批文件'%(obj.sub_number), level=messages.ERROR)
-                    obj.save()
-        else:
-            if obj.is_submit:
-                contract = Contract.objects.get(id=obj.contract.id)
-                contract.use_amount = contract.use_amount + project_amount
-                contract.save()
-                # 新建执行表单
-                create_submit_table(request, obj, states)
-            obj.save()
+        # 结算
         if obj.is_balance:
             obj.is_status = 15
             obj.save()
         super().save_model(request, obj, form, change)
 
+    # def make_submit(self, request, queryset):
+    #     n = 0
+    #     un =  0
+    #     sn = 0
+    #     for obj in queryset:
+    #         if not obj.is_submit:
+    #             states = [obj.is_ext, obj.is_lib, obj.is_seq, obj.is_ana]
+    #             project_amount = obj.sample_count * obj.contract.price
+    #             contract_income = 0
+    #             mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
+    #             for mm_invoice in mm_invoices:
+    #                 fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
+    #                 if not fm_invoice.income:
+    #                     contract_income = contract_income
+    #                 else:
+    #                     contract_income = fm_invoice.income + contract_income
+    #             # TODO 经过和商务方华琦沟通去点70%的到款判断，不做限制，改为人为的控制
+    #             # if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
+    #             #     obj.status = True
+    #             # else:
+    #             #     obj.status = False
+    #             obj.project_manager = request.user
+    #             if obj.status:
+    #                 if obj.file_to_start:
+    #                     contract = Contract.objects.get(id=obj.contract.id)
+    #                     contract.use_amount = contract.use_amount + project_amount
+    #                     contract.save()
+    #                     # 新建执行表单
+    #                     create_submit_table(request, obj, states)
+    #                     obj.is_submit = True
+    #                     obj.save()
+    #                     n = n +1
+    #                 else:
+    #                     un = un +1
+    #             else:
+    #                 contract = Contract.objects.get(id=obj.contract.id)
+    #                 contract.use_amount = contract.use_amount + project_amount
+    #                 contract.save()
+    #                 # 新建执行表单
+    #                 create_submit_table(request, obj, states)
+    #                 obj.is_submit = True
+    #                 obj.save()
+    #                 n = n + 1
+    #         else:
+    #             sn = sn + 1
+    #     self.message_user(request,"所选项目立项的子项目数量：%s,   无法立项的子项目数量：%s  ,已经立项过的子项目数量：%s" %(n,un,sn), level=messages.ERROR)
+    #     # 新增立项的时候，给实验发钉钉通知
+    #     self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+    #                             "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+    #     print(self.send_dingtalk_result)
+    # make_submit.short_description = '设置所选项目为确认可启动状态'
+
     def make_submit(self, request, queryset):
         n = 0
-        un =  0
         sn = 0
         for obj in queryset:
             if not obj.is_submit:
                 states = [obj.is_ext, obj.is_lib, obj.is_seq, obj.is_ana]
-                project_amount = obj.sample_count * obj.contract.price
-                contract_income = 0
-                mm_invoices = mm_Invoice.objects.filter(contract__id=obj.contract.id)
-                for mm_invoice in mm_invoices:
-                    fm_invoice = fm_Invoice.objects.get(invoice__id=mm_invoice.id)
-                    if not fm_invoice.income:
-                        contract_income = contract_income
-                    else:
-                        contract_income = fm_invoice.income + contract_income
-                # TODO 经过和商务方华琦沟通去点70%的到款判断，不做限制，改为人为的控制
-                # if project_amount * Decimal(0.7) > (contract_income - obj.contract.use_amount):
-                #     obj.status = True
-                # else:
-                #     obj.status = False
                 obj.project_manager = request.user
-                if obj.status:
-                    if obj.file_to_start:
-                        contract = Contract.objects.get(id=obj.contract.id)
-                        contract.use_amount = contract.use_amount + project_amount
-                        contract.save()
-                        # 新建执行表单
-                        create_submit_table(request, obj, states)
-                        obj.is_submit = True
-                        obj.save()
-                        n = n +1
-                    else:
-                        un = un +1
-                else:
-                    contract = Contract.objects.get(id=obj.contract.id)
-                    contract.use_amount = contract.use_amount + project_amount
-                    contract.save()
-                    # 新建执行表单
+                if obj.file_to_start:
+                    # 有提前启动文件就是提前立项（提前启动状态为True）
+                    obj.status = True
+                    # 新建执行表
                     create_submit_table(request, obj, states)
                     obj.is_submit = True
                     obj.save()
                     n = n + 1
+                else:
+                    # 没有提前启动文件就是正常立项（提前启动状态为False）
+                    obj.status = False
+                    # 新建执行表
+                    create_submit_table(request, obj, states)
+                    obj.is_submit = True
+                    obj.save()
+                    n = n + 1
+                # 新增立项的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
             else:
                 sn = sn + 1
-        self.message_user(request,"所选项目立项的子项目数量：%s,   无法立项的子项目数量：%s  ,已经立项过的子项目数量：%s" %(n,un,sn), level=messages.ERROR)
-        # 新增立项的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+
+        # self.message_user(request, "所选项目立项的子项目数量：%s,已经立项过的子项目数量：%s" % (n, sn), level=messages.ERROR)
+        self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
+                          level=messages.ERROR)
+        # # 新增立项的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_submit.short_description = '设置所选项目为确认可启动状态'
 
     def get_actions(self, request):
@@ -476,6 +528,8 @@ class ExtSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -525,12 +579,12 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
     def sample_receiver(self, obj):
         sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
-        return [sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms]
+        return "\t/".join([sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms])
     sample_receiver.short_description = '样品接收人'
 
     def arrive_time(self, obj):
         sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.subProject.id)
-        return [sampleInfoForm.arrive_time for sampleInfoForm in sampleInfoForms]
+        return "\t/".join([sampleInfoForm.arrive_time.isoformat() for sampleInfoForm in sampleInfoForms])
     arrive_time.short_description = '样品接收时间'
 
     def get_list_display_links(self, request, list_display):
@@ -588,11 +642,15 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.sample_type = sampleInfo.sample_type
                     sampleInfoExt.save()
                 obj.save()
+                # 新增抽提的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,), level=messages.ERROR)
-        # 新增抽提的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增抽提的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
         sub_number = obj.subProject.sub_number
         project = SubProject.objects.filter(sub_number=sub_number).first()
         project.time_ext_start = datetime.datetime.now()
@@ -676,6 +734,8 @@ class LibSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -779,12 +839,16 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.sample_name = sampleInfo.sample_name
                     sampleInfoLib.save()
                 obj.save()
+                # 新增建库的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增建库的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增建库的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
         sub_number = obj.subProject.sub_number
         project = SubProject.objects.filter(sub_number=sub_number).first()
         project.time_lib_start = datetime.datetime.now()
@@ -867,6 +931,8 @@ class SeqSubmitForm(forms.ModelForm):
             raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
         elif subProject.is_status == 15:
             raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
+        if not subProject.is_submit:
+            raise forms.ValidationError("该子项目未立项提交")
         return self.cleaned_data['subProject']
 
     def clean_sample(self):
@@ -982,12 +1048,16 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.sample_name = sampleInfo.sample_name
                         sampleInfoseq.save()
                     obj.save()
+                    # 新增测序的时候，给实验发钉钉通知
+                    self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+                                            "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                    print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增测序的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增测序的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_SeqSubmit_submit.short_description = '提交测序任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -1057,6 +1127,16 @@ class AnaSubmitForm(forms.ModelForm):
         subProject = self.cleaned_data['subProject']
         if not subProject:
             raise forms.ValidationError("子项目表单需要添加分析子项目")
+        else:
+            for i in range(len(subProject)):
+                if not subProject[0].is_submit:
+                    raise forms.ValidationError("该子项目未立项提交")
+                if subProject[0].is_status == 13:
+                    raise forms.ValidationError("该子项目已经完成，请选择其他子项目")
+                elif subProject[0].is_status == 14:
+                    raise forms.ValidationError("该子项目已经中止，请选择其他子项目")
+                elif subProject[0].is_status == 15:
+                    raise forms.ValidationError("该子项目已经结算，请选择其他子项目")
         return self.cleaned_data['subProject']
 
 
@@ -1132,12 +1212,16 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     subProject_old.save()
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
+                # 新增分析的时候，给实验发钉钉通知
+                self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
-        # 新增分析的时候，给实验发钉钉通知
-        self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
-                                "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        print(self.send_dingtalk_result)
+        # # 新增分析的时候，给实验发钉钉通知
+        # self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+        #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+        # print(self.send_dingtalk_result)
     make_AnaSubmit_submit.short_description = '提交分析任务'
 
     def get_readonly_fields(self, request, obj=None):

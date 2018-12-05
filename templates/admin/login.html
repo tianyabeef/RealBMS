@@ -7,9 +7,13 @@
 
 {% block bodyclass %}{{ block.super }} login{% endblock %}
 
-{% block usertools %}{% endblock %}
-
-{% block nav-global %}{% endblock %}
+{% block global_header %}
+    <div id="header">
+        <div id="branding" style="margin: 20px auto;text-align: center;float: none; font-size: 20px">
+            <p id="site-name"><a href="{% url 'admin:index' %}">锐翌生物BMS系统</a></p>
+        </div>
+    </div>
+{% endblock %}
 
 {% block content_title %}{% endblock %}
 
@@ -18,49 +22,50 @@
 {% block content %}
 {% if form.errors and not form.non_field_errors %}
 <p class="errornote">
-{% if form.errors.items|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+    {% if form.errors.items|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
 </p>
 {% endif %}
 
 {% if form.non_field_errors %}
-{% for error in form.non_field_errors %}
-<p class="errornote">
-    {{ error }}
-</p>
-{% endfor %}
+    {% for error in form.non_field_errors %}<p class="errornote">{{ error }}</p>{% endfor %}
 {% endif %}
 
 <div id="content-main">
+    {% if user.is_authenticated %}
+    <p class="errornote">
+    {% blocktrans trimmed %}
+        You are authenticated as {{ username }}, but are not authorized to
+        access this page. Would you like to login to a different account?
+    {% endblocktrans %}
+    </p>
+    {% endif %}
 
-{% if user.is_authenticated %}
-<p class="errornote">
-{% blocktrans trimmed %}
-    You are authenticated as {{ username }}, but are not authorized to
-    access this page. Would you like to login to a different account?
-{% endblocktrans %}
-</p>
-{% endif %}
-
-<form action="{{ app_path }}" method="post" id="login-form">{% csrf_token %}
-  <div class="form-row">
-    {{ form.username.errors }}
-    {{ form.username.label_tag }} {{ form.username }}
-  </div>
-  <div class="form-row">
-    {{ form.password.errors }}
-    {{ form.password.label_tag }} {{ form.password }}
-    <input type="hidden" name="next" value="{{ next }}" />
-  </div>
-  {% url 'admin_password_reset' as password_reset_url %}
-  {% if password_reset_url %}
-  <div class="password-reset-link">
-    <a href="{{ password_reset_url }}">{% trans 'Forgotten your password or username?' %}</a>
-  </div>
-  {% endif %}
-  <div class="submit-row">
-    <label>&nbsp;</label><input type="submit" value="{% trans 'Log in' %}" />
-  </div>
-</form>
-
+    <form action="{{ app_path }}" method="post" id="login-form" style="margin: 30px">{% csrf_token %}
+        <div class="form-row">
+            {{ form.username.errors }}
+            {{ form.username.label_tag }} {{ form.username }}
+        </div>
+        <div class="form-row">
+            {{ form.password.errors }}
+            {{ form.password.label_tag }} {{ form.password }}
+            <input type="hidden" name="next" value="{{ next }}" />
+        </div>
+        {% url 'admin_password_reset' as password_reset_url %}
+        {% if password_reset_url %}
+            <div class="password-reset-link">
+                <a href="{{ password_reset_url }}">{% trans 'Forgotten your password or username?' %}</a>
+            </div>
+        {% endif %}
+        <div style="margin: 10px auto; text-align: center;">
+            <label>&nbsp;</label>
+            <input style="margin: 10px auto; text-align: center;width: 100%" type="submit" value="{% trans 'Log in' %}" />
+        </div>
+        <div style="margin: 20px auto; text-align: left;height: 25px">
+            <span style="display: block;float: left;margin: 0 auto; text-align: left;height: 25px; line-height: 25px;">其它方式登陆：</span>
+            <a style="display: block;float: left;" href="{{ dingtalk_qrcode_uri }}">
+                <img src="/static/imgs/dingtalk_icon.svg" height="25" style="float: left;display: block;padding: 0 0;">
+            </a>
+        </div>
+    </form>
 </div>
 {% endblock %}
