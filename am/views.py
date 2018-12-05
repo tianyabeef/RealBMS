@@ -9,10 +9,10 @@ class AnaAutocompleteJsonView(AutocompleteJsonView):
     
     def get_group_users(self, query_condition=None):
         users_qs = User.objects.filter(query_condition).order_by("id")
-        users_qs, search_use_distinct = self.model_admin.get_search_results(
+        users_qs = self.model_admin.get_search_results(
             self.request, users_qs, self.term
-        )
-        return users_qs.distinct() if search_use_distinct else users_qs
+        )[0]
+        return users_qs.distinct()
     
     def get_queryset(self):
         # Attention: the hard code of group should be removed in the future,
