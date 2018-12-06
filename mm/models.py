@@ -104,7 +104,7 @@ class Contract_execute(models.Model):
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     contract_number = models.CharField('执行合同号', max_length=30, unique=True)
     contact_note = models.TextField('执行合同备注', blank=True)
-
+    submit = models.BooleanField("提交",default=False)
 
     def __str__(self):
         return self.contract_number
