@@ -71,6 +71,7 @@ class ContractExecuteForm(forms.ModelForm):
 
     def clean_all_amount(self):
         contract = self.cleaned_data["contract"]
+        # print(contract)
         income = 0
         for i in contract:
             income += (i.fis_amount_in + i.fin_amount_in) - i.consume_money
@@ -105,7 +106,11 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
     def save_model(self, request, obj, form, change):
         consume = obj.all_amount
         income = {}
-        for i in obj.contract.all():
+        # if Contract_execute.objects.all().count() == 0:
+        #     obj.id = 1
+        # else:
+        #     obj.id =(int(Contract_execute.objects.latest('id').id) + 1)
+        for i in form.cleaned_data["contract"]:
             income[i.id] = i.fis_amount_in + i.fin_amount_in - i.consume_money
         income_ = sorted(income.items(),key=lambda x:x[1])
         for i in income_:
@@ -582,7 +587,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                 if not self.send_dingtalk_result:
                     message_content += "  钉钉通知发送失败"
             else:
-                message_content += "  这个销售的没有钉钉ID号"
+                message_content += "  这个销售没有钉钉ID号"
             self.message_user(request, message_content)
 
         # 1、新增快递单号时自动记录时间戳
