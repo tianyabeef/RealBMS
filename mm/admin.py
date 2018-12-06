@@ -85,7 +85,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
     """
     form = ContractExecuteForm
     list_display_links = ("contract_number",)
-    list_display = ("contract_number","income","all_amount","contact_note")
+    list_display = ("contract_number","income","all_amount","contact_note","submit")
     filter_horizontal = ["contract", ]
 
     def income(self, obj):
@@ -103,28 +103,37 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
             kwargs["queryset"] = con
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj.submit:
+            return ["contract","all_amount","contract_number","contact_note","submit"]
+        else:
+            return ["",]
+
     def save_model(self, request, obj, form, change):
-        consume = obj.all_amount
-        income = {}
-        # if Contract_execute.objects.all().count() == 0:
-        #     obj.id = 1
-        # else:
-        #     obj.id =(int(Contract_execute.objects.latest('id').id) + 1)
-        for i in form.cleaned_data["contract"]:
-            income[i.id] = i.fis_amount_in + i.fin_amount_in - i.consume_money
-        income_ = sorted(income.items(),key=lambda x:x[1])
-        for i in income_:
-            if consume > i[1]:
-                consume = consume - i[1]
-                contract = Contract.objects.get(id=i[0])
-                contract.consume_money += i[1]
-                contract.save()
-            else:
-                contract = Contract.objects.get(id=i[0])
-                contract.consume_money += consume
-                contract.save()
-                break
-        obj.save()
+        if obj.submit:
+            consume = obj.all_amount
+            income = {}
+            # if Contract_execute.objects.all().count() == 0:
+            #     obj.id = 1
+            # else:
+            #     obj.id =(int(Contract_execute.objects.latest('id').id) + 1)
+            for i in form.cleaned_data["contract"]:
+                income[i.id] = i.fis_amount_in + i.fin_amount_in - i.consume_money
+            income_ = sorted(income.items(),key=lambda x:x[1])
+            for i in income_:
+                if consume > i[1]:
+                    consume = consume - i[1]
+                    contract = Contract.objects.get(id=i[0])
+                    contract.consume_money += i[1]
+                    contract.save()
+                else:
+                    contract = Contract.objects.get(id=i[0])
+                    contract.consume_money += consume
+                    contract.save()
+                    break
+            obj.save()
+        else:
+            obj.save()
 
 
 class ContractForm(forms.ModelForm):
