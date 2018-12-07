@@ -598,16 +598,16 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
         return self.obj
 
-    def formfield_for_manytomany(self, db_field, request,**kwargs):
-
-        if db_field.name == "sample" and getattr(self,"obj",None):
-
-            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
-
-            for i in sampleinfoform:
-                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
-
-        return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+    # def formfield_for_manytomany(self, db_field, request,**kwargs):
+    #
+    #     if db_field.name == "sample" and getattr(self,"obj",None):
+    #
+    #         sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+    #
+    #         for i in sampleinfoform:
+    #             kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+    #
+    #     return super(ExtSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_ExtSubmit_submit(self, request, queryset):
         """
@@ -798,15 +798,15 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
         return self.obj
 
-    def formfield_for_manytomany(self, db_field, request, **kwargs):
-
-        if db_field.name == "sample" and getattr(self, "obj", None):
-
-            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
-
-            for i in sampleinfoform:
-                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
-        return super(LibSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+    # def formfield_for_manytomany(self, db_field, request, **kwargs):
+    #
+    #     if db_field.name == "sample" and getattr(self, "obj", None):
+    #
+    #         sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+    #
+    #         for i in sampleinfoform:
+    #             kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+    #     return super(LibSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_LibSubmit_submit(self, request, queryset):
         """
@@ -1004,15 +1004,15 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
 
         return self.obj
 
-    def formfield_for_manytomany(self, db_field, request, **kwargs):
-
-        if db_field.name == "sample" and getattr(self, "obj", None):
-
-            sampleinfoform = self.obj.subProject.sampleInfoForm.all()
-
-            for i in sampleinfoform:
-                kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
-        return super(SeqSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
+    # def formfield_for_manytomany(self, db_field, request, **kwargs):
+    #
+    #     if db_field.name == "sample" and getattr(self, "obj", None):
+    #
+    #         sampleinfoform = self.obj.subProject.sampleInfoForm.all()
+    #
+    #         for i in sampleinfoform:
+    #             kwargs["queryset"] = SampleInfo.objects.filter(sampleinfoform=i)
+    #     return super(SeqSubmitAdmin, self).formfield_for_manytomany(db_field, request, **kwargs)
 
     def make_SeqSubmit_submit(self, request, queryset):
         """

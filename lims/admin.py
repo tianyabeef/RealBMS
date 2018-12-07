@@ -84,6 +84,7 @@ class SampleInfoExtInline(admin.StackedInline):
         "is_rebuild": admin.HORIZONTAL,
         "sample_type": admin.HORIZONTAL,
     }
+    readonly_fields = ["unique_code","sample_number","sample_name","species","sample_type",]
 
     def has_change_permission(self, request, obj=None):
         try:
@@ -101,7 +102,7 @@ class SampleInfoLibInline(admin.StackedInline):
         "lib_result": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
     }
-
+    readonly_fields = ["unique_code", "sample_number", "sample_name"]
     def has_change_permission(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -291,7 +292,6 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
-                print(data_url)
                 msg_email = "编号：{0} 的抽提实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number,data_url)
                 for i in qs.filter(is_rebuild=0):
                     # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
@@ -301,47 +301,49 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     #            i.note)))
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code = "__{}__已抽提".format(sub_number) )
                 #建立重抽提任务单
-                ext = ExtSubmit()
-                ext.project_manager_id = obj.extSubmit.project_manager_id
-                ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
-                ext.subProject = obj.extSubmit.subProject
-                for i in qs.filter(is_rebuild=1):
-                    # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
-                    #                      "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(
-                    #                          i.sample_number, i.sample_name, i.species,
-                    #                          i.Type_of_Sample[i.sample_type - 1][1], i.sample_used,
-                    #                          i.sample_rest, str(i.density_checked), str(i.volume_checked),
-                    #                          str(i.D260_280), str(i.D260_230),
-                    #                          str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
-                    #                          str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
-                    #                          i.note)))
-                    try:
-                        if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
-                            if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
-                                if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:-1]) in range(48,58):
-                                    new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-2] +\
-                                                 str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:])+1)
+                if qs.filter(is_rebuild=1).count() > 0:
+                    ext = ExtSubmit()
+                    ext.project_manager_id = obj.extSubmit.project_manager_id
+                    ext.id = str(int(ExtSubmit.objects.latest('id').id) + 1)
+                    ext.subProject = obj.extSubmit.subProject
+                    for i in qs.filter(is_rebuild=1):
+                        # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
+                        #                      "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(
+                        #                          i.sample_number, i.sample_name, i.species,
+                        #                          i.Type_of_Sample[i.sample_type - 1][1], i.sample_used,
+                        #                          i.sample_rest, str(i.density_checked), str(i.volume_checked),
+                        #                          str(i.D260_280), str(i.D260_230),
+                        #                          str(i.DNA_totel), str(i.Rebulid[i.is_rebuild][1]),
+                        #                          str(i.Quality_control_conclusion[i.quality_control_conclusion - 1][1]),
+                        #                          i.note)))
+                        try:
+                            if SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code:
+                                if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:]) in range(48,58):
+                                    if ord(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:-1]) in range(48,58):
+                                        new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-2] +\
+                                                     str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-2:])+1)
+                                    else:
+                                        new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] + \
+                                                     str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:])+1)
+                                    SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
                                 else:
-                                    new_status = SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[0:-1] + \
-                                                 str(int(SampleInfo.objects.filter(unique_code=i.unique_code).first().color_code[-1:])+1)
-                                SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=new_status)
+                                    SampleInfo.objects.filter(unique_code=i.unique_code).update(
+                                        color_code=" __{}__重抽提（未执行）1".format(sub_number))
                             else:
-                                SampleInfo.objects.filter(unique_code=i.unique_code).update(
-                                    color_code=" __{}__重抽提（未执行）1".format(sub_number))
-                        else:
-                            SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=" __{}__重抽提（未执行）1".format(sub_number))
+                                SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code=" __{}__重抽提（未执行）1".format(sub_number))
 
-                        ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
-                    except:
-                        pass
-                old = obj.extSubmit.ext_number
-                if "_" in old:
-                    new = old[0:-1] + str(int(old[-1])+1)
+                            ext.sample.add(SampleInfo.objects.filter(unique_code=i.unique_code).first())
+                        except:
+                            pass
+                    old = obj.extSubmit.ext_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1])+1)
+                    else:
+                        new = old + "_" + "1"
+                    ext.ext_number = new
+                    ext.save()
                 else:
-                    new = old + "_" + "1"
-                ext.ext_number = new
-                ext.save()
-                del ext
+                    pass
                 del md
                 project.time_ext = datetime.datetime.now()
                 project.save()
@@ -525,51 +527,53 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                     #                           i.lib_total,i.Lib_result[i.lib_result-1][1],i.lib_note,i.Rebulid[i.is_rebuild][1])))
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已建库".format(sub_number))
                 # 建立重建库任务单
-                lib = LibSubmit()
-                lib.project_manager_id = obj.libSubmit.project_manager_id
-                lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
-                lib.subProject = obj.libSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    # msg_email.append((
-                    #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
-                    #                      .format(j.sample_number, j.sample_name, j.lib_code, j.index, j.lib_volume,
-                    #                              j.lib_concentration,
-                    #                              j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
-                    #                              j.Rebulid[j.is_rebuild][1])))
-                    try:
-                        if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
-                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
-                                        48, 58):
-                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                           -2:-1]) in range(48, 58):
-                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                     0:-2] + \
-                                                     str(int(SampleInfo.objects.filter(
-                                                         unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                if qs.filter(is_rebuild=1).count() > 0:
+                    lib = LibSubmit()
+                    lib.project_manager_id = obj.libSubmit.project_manager_id
+                    lib.id = str(int(LibSubmit.objects.latest('id').id) + 1)
+                    lib.subProject = obj.libSubmit.subProject
+                    for j in qs.filter(is_rebuild=1):
+                        # msg_email.append((
+                        #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
+                        #                      .format(j.sample_number, j.sample_name, j.lib_code, j.index, j.lib_volume,
+                        #                              j.lib_concentration,
+                        #                              j.lib_total, j.Lib_result[j.lib_result - 1][1], j.lib_note,
+                        #                              j.Rebulid[j.is_rebuild][1])))
+                        try:
+                            if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                            48, 58):
+                                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                               -2:-1]) in range(48, 58):
+                                            new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                         0:-2] + \
+                                                         str(int(SampleInfo.objects.filter(
+                                                             unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                        else:
+                                            new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                         0:-1] + \
+                                                         str(int(SampleInfo.objects.filter(
+                                                             unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
                                     else:
-                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                     0:-1] + \
-                                                     str(int(SampleInfo.objects.filter(
-                                                         unique_code=j.unique_code).first().color_code[-1:]) + 1)
-                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
-                                else:
-                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                        color_code=" __{}__重建库（未执行）1".format(sub_number))
-                        else:
-                            SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                color_code=" __{}__重建库（未执行）1".format(sub_number))
-                        lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    except:
-                        pass
-                old = obj.libSubmit.lib_number
-                if "_" in old:
-                    new = old[0:-1] + str(int(old[-1]) + 1)
+                                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                            color_code=" __{}__重建库（未执行）1".format(sub_number))
+                            else:
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                    color_code=" __{}__重建库（未执行）1".format(sub_number))
+                            lib.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                        except:
+                            pass
+                    old = obj.libSubmit.lib_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1]) + 1)
+                    else:
+                        new = old + "_" + "1"
+                    lib.lib_number = new
+                    lib.save()
                 else:
-                    new = old + "_" + "1"
-                lib.lib_number = new
-                lib.save()
-                del lib
+                    pass
                 del md
                 project.update(time_lib=datetime.datetime.now())
                 # content = ""
@@ -806,52 +810,54 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
                     SampleInfo.objects.filter(unique_code=i.unique_code).update(color_code="__{}__已测序".format(sub_number))
                 # 建立重测序任务单
-                seq = SeqSubmit()
-                seq.project_manager_id = obj.seqSubmit.project_manager_id
-                seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
-                seq.subProject = obj.seqSubmit.subProject
-                for j in qs.filter(is_rebuild=1):
-                    # msg_email.append((
-                    #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
-                    #                      .format(j.sample_number, j.sample_name, j.seq_code, j.seq_index,
-                    #                              j.data_request,
-                    #                              j.seq_data,
-                    #                              j.Seq_result[j.seq_result - 1][1], j.seq_note,
-                    #                              j.Rebulid[j.is_rebuild][1])))
-                    try:
-                        if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
-                            if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
-                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
-                                        48, 58):
-                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                           -2:-1]) in range(48, 58):
-                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                     0:-2] + \
-                                                     str(int(SampleInfo.objects.filter(
-                                                         unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                if qs.filter(is_rebuild=1).count() > 0:
+                    seq = SeqSubmit()
+                    seq.project_manager_id = obj.seqSubmit.project_manager_id
+                    seq.id = str(int(SeqSubmit.objects.latest('id').id) + 1)
+                    seq.subProject = obj.seqSubmit.subProject
+                    for j in qs.filter(is_rebuild=1):
+                        # msg_email.append((
+                        #                      "<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
+                        #                      .format(j.sample_number, j.sample_name, j.seq_code, j.seq_index,
+                        #                              j.data_request,
+                        #                              j.seq_data,
+                        #                              j.Seq_result[j.seq_result - 1][1], j.seq_note,
+                        #                              j.Rebulid[j.is_rebuild][1])))
+                        try:
+                            if SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code:
+                                if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(48, 58):
+                                    if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[-1:]) in range(
+                                            48, 58):
+                                        if ord(SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                               -2:-1]) in range(48, 58):
+                                            new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                         0:-2] + \
+                                                         str(int(SampleInfo.objects.filter(
+                                                             unique_code=j.unique_code).first().color_code[-2:]) + 1)
+                                        else:
+                                            new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
+                                                         0:-1] + \
+                                                         str(int(SampleInfo.objects.filter(
+                                                             unique_code=j.unique_code).first().color_code[-1:]) + 1)
+                                        SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
                                     else:
-                                        new_status = SampleInfo.objects.filter(unique_code=j.unique_code).first().color_code[
-                                                     0:-1] + \
-                                                     str(int(SampleInfo.objects.filter(
-                                                         unique_code=j.unique_code).first().color_code[-1:]) + 1)
-                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(color_code=new_status)
-                                else:
-                                    SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                        color_code=" __{}__重测序（未执行）1".format(sub_number))
-                        else:
-                            SampleInfo.objects.filter(unique_code=j.unique_code).update(
-                                color_code=" __{}__重测序（未执行）1".format(sub_number))
-                        seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
-                    except:
-                        pass
-                old = obj.seqSubmit.seq_number
-                if "_" in old:
-                    new = old[0:-1] + str(int(old[-1]) + 1)
+                                        SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                            color_code=" __{}__重测序（未执行）1".format(sub_number))
+                            else:
+                                SampleInfo.objects.filter(unique_code=j.unique_code).update(
+                                    color_code=" __{}__重测序（未执行）1".format(sub_number))
+                            seq.sample.add(SampleInfo.objects.filter(unique_code=j.unique_code).first())
+                        except:
+                            pass
+                    old = obj.seqSubmit.seq_number
+                    if "_" in old:
+                        new = old[0:-1] + str(int(old[-1]) + 1)
+                    else:
+                        new = old + "_" + "1"
+                    seq.seq_number = new
+                    seq.save()
                 else:
-                    new = old + "_" + "1"
-                seq.seq_number = new
-                seq.save()
-                del seq
+                    pass
                 del md
                 # content = ""
                 # for x in msg_email:
