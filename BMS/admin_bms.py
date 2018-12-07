@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 from django.contrib.admin import AdminSite
 from django.contrib.auth.admin import User, UserAdmin, Group, GroupAdmin
+from djcelery.admin import IntervalSchedule, CrontabSchedule, PeriodicTaskAdmin, PeriodicTask, TaskState, TaskMonitor, \
+    WorkerMonitor, WorkerState
 from django.template.response import TemplateResponse
 from django.utils.translation import ugettext_lazy
 from django.views.decorators.cache import never_cache
@@ -12,7 +14,7 @@ class BMSAdminSite(AdminSite):
     site_title = "BMS网站管理"
     site_header = ugettext_lazy('后台管理')
     login_template = "admin/login.html"
-    
+
     @never_cache
     def index(self, request, extra_context=None):
         """
@@ -30,7 +32,7 @@ class BMSAdminSite(AdminSite):
         return TemplateResponse(
             request, self.index_template or 'admin/index.html', context
         )
-    
+
     def each_context(self, request):
         """
         Returns a dictionary of variables to put in the template context for
@@ -69,7 +71,7 @@ class BMSAdminSite(AdminSite):
             'group_id': group_context,
             'available_apps': self.get_app_list(request),
         }
-    
+
     @never_cache
     def login(self, request, extra_context=None):
         extra_context = extra_context or {}
@@ -94,3 +96,8 @@ class BMSAdminSite(AdminSite):
 BMS_admin_site = BMSAdminSite()
 BMS_admin_site.register(User, UserAdmin)
 BMS_admin_site.register(Group, GroupAdmin)
+BMS_admin_site.register(IntervalSchedule)
+BMS_admin_site.register(CrontabSchedule)
+BMS_admin_site.register(PeriodicTask, PeriodicTaskAdmin)
+BMS_admin_site.register(TaskState, TaskMonitor)
+BMS_admin_site.register(WorkerState, WorkerMonitor)
