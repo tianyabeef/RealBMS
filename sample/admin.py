@@ -265,6 +265,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     for i in subproject:
                         result |= (qs & i.sampleInfoForm.all())
                     return result
+                elif current_group_set[0].name == "销售总监":
+                    return qs
+                else:
+                    return qs
             else:
                 names = [i.name for i in current_group_set]
                 if "销售总监" in names:
