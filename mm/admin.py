@@ -107,7 +107,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
         if obj.submit:
             return ["contract","all_amount","contract_number","contact_note","submit"]
         else:
-            return ["",]
+            return self.readonly_fields
 
     def save_model(self, request, obj, form, change):
         if obj.submit:
