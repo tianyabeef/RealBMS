@@ -283,16 +283,17 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 if qs.count()==0:
                     self.message_user(request,"未选择样品！")
                     return None
-                msg_dingding = "项目{0}的抽提执行{1}结果已上传".format(project.sub_project,obj.extSubmit)
-                # msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
-                #              "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
-                #              "<th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>".format(msg_dingding),]
                 md = md5()
                 md.update(("ext" + str(time.time())).encode())
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
-                msg_email = "编号：{0} 的抽提实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number,data_url)
+                msg_email = "编号：{0} 的抽提实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+
+                msg_dingding = "项目{0}的抽提执行{1}结果已上传{2}".format(project.sub_project,obj.extSubmit,data_url)
+                # msg_email = ["<h2>{0}</h2><br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量"
+                #              "</th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>"
+                #              "<th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>".format(msg_dingding),]
                 for i in qs.filter(is_rebuild=0):
                     # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td>"
                     #                   "<td>{8}</td><td>{9}</td><td>{10}</td><td>{11}</td><td>{12}</td></tr>".format(i.sample_number,i.sample_name,i.species,i.Type_of_Sample[i.sample_type-1][1],i.sample_used,
@@ -510,16 +511,17 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 if qs.count()==0:
                     self.message_user(request,"未选择样品！")
                     return None
-                msg_dingding = "项目{0}的建库执行{1}结果已上传".format(project.first().sub_project, obj.libSubmit)
-                # # msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
-                #              "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
-                #              "</tr>".format(msg_dingding), ]
                 md = md5()
                 md.update(("lib" + str(time.time())).encode())
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
                 msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+
+                msg_dingding = "项目{0}的建库执行{1}结果已上传{2}".format(project.first().sub_project, obj.libSubmit,data_url)
+                # # msg_email = ["<h2>{0}</h2><br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)"
+                #              "</th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>备注(文库)</th><th>选择是否重建库</th>"
+                #              "</tr>".format(msg_dingding), ]
 
                 for i in qs.filter(is_rebuild=0):
                     # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td>"
@@ -789,17 +791,18 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 if qs.count()==0:
                     self.message_user(request,"未选择样品！")
                     return None
-                msg_dingding = "项目{0}的测序执行{1}结果已上传".format(project.first().sub_project, obj.seqSubmit)
-                # msg_email = [
-                #     "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
-                #     "</th><th>测序数据量</th><th>结论(测序)</th><th>备注(测序)</th><th>选择是否重测序</th>"
-                #     "</tr>".format(msg_dingding), ]
                 md = md5()
                 md.update(("lib" + str(time.time())).encode())
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
                 msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+
+                msg_dingding = "项目{0}的测序执行{1}结果已上传{2}".format(project.first().sub_project, obj.seqSubmit,data_url)
+                # msg_email = [
+                #     "<h2>{0}</h2><br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求"
+                #     "</th><th>测序数据量</th><th>结论(测序)</th><th>备注(测序)</th><th>选择是否重测序</th>"
+                #     "</tr>".format(msg_dingding), ]
 
                 for i in qs.filter(is_rebuild=0):
                     # msg_email.append(("<tr><td>{0}</td><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td>"
