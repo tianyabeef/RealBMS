@@ -43,46 +43,46 @@ def get_sub_dept_users(dept_ids=None):
             dept_users.extend(users)
         return dept_users
 
+def task_updateem():
+    get_level_2_depts_params = {
+        "access_token": access_token,
+        "id": 1,
+        "fetch_child": False,
+    }
+    get_level_2_depts = DeptsRequest(params=get_level_2_depts_params)
+    get_level_2_depts.get_json_response()
 
-get_level_2_depts_params = {
-    "access_token": access_token,
-    "id": 1,
-    "fetch_child": False,
-}
-get_level_2_depts = DeptsRequest(params=get_level_2_depts_params)
-get_level_2_depts.get_json_response()
-
-# 以下get_depts方法在0.2.4版本才有
-level_2_depts = get_level_2_depts.get_depts(dept_name="财务部")
-sub_dept_ids = recruit_dept_ids(init_ids=[level_2_depts["id"]],
-                                total_ids=[level_2_depts["id"]],
-                                access_token=access_token)
-sub_dept_users = get_sub_dept_users(dept_ids=sub_dept_ids)
-print(sub_dept_users)
-n = 0
-un = 0
-mn = 0
-for user in sub_dept_users:
-    users_django = User.objects.filter(last_name__exact=user['name'][0], first_name__exact=user['name'][1:])
-    if users_django:
-        if len(users_django) == 1:
-            user_django = users_django[0]
-            employees = Employees.objects.filter(user=user_django)
-            if employees:
-                employees.dingtalk_id = user['userid']
-                employees.dingtalk_name = user['name']
-                employees.is_on_job = user_django.is_staff
-                employees.submit_date = datetime.datetime.now()
-                mn = mn + 1
-            else:
-                Employees.objects.create(user=user_django, dingtalk_id=user['userid'], dingtalk_name=user['name'],
-                                         submit_date=datetime.datetime.now(), is_on_job=user_django.is_staff)
-                n = n + 1
-    else:
-        un = un + 1
-print("总共%s个员工，添加成功的%s个员工，不成功的%s个员工，修改成功的%s个员工" % (len(sub_dept_users), n, un, mn))
-# 讨论组
-params = {"access_token": access_token}
+    # 以下get_depts方法在0.2.4版本才有
+    level_2_depts = get_level_2_depts.get_depts(dept_name="科技服务事业部")
+    sub_dept_ids = recruit_dept_ids(init_ids=[level_2_depts["id"]],
+                                    total_ids=[level_2_depts["id"]],
+                                    access_token=access_token)
+    sub_dept_users = get_sub_dept_users(dept_ids=sub_dept_ids)
+    print(sub_dept_users)
+    n = 0
+    un = 0
+    mn = 0
+    for user in sub_dept_users:
+        users_django = User.objects.filter(last_name__exact=user['name'][0], first_name__exact=user['name'][1:])
+        if users_django:
+            if len(users_django) == 1:
+                user_django = users_django[0]
+                employees = Employees.objects.filter(user=user_django)
+                if employees:
+                    employees.dingtalk_id = user['userid']
+                    employees.dingtalk_name = user['name']
+                    employees.is_on_job = user_django.is_staff
+                    employees.submit_date = datetime.datetime.now()
+                    mn = mn + 1
+                else:
+                    Employees.objects.create(user=user_django, dingtalk_id=user['userid'], dingtalk_name=user['name'],
+                                             submit_date=datetime.datetime.now(), is_on_job=user_django.is_staff)
+                    n = n + 1
+        else:
+            un = un + 1
+    print("总共%s个员工，添加成功的%s个员工，不成功的%s个员工，修改成功的%s个员工" % (len(sub_dept_users), n, un, mn))
+    # 讨论组
+    params = {"access_token": access_token}
 # data = {
 #                 "name": "财务钉钉群-BMS",
 #                 "owner":"0629592907207",
