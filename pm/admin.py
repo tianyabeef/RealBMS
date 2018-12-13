@@ -500,9 +500,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     obj.save()
                     n = n + 1
                 # 新增立项的时候，给实验发钉钉通知
-                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
-                                        dingdingid)
+                                        dingdingid.chat_id)
                 print(self.send_dingtalk_result)
             else:
                 sn = sn + 1
@@ -658,9 +658,9 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.save()
                 obj.save()
                 # 新增抽提的时候，给实验发钉钉通知
-                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
-                                        dingdingid)
+                                        dingdingid.chat_id)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,), level=messages.ERROR)
         # # 新增抽提的时候，给实验发钉钉通知
         # self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
@@ -855,10 +855,9 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.save()
                 obj.save()
                 # 新增建库的时候，给实验发钉钉通知
-                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
-                                        dingdingid)
-                print(self.send_dingtalk_result)
+                                        dingdingid.chat_id)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # # 新增建库的时候，给实验发钉钉通知
@@ -1065,9 +1064,9 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.save()
                     obj.save()
                     # 新增测序的时候，给实验发钉钉通知
-                    dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                    dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                     self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
-                                            dingdingid)
+                                            dingdingid.chat_id)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # # 新增测序的时候，给实验发钉钉通知
@@ -1229,9 +1228,9 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
                 # 新增分析的时候，给实验发钉钉通知
-                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
-                                        dingdingid)
+                                        dingdingid.chat_id)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # # 新增分析的时候，给实验发钉钉通知

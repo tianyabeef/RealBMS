@@ -188,11 +188,11 @@ class SampleInfoResource(resources.ModelResource):
         instance.sample_species = row["物种(没有写无)"]
         if SampleInfo.objects.all().count() == 0:
             instance.sample_number = str(datetime.datetime.now().year) + \
-                                     Monthchoose[datetime.datetime.now().month] + "0001"
+                                     Monthchoose[datetime.datetime.now().month] + "1"
             instance.unique_code = 'RY_Sample_1'
         else:
             instance.sample_number = str(datetime.datetime.now().year) + \
-                                     Monthchoose[datetime.datetime.now().month] + "000" + str(
+                                     Monthchoose[datetime.datetime.now().month] + str(
                 SampleInfo.objects.latest('id').id + 1)
             instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
@@ -409,7 +409,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 if not (instance.unique_code and instance.sample_number):
                     instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
                     instance.sample_number = str(datetime.datetime.now().year) + \
-                                             Monthchoose[datetime.datetime.now().month] + "000" + str(
+                                             Monthchoose[datetime.datetime.now().month] + str(
                         SampleInfo.objects.latest('id').id + 1)
                 instance.save()
                 formset.save_m2m()
