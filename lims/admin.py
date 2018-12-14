@@ -144,17 +144,17 @@ class SampleInfoExtResource(resources.ModelResource):
         model = SampleInfoExt
         skip_unchanged = True
         import_id_fields = ("sample_number",)
-        fields = ("id",'sample_number','sample_used',
+        fields = ("id",'sample_number',"sample_name",'sample_used',
         'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
         # export_order = ("id",'sample_number','sample_used',
         # 'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
 
     def get_export_headers(self):
-        return ["id","sample_number","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
+        return ["id","sample_number","样品名称","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def get_diff_headers(self):
-        return ["id","sample_number","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
+        return ["id","sample_number","样品名称","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
             ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def export(self, queryset=None, *args, **kwargs):
@@ -205,7 +205,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     appsecret = DINGTALK_SECRET
 
-    fields = ("extSubmit","ext_experimenter",("extract_method","test_method"),"note","upload_file","is_submit")
+    # fields = ("extSubmit","ext_experimenter",("extract_method","test_method"),"note","upload_file","is_submit")
 
     search_fields = ("extract_method","test_method")
 
@@ -213,11 +213,26 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
 
-    exclude = ("ext_end_date","query_code")
+    # exclude = ("ext_end_date","query_code")
 
     list_display_links = ('extSubmit',)
 
     ordering = ('-id',)
+
+    readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang")
+
+    fieldsets = (
+        ('合同信息', {
+            'fields': (('contacts', 'contract_number', 'partner_company',),
+                       ('sub_project_name', 'sample_receiver', 'arrive_time',),"is_fanyang")
+        }),
+        ('任务信息', {
+            'fields': ('extSubmit', 'ext_experimenter',("sample_count"), ('extract_method',
+                                                'test_method',), ('note',),"upload_file","is_submit")
+        }),
+    )
+
 
     def get_object(self, request, object_id, from_field=None):
 
@@ -240,17 +255,56 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         return super().formfield_for_manytomany( db_field, request, **kwargs)
 
+
     def get_readonly_fields(self, request, obj=None):
-        self.readonly_fields = []
         try:
             if obj.is_submit:
-                self.readonly_fields = ('extSubmit','ext_experimenter',"extract_method","test_method",'upload_file','ext_end_date', 'note',"is_submit",)
+                self.readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang",'contacts', 'contract_number', 'partner_company', 'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang",'extSubmit','ext_experimenter',"extract_method","test_method",'upload_file','ext_end_date', 'note',"is_submit",)
                 return self.readonly_fields
         except:
 
             return self.readonly_fields
 
         return self.readonly_fields
+
+    def sample_count(self,obj):
+
+        return obj.sampleinfoext_set.all().count()
+
+    sample_count.short_description = '样品数量'
+
+    def contacts(self, obj):
+        return obj.extSubmit.subProject.contract.contacts
+    contacts.short_description = '合同联系人姓名'
+
+    def sub_project_name(self, obj):
+        return obj.extSubmit.subProject.sub_project
+    sub_project_name.short_description = '子项目名称'
+
+    def contract_number(self, obj):
+        return obj.extSubmit.subProject.contract.contract_number
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.extSubmit.subProject.contract.partner_company
+    partner_company.short_description = '合同单位'
+
+    def sample_receiver(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.extSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms])
+    sample_receiver.short_description = '样品接收人'
+
+    def arrive_time(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.extSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.arrive_time.isoformat() for sampleInfoForm in sampleInfoForms])
+    arrive_time.short_description = '样品接收时间'
+
+    def is_fanyang(self,obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.extSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sampleinfoformid + "---" + sampleInfoForm.Management_to_the_rest[sampleInfoForm.management_to_rest-1][1] + "\n"for sampleInfoForm in sampleInfoForms])
+
+    is_fanyang.short_description = '样品是否要求返样'
 
     def save_model(self, request, obj, form, change):
 
@@ -351,12 +405,26 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # content = ""
                 # for x in msg_email:
                 #     content += x
-                # content += "</table>"
-                self.send_email(content="内容",html_message = msg_email,
-                        sender=settings.EMAIL_FROM,
-                        recipient_list=["love949872618@qq.com",],
-                        fail_silently=False)
-                self.send_group_message(msg_dingding,"chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                # content += "</table>"project_manager
+                email_address = obj.extSubmit.subProject.project_manager.email
+                if email_address:
+                    try:
+                        self.send_email(content="内容",html_message = msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address,"pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request,"邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                self.send_group_message(msg_dingding,dingdingid.chat_id)
                 self.message_user(request,"抽提实验结果导入成功")
             else:
                 pass
@@ -370,17 +438,17 @@ class SampleInfoLibResource(resources.ModelResource,):
         model = SampleInfoLib
         skip_unchanged = True
         import_id_fields = ("sample_number",)
-        fields = ("id",'sample_number','lib_code',
+        fields = ("id",'sample_number',"sample_name",'lib_code',
         'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
         # export_order = ('sample_number','lib_code',
         # 'index', 'lib_volume','lib_concentration', 'lib_total', 'lib_result', 'lib_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["id","sample_number","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
+        return ["id","sample_number","样品名称","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
             ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
     def get_diff_headers(self):
-        return ["id","sample_number","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
+        return ["id","sample_number","样品名称","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
                 ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
     def export(self, queryset=None, *args, **kwargs):
@@ -431,8 +499,21 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     save_on_top = False
 
-    fields = ("libSubmit","lib_experimenter",("reaction_times","pcr_system","dna_polymerase"),("model_initiation_mass","enzyme_number",
+    # fields = ("libSubmit","lib_experimenter",("reaction_times","pcr_system","dna_polymerase"),("model_initiation_mass","enzyme_number",
+    #          ),("pcr_process","loop_number","gel_recovery_kit"),"annealing_temperature","note","upload_file","is_submit")
+
+    fieldsets = (
+        ('合同信息', {
+            'fields': (('contacts', 'contract_number', 'partner_company',),
+                       ('sub_project_name', 'sample_receiver', 'arrive_time',),"is_fanyang")
+        }),
+        ('任务信息', {
+            'fields': ("libSubmit","lib_experimenter",("sample_count"),("reaction_times","pcr_system","dna_polymerase"),("model_initiation_mass","enzyme_number",
              ),("pcr_process","loop_number","gel_recovery_kit"),"annealing_temperature","note","upload_file","is_submit")
+
+        }),
+    )
+
 
     form = LibExecuteForm
 
@@ -450,17 +531,59 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     ordering = ('-id',)
 
+    readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang")
+
     def get_readonly_fields(self, request, obj=None):
-        self.readonly_fields = []
         try:
             if obj.is_submit:
-                self.readonly_fields = ('libSubmit','lib_experimenter','upload_file','lib_end_date', 'note',"is_submit",
+                self.readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang",'libSubmit','lib_experimenter','upload_file','lib_end_date', 'note',"is_submit",
                                         "reaction_times","pcr_system","dna_polymerase","model_initiation_mass","enzyme_number",
                                         "pcr_process","annealing_temperature","loop_number","gel_recovery_kit")
                 return self.readonly_fields
         except:
             return self.readonly_fields
         return self.readonly_fields
+
+    def sample_count(self,obj):
+
+        return obj.sampleinfolib_set.all().count()
+
+    sample_count.short_description = '样品数量'
+
+    def contacts(self, obj):
+        return obj.libSubmit.subProject.contract.contacts
+    contacts.short_description = '合同联系人姓名'
+
+    def sub_project_name(self, obj):
+        return obj.libSubmit.subProject.sub_project
+    sub_project_name.short_description = '子项目名称'
+
+    def contract_number(self, obj):
+        return obj.libSubmit.subProject.contract.contract_number
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.libSubmit.subProject.contract.partner_company
+    partner_company.short_description = '合同单位'
+
+    def sample_receiver(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.libSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms])
+    sample_receiver.short_description = '样品接收人'
+
+    def arrive_time(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.libSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.arrive_time.isoformat() for sampleInfoForm in sampleInfoForms])
+    arrive_time.short_description = '样品接收时间'
+
+    def is_fanyang(self,obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.libSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sampleinfoformid + "---" + sampleInfoForm.Management_to_the_rest[sampleInfoForm.management_to_rest-1][1] + "\n"for sampleInfoForm in sampleInfoForms])
+
+    is_fanyang.short_description = '样品是否要求返样'
+
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
         extra_context = extra_context or {}
@@ -582,11 +705,26 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # for x in msg_email:
                 #     content += x
                 # content += "</table>"
-                self.send_email(content="内容", html_message=msg_email,
-                                sender=settings.EMAIL_FROM,
-                                recipient_list=["love949872618@qq.com", ],
-                                fail_silently=False)
-                self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                email_address = obj.libSubmit.subProject.project_manager.email
+                if email_address:
+                    print("正在发送建库信息")
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address, "pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                self.send_group_message(msg_dingding, dingdingid.chat_id)
                 self.message_user(request,"建库实验结果导入成功")
             else:
                 pass
@@ -599,17 +737,17 @@ class SampleInfoSeqResource(resources.ModelResource):
         model = SampleInfoSeq
         skip_unchanged = True
         import_id_fields = ("sample_number",)
-        fields = ("id",'sample_number','seq_code',
+        fields = ("id",'sample_number',"sample_name",'seq_code',
         'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
         # export_order = ('sample_number','seq_code',
         # 'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["id","sample_number","文库号","Index","数据量要求","测序数据量"
+        return ["id","sample_number","样品名称","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def get_diff_headers(self):
-        return ["id","sample_number","文库号","Index","数据量要求","测序数据量"
+        return ["id","sample_number","样品名称","文库号","Index","数据量要求","测序数据量"
             ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def export(self, queryset=None, *args, **kwargs):
@@ -656,8 +794,20 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     save_on_top = False
 
-    fields = ("seqSubmit", "seq_experimenter", "note", "upload_file",
+    readonly_fields = ("sample_count", "contacts", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang")
+
+    fieldsets = (
+        ('合同信息', {
+            'fields': (('contacts', 'contract_number', 'partner_company',),
+                       ('sub_project_name', 'sample_receiver', 'arrive_time',), "is_fanyang")
+        }),
+        ('任务信息', {
+            'fields': ("seqSubmit", "seq_experimenter",("sample_count"), "note", "upload_file",
               "is_submit")
+
+        }),
+    )
 
 
     form = SeqExecuteForm
@@ -670,13 +820,53 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
     list_display = ('seqSubmit', 'seq_end_date', 'note',"pooling","is_submit")
 
-    exclude = ("seq_end_date","query_code")
+    # exclude = ("seq_end_date","query_code")
 
     list_display_links = ('seqSubmit',)
 
     ordering = ('-id',)
 
+
+
     actions = ["processing_experiment","submit" ]
+
+    def sample_count(self,obj):
+
+        return obj.sampleinfoseq_set.all().count()
+
+    sample_count.short_description = '样品数量'
+
+    def contacts(self, obj):
+        return obj.seqSubmit.subProject.contract.contacts
+    contacts.short_description = '合同联系人姓名'
+
+    def sub_project_name(self, obj):
+        return obj.seqSubmit.subProject.sub_project
+    sub_project_name.short_description = '子项目名称'
+
+    def contract_number(self, obj):
+        return obj.seqSubmit.subProject.contract.contract_number
+    contract_number.short_description = '合同号'
+
+    def partner_company(self, obj):
+        return obj.seqSubmit.subProject.contract.partner_company
+    partner_company.short_description = '合同单位'
+
+    def sample_receiver(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.seqSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sample_receiver.username for sampleInfoForm in sampleInfoForms])
+    sample_receiver.short_description = '样品接收人'
+
+    def arrive_time(self, obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.seqSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.arrive_time.isoformat() for sampleInfoForm in sampleInfoForms])
+    arrive_time.short_description = '样品接收时间'
+
+    def is_fanyang(self,obj):
+        sampleInfoForms = SampleInfoForm.objects.filter(subproject__id=obj.seqSubmit.subProject.id)
+        return "\t/".join([sampleInfoForm.sampleinfoformid + "---" + sampleInfoForm.Management_to_the_rest[sampleInfoForm.management_to_rest-1][1] + "\n"for sampleInfoForm in sampleInfoForms])
+
+    is_fanyang.short_description = '样品是否要求返样'
 
     def get_actions(self, request):
         actions = super().get_actions(request)
@@ -737,21 +927,24 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         current_group_set = Group.objects.filter(user=request.user)
         names = [i.name for i in current_group_set]
-        readonly_fields = []
         try:
             if obj.is_submit:
-                readonly_fields = ('seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
-                return readonly_fields
+                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
+                return self.readonly_fields
             if "实验部" in names:
-                return ["is_submit",]
+                return ["contacts", "sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang","is_submit"]
             elif "项目管理" in names:
-                readonly_fields = ('seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note',)
-                return readonly_fields
+                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note',)
+                return self.readonly_fields
             else:
-                readonly_fields = ('seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note', "is_submit",)
-                return readonly_fields
+                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note', "is_submit",)
+                return self.readonly_fields
         except:
-            return readonly_fields
+            return self.readonly_fields
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "seq_experimenter":
@@ -796,7 +989,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
-                msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+                msg_email = "编号：{0} 的测序实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
 
                 msg_dingding = "项目{0}的测序执行{1}结果已上传{2}".format(project.first().sub_project, obj.seqSubmit,data_url)
                 # msg_email = [
@@ -866,11 +1059,25 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # for x in msg_email:
                 #     content += x
                 # content += "</table>"
-                self.send_email(content="内容", html_message=msg_email,
-                                sender=settings.EMAIL_FROM,
-                                recipient_list=["love949872618@qq.com", ],
-                                fail_silently=False)
-                self.send_group_message(msg_dingding, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                email_address = obj.seqSubmit.subProject.project_manager.email
+                if email_address:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address, "pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                self.send_group_message(msg_dingding, dingdingid.chat_id)
                 self.message_user(request,"测序实验结果已导入")
             else:
                 pass

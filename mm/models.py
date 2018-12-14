@@ -18,8 +18,8 @@ class InvoiceTitle(models.Model):
 
 class Contract(models.Model):
     RANGE_CHOICES = (
-        (1, '高于销售底价'),
         (2, '总监底价'),
+        (1, '高于销售底价'),
         (3, '低于总监底价'),
     )
     TYPE_CHOICES = (

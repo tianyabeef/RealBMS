@@ -188,11 +188,11 @@ class SampleInfoResource(resources.ModelResource):
         instance.sample_species = row["物种(没有写无)"]
         if SampleInfo.objects.all().count() == 0:
             instance.sample_number = str(datetime.datetime.now().year) + \
-                                     Monthchoose[datetime.datetime.now().month] + "0001"
+                                     Monthchoose[datetime.datetime.now().month] + "1"
             instance.unique_code = 'RY_Sample_1'
         else:
             instance.sample_number = str(datetime.datetime.now().year) + \
-                                     Monthchoose[datetime.datetime.now().month] + "000" + str(
+                                     Monthchoose[datetime.datetime.now().month] + str(
                 SampleInfo.objects.latest('id').id + 1)
             instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
         return instance
@@ -409,7 +409,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 if not (instance.unique_code and instance.sample_number):
                     instance.unique_code = 'RY_Sample_' + str(SampleInfo.objects.latest('id').id + 1)
                     instance.sample_number = str(datetime.datetime.now().year) + \
-                                             Monthchoose[datetime.datetime.now().month] + "000" + str(
+                                             Monthchoose[datetime.datetime.now().month] + str(
                         SampleInfo.objects.latest('id').id + 1)
                 instance.save()
                 formset.save_m2m()
@@ -443,12 +443,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     try:
                         self.send_email("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid),
                                             settings.EMAIL_FROM,
-                                            ["love949872618@qq.com", ],
+                                            ["microlab@realbio.cn",],
                                             fail_silently=False)
-                        dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
-                        self.send_group_message(msg, dingdingid)
                     except:
                         self.message_user(request, "邮箱发送失败")
+                    dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
+                    self.send_group_message(msg, dingdingid)
                     # if not self.send_dingtalk_result:
                     #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")
