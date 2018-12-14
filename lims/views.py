@@ -51,7 +51,7 @@ def getData(request):
         if result:
             for i in result:
                 i = request.META.get("HTTP_HOST") + i
-        sub_number = ext.extSubmit.subProject.sub_number
+        subject = ext.extSubmit.subProject
         dataset = ext.sampleinfoext_set.all()
         type = 1
     elif LibExecute.objects.filter(query_code=index):
@@ -59,14 +59,14 @@ def getData(request):
         if result:
             for i in result:
                 i = request.META.get("HTTP_HOST") + i
-        sub_number = LibExecute.objects.filter(query_code=index).first().libSubmit.subProject.sub_number
+        subject = LibExecute.objects.filter(query_code=index).first().libSubmit.subProject
         dataset = LibExecute.objects.filter(query_code=index).first().sampleinfolib_set.all()
         type = 2
     elif SeqExecute.objects.filter(query_code=index):
-        result = ["",]
-        sub_number = SeqExecute.objects.filter(query_code=index).first().seqSubmit.subProject.sub_number
+        subject = SeqExecute.objects.filter(query_code=index).first().seqSubmit.subProject
         dataset = SeqExecute.objects.filter(query_code=index).first().sampleinfoseq_set.all()
         type = 3
+        return render(request, "Showdata.html", {"data": dataset, "type": type, "subject": subject})
     else:
         return render(request,"Showdata.html",{"error":msg})
-    return render(request,"Showdata.html",{"data":dataset,"type":type,"sub_number":sub_number,"pic":result})
+    return render(request,"Showdata.html",{"data":dataset,"type":type,"subject":subject,"pic":result})

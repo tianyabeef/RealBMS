@@ -443,12 +443,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     try:
                         self.send_email("<h3>{0}客户的样品概要（{1}）信息已确认</h3>".format(obj.partner, obj.sampleinfoformid),
                                             settings.EMAIL_FROM,
-                                            ["love949872618@qq.com", ],
+                                            ["microlab@realbio.cn",],
                                             fail_silently=False)
-                        dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
-                        self.send_group_message(msg, dingdingid)
                     except:
                         self.message_user(request, "邮箱发送失败")
+                    dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
+                    self.send_group_message(msg, dingdingid)
                     # if not self.send_dingtalk_result:
                     #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")

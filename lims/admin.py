@@ -405,11 +405,24 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # content = ""
                 # for x in msg_email:
                 #     content += x
-                # content += "</table>"
-                self.send_email(content="内容",html_message = msg_email,
-                        sender=settings.EMAIL_FROM,
-                        recipient_list=["love949872618@qq.com",],
-                        fail_silently=False)
+                # content += "</table>"project_manager
+                email_address = obj.extSubmit.subProject.project_manager.email
+                if email_address:
+                    try:
+                        self.send_email(content="内容",html_message = msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address,"pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request,"邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
                 dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message(msg_dingding,dingdingid.chat_id)
                 self.message_user(request,"抽提实验结果导入成功")
@@ -692,10 +705,24 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # for x in msg_email:
                 #     content += x
                 # content += "</table>"
-                self.send_email(content="内容", html_message=msg_email,
-                                sender=settings.EMAIL_FROM,
-                                recipient_list=["love949872618@qq.com", ],
-                                fail_silently=False)
+                email_address = obj.libSubmit.subProject.project_manager.email
+                if email_address:
+                    print("正在发送建库信息")
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address, "pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
                 dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message(msg_dingding, dingdingid.chat_id)
                 self.message_user(request,"建库实验结果导入成功")
@@ -962,7 +989,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 key = md.hexdigest()
                 obj.query_code = key
                 data_url = "http://" + request.META.get("HTTP_HOST") + "/lims/getdata/?index=" + key
-                msg_email = "编号：{0} 的建库实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
+                msg_email = "编号：{0} 的测序实验完成，请点击<a href='{1}'>实验结果</a>查看<hr>".format(sub_number, data_url)
 
                 msg_dingding = "项目{0}的测序执行{1}结果已上传{2}".format(project.first().sub_project, obj.seqSubmit,data_url)
                 # msg_email = [
@@ -1032,10 +1059,23 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
                 # for x in msg_email:
                 #     content += x
                 # content += "</table>"
-                self.send_email(content="内容", html_message=msg_email,
-                                sender=settings.EMAIL_FROM,
-                                recipient_list=["love949872618@qq.com", ],
-                                fail_silently=False)
+                email_address = obj.seqSubmit.subProject.project_manager.email
+                if email_address:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=[email_address, "pm@realbio.cn"],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
+                else:
+                    try:
+                        self.send_email(content="内容", html_message=msg_email,
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["pm@realbio.cn",],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
                 dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message(msg_dingding, dingdingid.chat_id)
                 self.message_user(request,"测序实验结果已导入")

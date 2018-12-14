@@ -1,3 +1,4 @@
+from BMS import settings
 from BMS.admin_bms import BMS_admin_site
 from nm.models import DingtalkChat
 from .models import SubProject, ExtSubmit, LibSubmit, SeqSubmit,AnaSubmit
@@ -658,6 +659,13 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.save()
                 obj.save()
                 # 新增抽提的时候，给实验发钉钉通知
+                try:
+                    self.send_email(content="内容", html_message="编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["microlab@realbio.cn",],
+                                        fail_silently=False)
+                except:
+                    self.message_user(request,"邮箱发送失败")
                 dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
                                         dingdingid.chat_id)
@@ -855,6 +863,13 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.save()
                 obj.save()
                 # 新增建库的时候，给实验发钉钉通知
+                try:
+                    self.send_email(content="内容", html_message="编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["microlab@realbio.cn",],
+                                        fail_silently=False)
+                except:
+                    self.message_user(request,"邮箱发送失败")
                 dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                 self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
                                         dingdingid.chat_id)
@@ -1064,6 +1079,14 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.save()
                     obj.save()
                     # 新增测序的时候，给实验发钉钉通知
+                    try:
+                        self.send_email(content="内容",
+                                        html_message="编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
+                                        sender=settings.EMAIL_FROM,
+                                        recipient_list=["microlab@realbio.cn", ],
+                                        fail_silently=False)
+                    except:
+                        self.message_user(request, "邮箱发送失败")
                     dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
                     self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
                                             dingdingid.chat_id)
@@ -1227,8 +1250,16 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     subProject_old.save()
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
+                try:
+                    self.send_email(content="内容",
+                                    html_message="编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
+                                    sender=settings.EMAIL_FROM,
+                                    recipient_list=["an@realbio.cn", ],
+                                    fail_silently=False)
+                except:
+                    self.message_user(request,"邮箱发送失败")
                 # 新增分析的时候，给实验发钉钉通知
-                dingdingid = DingtalkChat.objects.get(chat_name="实验钉钉群-BMS")
+                dingdingid = DingtalkChat.objects.get(chat_name="生信分析钉钉群-BMS")
                 self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
                                         dingdingid.chat_id)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
