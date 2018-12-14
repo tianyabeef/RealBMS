@@ -13,6 +13,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
+from nm.models import DingtalkChat
 from pm.models import SubProject
 
 try:
@@ -132,19 +133,19 @@ class SampleInfoResource(resources.ModelResource):
         model = SampleInfo
         skip_unchanged = True
         fields = ('id', 'sampleinfoform',
-                  'sample_name', 'sample_receiver_name', 'sample_type', 'tube_number', 'is_extract', 'remarks',
-                  'data_request', "sample_species")
+                  'sample_name', 'sample_receiver_name', "sample_species", 'sample_type', 'tube_number', 'is_extract', 'remarks',
+                  'data_request')
         export_order = ('id', 'sampleinfoform',
-                        'sample_name', 'sample_receiver_name', 'sample_type', 'tube_number', 'is_extract', 'remarks',
-                        'data_request', "sample_species")
+                        'sample_name', 'sample_receiver_name', "sample_species",'sample_type', 'tube_number', 'is_extract', 'remarks',
+                        'data_request' )
 
     def get_export_headers(self):
-        return ["id", "概要信息编号", "样品名", "实际收到样品名"
-            , "样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))", "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求", "物种"]
+        return ["id", "概要信息编号", "样品名", "实际收到样品名","物种(没有写无)"
+            , "样品类型(没有写无)", "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求", "物种"]
 
     def get_diff_headers(self):
-        return ["id", "概要信息编号", "样品名", "实际收到样品名", "样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))",
-                "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求", "物种"]
+        return ["id", "概要信息编号", "样品名", "实际收到样品名", "物种(没有写无)", "样品类型(没有写无)",
+                "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求"]
 
     def get_or_init_instance(self, instance_loader, row):
         """
@@ -155,12 +156,12 @@ class SampleInfoResource(resources.ModelResource):
             instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
             instance.sample_name = row['样品名']
             instance.sample_receiver_name = row['实际收到样品名']
-            instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
-            instance.tube_number = row['管数']
+            instance.sample_type = row['样品类型(没有写无)']
+            instance.tube_number = int(row['管数'])
             instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
             instance.remarks = row['备注']
             instance.data_request = row['数据量要求']
-            instance.sample_species = row["物种"]
+            instance.sample_species = row["物种(没有写无)"]
             instance.save()
             return (instance, False)
         else:
@@ -179,12 +180,12 @@ class SampleInfoResource(resources.ModelResource):
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
         instance.sample_name = row['样品名']
         instance.sample_receiver_name = row['实际收到样品名']
-        instance.sample_type = row['样品类型(1-g DNA,2-组织,3-细胞,4-土壤,5-粪便其他未提取（请描述))']
-        instance.tube_number = row['管数']
+        instance.sample_type = row['样品类型(没有写无)']
+        instance.tube_number = int(row['管数'])
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
         instance.remarks = row['备注']
         instance.data_request = row['数据量要求']
-        instance.sample_species = row["物种"]
+        instance.sample_species = row["物种(没有写无)"]
         if SampleInfo.objects.all().count() == 0:
             instance.sample_number = str(datetime.datetime.now().year) + \
                                      Monthchoose[datetime.datetime.now().month] + "0001"
@@ -444,7 +445,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                             settings.EMAIL_FROM,
                                             ["love949872618@qq.com", ],
                                             fail_silently=False)
-                        self.send_group_message(msg, "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                        dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+                        self.send_group_message(msg, dingdingid)
                     except:
                         self.message_user(request, "邮箱发送失败")
                     # if not self.send_dingtalk_result:
@@ -531,60 +533,63 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
     def get_readonly_fields(self, request, obj=None):
         """  重新定义此函数，限制普通用户所能修改的字段  """
-        try:
-            current_group_set = Group.objects.filter(user=request.user)
-            names = [i.name for i in current_group_set]
-            if "实验部" in names:
+        if obj is None:
+            return self.readonly_fields
+        else:
+            try:
+                current_group_set = Group.objects.filter(user=request.user)
+                names = [i.name for i in current_group_set]
                 if obj.sample_status == 2:
                     readonly_fields = ('transform_company', "partner", 'transform_number',
-                                            'transform_contact', 'transform_phone',
-                                            'transform_status', 'sender_address', 'partner', 'partner_company',
-                                            'partner_phone', 'partner_email', 'saler',
-                                            'project_type',
-                                            'sample_num', 'extract_to_pollute_DNA',
-                                            'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
-                                            "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
-                                            'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
-                                            'sample_diwenzhuangtai', "note_receive")
+                                       'transform_contact', 'transform_phone',
+                                       'transform_status', 'sender_address', 'partner', 'partner_company',
+                                       'partner_phone', 'partner_email', 'saler',
+                                       'project_type',
+                                       'sample_num', 'extract_to_pollute_DNA',
+                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
+                                       'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
+                                       'sample_diwenzhuangtai', "note_receive")
                     return readonly_fields
-
+                if "实验部" in names:
+                    readonly_fields = ('transform_company', "partner", 'transform_number',
+                                       'transform_contact', 'transform_phone',
+                                       'transform_status', 'sender_address', 'partner', 'partner_company',
+                                       'partner_phone', 'partner_email', 'saler',
+                                       'project_type',
+                                       'sample_num', 'extract_to_pollute_DNA',
+                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       "sampleinfoformid", "time_to_upload", "information_email",)
+                    return readonly_fields
+                elif names[0] == "合作伙伴":
+                    if obj.sample_status:
+                        readonly_fields = ('transform_company', 'transform_number', "partner",
+                                           'transform_contact', 'transform_phone',
+                                           'transform_status', 'sender_address', 'partner', 'partner_company',
+                                           'partner_phone', 'partner_email', 'saler',
+                                           'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai', 'project_type',
+                                           'arrive_time', 'sample_diwenjiezhi',
+                                           'sample_num', 'extract_to_pollute_DNA', "download_teacher",
+                                           "download_tester",
+                                           'management_to_rest', 'file_teacher',
+                                           "sampleinfoformid", "time_to_upload", "information_email")
+                        return readonly_fields
+                    else:
+                        return self.readonly_fields
                 else:
                     readonly_fields = ('transform_company', "partner", 'transform_number',
-                                            'transform_contact', 'transform_phone',
-                                            'transform_status', 'sender_address', 'partner', 'partner_company',
-                                            'partner_phone', 'partner_email', 'saler',
-                                            'project_type',
-                                            'sample_num', 'extract_to_pollute_DNA',
-                                            'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
-                                            "sampleinfoformid", "time_to_upload", "information_email",)
+                                       'transform_contact', 'transform_phone',
+                                       'transform_status', 'sender_address', 'partner', 'partner_company',
+                                       'partner_phone', 'partner_email', 'saler',
+                                       'project_type',
+                                       'sample_num', 'extract_to_pollute_DNA',
+                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
+                                       'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
+                                       'sample_diwenzhuangtai', "note_receive")
                     return readonly_fields
-            if names[0] == "合作伙伴":
-                if obj.sample_status:
-                    readonly_fields = ('transform_company', 'transform_number', "partner",
-                                            'transform_contact', 'transform_phone',
-                                            'transform_status', 'sender_address', 'partner', 'partner_company',
-                                            'partner_phone', 'partner_email', 'saler',
-                                            'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai', 'project_type',
-                                            'arrive_time', 'sample_diwenjiezhi',
-                                            'sample_num', 'extract_to_pollute_DNA', "download_teacher", "download_tester",
-                                            'management_to_rest', 'file_teacher',
-                                            "sampleinfoformid", "time_to_upload", "information_email")
-                    return readonly_fields
-            else:
-                readonly_fields = ('transform_company', "partner", 'transform_number',
-                                   'transform_contact', 'transform_phone',
-                                   'transform_status', 'sender_address', 'partner', 'partner_company',
-                                   'partner_phone', 'partner_email', 'saler',
-                                   'project_type',
-                                   'sample_num', 'extract_to_pollute_DNA',
-                                   'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
-                                   "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
-                                   'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
-                                   'sample_diwenzhuangtai', "note_receive")
-                return readonly_fields
-        except:
-            readonly_fields = ["", ]
-            return readonly_fields
+            except:
+                return self.readonly_fields
 
     # def change_view(self, request, object_id, form_url='', extra_context=None):
     #     change_obj = DataPaperStore.objects.filter(pk=object_id)

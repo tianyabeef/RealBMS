@@ -23,4 +23,5 @@ def sub(x, y):
 @task(ignore_result=True, max_retries=1, default_retry_delay=10)
 def just_print():
     import BMS.dingding
+    BMS.dingding.task_updateem()
     print("import dingding.py finish")

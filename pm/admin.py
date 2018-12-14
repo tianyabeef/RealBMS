@@ -1,4 +1,5 @@
 from BMS.admin_bms import BMS_admin_site
+from nm.models import DingtalkChat
 from .models import SubProject, ExtSubmit, LibSubmit, SeqSubmit,AnaSubmit
 from django.contrib import admin
 from sample.models import SampleInfoForm
@@ -299,6 +300,15 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                 'saleman', 'company', 'project_type','income_notes','sampleInfoForm','customer_name',
                                 'customer_phone', 'service_types','sample_receiver', 'arrive_time','sub_number',
                                 'sub_project', 'sample_count','is_ext', 'is_lib', 'is_seq', 'is_ana','sub_project_note','is_submit']
+                if obj.is_balance:
+                    readonly_fields = ['contract', 'contract_number', 'contract_name', 'contacts', 'contacts_phone',
+                                       'saleman', 'company', 'project_type', 'income_notes', 'sampleInfoForm',
+                                       'customer_name',
+                                       'customer_phone', 'service_types', 'sample_receiver', 'arrive_time',
+                                       'sub_number',
+                                       'sub_project', 'sample_count', 'is_ext', 'is_lib', 'is_seq', 'is_ana',
+                                       'sub_project_note', 'is_submit',"settlement_amount","is_balance","start_up_amount"]
+
         else:
             #新增的时候不能点确定
             return ['contract_number', 'contract_name', 'contacts', 'contacts_phone', 'saleman', 'company',
@@ -405,7 +415,11 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
             obj.project_start_time = date.today()
         obj.project_manager = request.user
         # 结算
-        if obj.is_balance:
+        if obj.is_balance and obj.is_submit:
+            if obj.settlement_amount > 0:
+                contract = Contract.objects.get(id=obj.contract.id)
+                contract.use_amount += obj.settlement_amount
+                contract.save()
             obj.is_status = 15
             obj.save()
         super().save_model(request, obj, form, change)
@@ -486,8 +500,9 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     obj.save()
                     n = n + 1
                 # 新增立项的时候，给实验发钉钉通知
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message("编号{0}的立项完成------，立项人员:{1}".format(obj.sub_number, obj.project_manager),
-                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                                        dingdingid)
                 print(self.send_dingtalk_result)
             else:
                 sn = sn + 1
@@ -643,9 +658,9 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt.save()
                 obj.save()
                 # 新增抽提的时候，给实验发钉钉通知
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
-                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-                print(self.send_dingtalk_result)
+                                        dingdingid)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,), level=messages.ERROR)
         # # 新增抽提的时候，给实验发钉钉通知
         # self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
@@ -840,8 +855,9 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib.save()
                 obj.save()
                 # 新增建库的时候，给实验发钉钉通知
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
-                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
+                                        dingdingid)
                 print(self.send_dingtalk_result)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
@@ -1049,9 +1065,9 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq.save()
                     obj.save()
                     # 新增测序的时候，给实验发钉钉通知
+                    dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                     self.send_group_message("编号{0}的测序下单完成------，测序下单人员:{1}".format(obj.seq_number, obj.project_manager),
-                                            "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-                    print(self.send_dingtalk_result)
+                                            dingdingid)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # # 新增测序的时候，给实验发钉钉通知
@@ -1213,9 +1229,9 @@ class AnaSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 anaExecute = am_anaExecute.objects.create(ana_submit=obj)
                 obj.save()
                 # 新增分析的时候，给实验发钉钉通知
+                dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
                 self.send_group_message("编号{0}的分析下单完成------，分析下单人员:{1}".format(obj.ana_number, obj.project_manager),
-                                        "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-                print(self.send_dingtalk_result)
+                                        dingdingid)
         self.message_user(request, '您选中 %s个。其中 %s个已提交过了，不能再次提交。%s个提交了成功' % (queryset.count(), sn, n,),
                           level=messages.ERROR)
         # # 新增分析的时候，给实验发钉钉通知
