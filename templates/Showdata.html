@@ -9,9 +9,15 @@
     <h1>{{ error }}</h1>
 {% endif %}
 {% if type %}
+    {% if subject %}
+        项目名称：<label>{{ subject.sub_project }}</label><hr>
+        合同号：<label>{{ subject.contract.contract_number }}</label>
+        合同名称：<label>{{ subject.contract.name }}</label><br>
+        客户姓名：<label>{{ subject.contract.contacts }}</label>
+        客户单位：<label>{{ subject.contract.partner_company }}</label>
+    {% endif %}
     {% if type == 1 %}
-
-        <h1>{{ sub_number }}抽提结果</h1>
+        <h1>项目{{ subject.sub_number }}抽提结果</h1>
         <br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量
         </th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>
         <th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>
@@ -46,9 +52,11 @@
     </table>
 {% endif %}
 {% endif %}
+{% if pic %}
 {% for foo in pic %}
     <img src={{ foo }}>
 {% endfor %}
+{% endif %}
 
 </body>
 </html>
