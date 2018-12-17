@@ -29,7 +29,7 @@ class Testmethod(models.Model):
 
 
 class ExtExecute(models.Model):
-    extSubmit = models.OneToOneField(
+    extSubmit = models.ForeignKey(
         ExtSubmit,
         verbose_name='子项目编号(抽提)',
         on_delete=models.CASCADE,blank= True,null=True
@@ -62,7 +62,7 @@ class ExtExecute(models.Model):
 #建库执行
 class LibExecute(models.Model):
 
-    libSubmit = models.OneToOneField(
+    libSubmit = models.ForeignKey(
         LibSubmit,
         verbose_name='子项目编号(建库)',
         on_delete=models.CASCADE,blank= True,null=True
@@ -104,7 +104,7 @@ class LibExecute(models.Model):
 
 #测序执行
 class SeqExecute(models.Model):
-    seqSubmit = models.OneToOneField(
+    seqSubmit = models.ForeignKey(
         SeqSubmit,
         verbose_name='子项目编号(测序)',
         on_delete=models.CASCADE,blank=True,null=True
@@ -217,7 +217,7 @@ class SampleInfoExt(models.Model):
     # preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
     # is_RNase_processing = models.IntegerField(choices=Is_RNase_processing,verbose_name="是否经过RNase处理",default=1)
     species = models.CharField(max_length=200,verbose_name="物种")
-    sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
+    sample_type = models.CharField(max_length=50,verbose_name="样品类型",default="")
     ##以下字段为抽提的的结果
     sample_used = models.CharField(max_length=200,verbose_name="样品提取用量",blank=True,null=True)
     sample_rest = models.CharField(max_length=200,verbose_name="样品剩余用量",blank=True,null=True)

@@ -72,17 +72,17 @@ class InvoiceInfoResource(resources.ModelResource):
     invoice_issuingUnit = fields.Field(column_name='开票单位')
     income_set = fields.Field(column_name='到账金额集', attribute="income_set")
     income_date_set = fields.Field(column_name='到账时间集', attribute="income_date_set")
-
+    invoice_receive_date = fields.Field(column_name='合同寄回日')
 
     class Meta:
         model = Invoice
         skip_unchanged = True
         fields = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                   'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set')
+                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date")
         export_order = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                         'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set')
+                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date")
     def dehydrate_contract_amount(self, invoice):
         return '%.2f' % (invoice.invoice.contract.fis_amount+invoice.invoice.contract.fin_amount)
     def dehydrate_contract_salesman(self,invoice):
@@ -97,6 +97,18 @@ class InvoiceInfoResource(resources.ModelResource):
         return invoice.invoice.title.title
     def dehydrate_invoice_issuingUnit(self,invoice):
         return invoice.invoice.get_issuingUnit_display()
+    def dehydrate_invoice_receive_date(self,invoice):
+        date_ = invoice.invoice.contract.receive_date
+        if date_:
+            date_ = str(date_)
+            result = ""
+            for i in date_.split("-"):
+                result += (i +"-")
+            result = result[0:-1]
+        else:
+            result = "无"
+        return result
+        # return format(invoice.invoice.contract.receive_date,"Y年-m月-d日")
 
     # def export(self, queryset=None, *args, **kwargs):
     #     queryset_result = Bill.objects.filter(id=None)

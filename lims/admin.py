@@ -82,7 +82,6 @@ class SampleInfoExtInline(admin.StackedInline):
     radio_fields = {
         "quality_control_conclusion": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
-        "sample_type": admin.HORIZONTAL,
     }
     readonly_fields = ["unique_code","sample_number","sample_name","species","sample_type",]
 
@@ -211,7 +210,7 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     autocomplete_fields = ("extract_method","test_method")
 
-    list_display = ('extSubmit',  'ext_end_date', 'note',"is_submit")
+    list_display = ('extSubmit',"kehu","pro_name",'ext_end_date', 'note',"is_submit")
 
     # exclude = ("ext_end_date","query_code")
 
@@ -233,7 +232,15 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         }),
     )
 
+    def kehu(self,obj):
+        return obj.extSubmit.subProject.contract.contacts
 
+    kehu.short_description = '客户姓名'
+
+    def pro_name(self,obj):
+        return obj.extSubmit.subProject.contract.name
+
+    pro_name.short_description = '项目'
     def get_object(self, request, object_id, from_field=None):
 
         self.obj = super(ExtExecuteAdmin,self).get_object(request,object_id)
@@ -521,7 +528,7 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     appsecret = DINGTALK_SECRET
 
-    list_display = ('libSubmit', 'lib_end_date', 'note',"is_submit")
+    list_display = ('libSubmit', "kehu","pro_name",'lib_end_date', 'note',"is_submit")
 
     exclude = ("lib_end_date","query_code")
 
@@ -534,6 +541,15 @@ class LibExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
                        'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang")
 
+    def kehu(self,obj):
+        return obj.libSubmit.subProject.contract.contacts
+
+    kehu.short_description = '客户姓名'
+
+    def pro_name(self,obj):
+        return obj.libSubmit.subProject.contract.name
+
+    pro_name.short_description = '项目'
     def get_readonly_fields(self, request, obj=None):
         try:
             if obj.is_submit:
@@ -818,7 +834,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     filter_horizontal = ("seq_experimenter",)
     # list_display = ('seqSubmit', 'seq_experimenter', 'seq_end_date', 'note')
-    list_display = ('seqSubmit', 'seq_end_date', 'note',"pooling","is_submit")
+    list_display = ('seqSubmit',"kehu","pro_name", 'seq_end_date', 'note',"pooling","is_submit")
 
     # exclude = ("seq_end_date","query_code")
 
@@ -829,6 +845,16 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
 
     actions = ["processing_experiment","submit" ]
+
+    def kehu(self,obj):
+        return obj.libSubmit.subProject.contract.contacts
+
+    kehu.short_description = '客户姓名'
+
+    def pro_name(self,obj):
+        return obj.libSubmit.subProject.contract.name
+
+    pro_name.short_description = '项目'
 
     def sample_count(self,obj):
 

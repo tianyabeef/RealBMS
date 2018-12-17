@@ -178,8 +178,24 @@ class SampleInfoResource(resources.ModelResource):
         else:
             instance.id = str(int(SampleInfo.objects.latest('id').id) + 1)
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
-        instance.sample_name = row['样品名']
-        instance.sample_receiver_name = row['实际收到样品名']
+        # print(type(row["样品名"]))
+        # print(type(row["实际收到样品名"]))
+        # print(str(row["样品名"])+ "-----------" + str(type(row["样品名"])))
+        # print(str(row["实际收到样品名"])+ "-----------" + str(type(row["实际收到样品名"])))
+        if isinstance(row["样品名"],float):
+            if row["样品名"] - int(row["样品名"]) == 0.0:
+                instance.sample_name = str(int(row['样品名']))
+            else:
+                instance.sample_name = row['样品名']
+        else:
+            instance.sample_name = row['样品名']
+        if isinstance(row["实际收到样品名"],float):
+            if row["实际收到样品名"] - int(row["实际收到样品名"]) == 0.0:
+                instance.sample_receiver_name = str(int(row['实际收到样品名']))
+            else:
+                instance.sample_receiver_name = row['实际收到样品名']
+        else:
+            instance.sample_receiver_name = row['实际收到样品名']
         instance.sample_type = row['样品类型(没有写无)']
         instance.tube_number = int(row['管数'])
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']

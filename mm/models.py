@@ -62,7 +62,7 @@ class Contract(models.Model):
     send_date = models.DateField('合同寄出日', null=True, blank=True)
     tracking_number = models.CharField('快递单号', max_length=15, blank=True)
     receive_date = models.DateField('合同寄回日', null=True, blank=True)
-    contract_file = models.FileField('附件', upload_to='uploads/%Y/%m')
+    contract_file = models.FileField('附件', upload_to='uploads/%Y/%m',blank=True)
     contract_file_scanning = models.FileField('扫描件', upload_to='uploads/contractScanning/%Y/%m', blank=True, null=True)
     contacts = models.CharField('合同联系人', max_length=15, default="",null=True)
     contacts_email = models.EmailField(verbose_name="合同联系人邮箱", default='',null=True)

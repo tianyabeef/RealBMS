@@ -104,10 +104,13 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     def get_readonly_fields(self, request, obj=None):
-        if obj.submit:
-            return ["contract","all_amount","contract_number","contact_note","submit"]
-        else:
-            return self.readonly_fields
+        try:
+            if obj.submit:
+                return ["contract","all_amount","contract_number","contact_note","submit"]
+            else:
+                return self.readonly_fields
+        except:
+            return  self.readonly_fields
 
     def save_model(self, request, obj, form, change):
         if obj.submit:
