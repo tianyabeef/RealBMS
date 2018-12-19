@@ -611,7 +611,8 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     def get_changeform_initial_data(self, request):
         initial = super(ContractAdmin,self).get_changeform_initial_data(request)
         initial["type"] = 1 #
-        initial["contract_number"] = "RY"
+        # initial["contract_number"] = "RY"
+        initial["range"] = 2
         return initial
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
