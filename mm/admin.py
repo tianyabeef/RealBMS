@@ -104,10 +104,13 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
     def get_readonly_fields(self, request, obj=None):
-        if obj.submit:
-            return ["contract","all_amount","contract_number","contact_note","submit"]
-        else:
-            return self.readonly_fields
+        try:
+            if obj.submit:
+                return ["contract","all_amount","contract_number","contact_note","submit"]
+            else:
+                return self.readonly_fields
+        except:
+            return  self.readonly_fields
 
     def save_model(self, request, obj, form, change):
         if obj.submit:
@@ -346,7 +349,7 @@ class ContractResource(resources.ModelResource):
     contract_type = fields.Field(column_name="类型")
     contract_salesman = fields.Field(column_name="业务员")
     contract_price = fields.Field(column_name="单价",attribute="price")
-    contract_range = fields.Field(column_name="价格区间",attribute="range")
+    contract_range = fields.Field(column_name="价格区间",attribute="price_range")
     contract_all_amount = fields.Field(column_name="总款额",attribute="all_amount")
     contract_fis_amount = fields.Field(column_name="首款",attribute="fis_amount")
     contract_fin_amount = fields.Field(column_name="尾款",attribute="fin_amount")
@@ -388,17 +391,17 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     resource_class = ContractResource
-    list_display = ('contract_number','contract_type', 'name','partner_company_modify', 'contacts', 'type', 'salesman_name', 'price', 'range', 'all_amount', 'fis_income',
+    list_display = ('contract_number','contract_type', 'name','partner_company_modify', 'contacts', 'type', 'salesman_name', 'price', 'price_range', 'all_amount', 'fis_income',
                     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     date_hierarchy = 'send_date'
     inlines = [InvoiceInline,]
-    radio_fields = {'type': admin.HORIZONTAL,'range':admin.HORIZONTAL}
+    radio_fields = {'type': admin.HORIZONTAL,'price_range':admin.HORIZONTAL}
     list_per_page = 50
     ordering = ['-id']
     fieldsets = (
         ('基本信息', {
             'fields': (("contract_type",),('contract_number', 'name', 'type'),('contacts','contact_phone', 'contacts_email'),
-                       ('contact_address', 'partner_company', 'salesman'), ('price', 'range'),
+                       ('contact_address', 'partner_company', 'salesman'), ('price', 'price_range'),
                        ('fis_amount', 'fin_amount', 'all_amount'),( 'contact_note'),"consume_money")
         }),
         ('邮寄信息', {
@@ -528,7 +531,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         if obj:
             if obj.is_status >= 2:
-                return ['contract_number', "contract_type","consume_money",'name', 'type', 'salesman','contacts','contact_phone','contacts_email','contact_address','partner_company', 'price', 'range', 'fis_amount', 'fin_amount', 'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file','contact_note']
+                return ['contract_number', "contract_type","consume_money",'name', 'type', 'salesman','contacts','contact_phone','contacts_email','contact_address','partner_company', 'price', 'price_range', 'fis_amount', 'fin_amount', 'all_amount','tracking_number', 'send_date', 'receive_date', 'contract_file','contact_note']
         return self.readonly_fields
 
     def save_formset(self, request, form, formset, change):
@@ -612,7 +615,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         initial = super(ContractAdmin,self).get_changeform_initial_data(request)
         initial["type"] = 1 #
         # initial["contract_number"] = "RY"
-        initial["range"] = 2
+        initial["price_range"] = 2
         return initial
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
