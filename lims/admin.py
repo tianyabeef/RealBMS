@@ -77,10 +77,9 @@ class SeqExecuteForm(forms.ModelForm):
 #外键样品
 class SampleInfoExtInline(admin.StackedInline):
     model = SampleInfoExt
-    fields = (("extExecute","unique_code","sample_number",),("sample_name","species","sample_type",),("sample_used",
-               "sample_rest",),("density_checked","volume_checked","D260_280","D260_230","DNA_totel","quality_control_conclusion","is_rebuild"),)
+    fields = (("extExecute","unique_code","sample_number","sample_name","species","sample_type","sample_used",
+               "sample_rest","density_checked","volume_checked","D260_280","D260_230","DNA_totel","quality_control_conclusion","is_rebuild"),)
     radio_fields = {
-        "quality_control_conclusion": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
     }
     readonly_fields = ["unique_code","sample_number","sample_name","species","sample_type",]
@@ -144,17 +143,17 @@ class SampleInfoExtResource(resources.ModelResource):
         skip_unchanged = True
         import_id_fields = ("sample_number",)
         fields = ("id",'sample_number',"sample_name",'sample_used',
-        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
+        'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','quality_control_conclusion','note','is_rebuild')
         # export_order = ("id",'sample_number','sample_used',
         # 'sample_rest', 'density_checked','volume_checked', 'D260_280', 'D260_230', 'DNA_totel','note','quality_control_conclusion','is_rebuild')
 
     def get_export_headers(self):
         return ["id","sample_number","样品名称","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
-            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+            ,"D260/280","D260/230","DNA总量","质检结论","备注","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def get_diff_headers(self):
         return ["id","sample_number","样品名称","样品提取用量","样品剩余用量","浓度ng/uL(公司检测)","体积uL(公司检测)"
-            ,"D260/280","D260/230","DNA总量","备注","质检结论","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
+            ,"D260/280","D260/230","DNA总量","质检结论","备注","选择是否重抽提(0代表不重抽提,1代表重抽提)"]
 
     def export(self, queryset=None, *args, **kwargs):
         queryset_result = SampleInfoExt.objects.filter(id=None)
@@ -174,7 +173,10 @@ class SampleInfoExtResource(resources.ModelResource):
             instance.volume_checked = row['体积uL(公司检测)']
             instance.D260_280 = row['D260/280']
             instance.D260_230 = row['D260/230']
-            instance.DNA_totel = row['DNA总量']
+            if isinstance(row["DNA总量"],float):
+                instance.DNA_totel = round(row['DNA总量'],3)
+            else:
+                instance.DNA_totel = row['DNA总量']
             instance.note = row['备注']
             instance.quality_control_conclusion = row['质检结论']
             instance.is_rebuild = row['选择是否重抽提(0代表不重抽提,1代表重抽提)']

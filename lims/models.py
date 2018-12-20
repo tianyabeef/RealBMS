@@ -183,12 +183,12 @@ class SampleInfoExt(models.Model):
         (2, '否'),
     )
 
-    Quality_control_conclusion = (
-        (1, 'A'),
-        (2, 'B'),
-        (3, 'C'),
-        (4, 'D'),
-    )
+    # Quality_control_conclusion = (
+    #     (1, 'A'),
+    #     (2, 'B'),
+    #     (3, 'C'),
+    #     (4, 'D'),
+    # )
 
     Type_of_Sample = (
         (1, 'g DNA'),
@@ -227,19 +227,19 @@ class SampleInfoExt(models.Model):
     D260_230 = models.CharField(max_length=50,verbose_name="D260/230",blank=True,null=True)
     DNA_totel = models.CharField(max_length=200,verbose_name="DNA总量",blank=True,null=True)
     note = models.TextField('备注', blank=True, null=True)
-    quality_control_conclusion = models.IntegerField(choices=Quality_control_conclusion,verbose_name="质检结论",default=1)##ABC
+    quality_control_conclusion = models.CharField(max_length=20,verbose_name="质检结论",default="")##ABC
     is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提",default=0)
     def __str__(self):
         return str(self.sample_number)
 
     def type_sample(self):
-        return self.Type_of_Sample[self.sample_type - 1][1]
+        return self.sample_type
 
     def rebuild(self):
         return self.Rebulid[self.is_rebuild][1]
 
     def quality(self):
-        return self.Quality_control_conclusion[self.quality_control_conclusion - 1][1]
+        return self.quality_control_conclusion
 
     class Meta:
         verbose_name = "样品池---抽提"

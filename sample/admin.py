@@ -248,7 +248,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         "sample_diwenzhuangtai": admin.HORIZONTAL,
     }
 
-    list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link', 'jindu_status')
+    list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link'
+                   #  陈夏婷提出 字段暂时无用
+                    #, 'jindu_status'
+                    )
 
     list_display_links = ('sampleinfoformid',)
 
@@ -405,9 +408,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "saler":
-            kwargs["queryset"] = User.objects.filter(groups__name="业务员（销售）")
-        if db_field.name == "transform_contact":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+            kwargs["queryset"] = User.objects.filter(groups__id=3)
         if db_field.name == "sample_receiver":
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         if db_field.name == "sample_checker":
@@ -622,7 +623,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
             , ['客户信息', {
                 'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
-            }], ['收货信息', {
+            }], ['收样信息', {
                 'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
             }], ['项目信息', {
                 'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
@@ -648,7 +649,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                    'management_to_rest', 'file_teacher',
                                    "sampleinfoformid",
                                    "time_to_upload"),
-                    }], ['收货信息', {
+                    }], ['收样信息', {
                         'fields': ("arrive_time", 'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
                                    'sample_diwenzhuangtai', "note_receive"),
                     }])
@@ -677,7 +678,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 , ['客户信息', {
                     'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
-                }], ['收货信息', {
+                }], ['收样信息', {
                     'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
                 }], ['项目信息', {
                     'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
