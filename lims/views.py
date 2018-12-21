@@ -10,10 +10,10 @@ def getpicture(word):
         return None
     word_zip = word.split(".")[0] + ".zip"
     path = ""
-    for i in word.split("\\")[0:-1]:
+    for i in word.split("/")[0:-1]:
         path += i
-        path += "\\"
-    path += "tem\\"
+        path += "/"
+    path += "tem/"
     if not os.path.exists(path):
         os.rename(word,word_zip)
         f = zipfile.ZipFile(word_zip,"r")
@@ -21,23 +21,23 @@ def getpicture(word):
             f.extract(file,path)
         f.close()
         os.rename(word_zip,word)
-        pic = os.listdir(os.path.join(path,"word\media"))
+        pic = os.listdir(os.path.join(path,"word/media"))
         result = []
         result_ = []
         for i in pic:
-            result.append(os.path.join(path,"word\media\\") + i)
+            result.append(os.path.join(path,"word/media/") + i)
         for j in result:
-            url = "\media\\" + j.split("\\media\\")[1] + "\media\\" + j.split("\\media\\")[2]
+            url = "/media/" + j.split("/media/")[1] + "/media/" + j.split("/media/")[2]
             result_.append(url)
         return result_
     else:
-        pic = os.listdir(os.path.join(path, "word\media"))
+        pic = os.listdir(os.path.join(path, "word/media"))
         result = []
         result_ = []
         for i in pic:
-            result.append(os.path.join(path, "word\media\\") + i)
+            result.append(os.path.join(path, "word/media/") + i)
         for j in result:
-            url = "\media\\" + j.split("\\media\\")[1]  + "\media\\" +j.split("\\media\\")[2]
+            url = "/media/" + j.split("/media/")[1]  + "/media/" +j.split("/media/")[2]
             result_.append(url)
         return result_
 

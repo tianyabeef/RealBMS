@@ -102,7 +102,7 @@ class SampleInfoForm(models.Model):
     transform_company = models.CharField(max_length=200,verbose_name="运输公司",default="顺丰")
     transform_number = models.CharField(max_length=200,verbose_name="快递单号")
     transform_contact = models.CharField(max_length=200,verbose_name="寄样人姓名",default="")
-    transform_phone = models.BigIntegerField(verbose_name="寄样联系人电话")
+    transform_phone = models.CharField(max_length=20,verbose_name="寄样联系人电话")
     transform_status = models.IntegerField(choices=TransForm_Status,verbose_name="运输状态",default=0)
     sender_address = models.CharField(max_length=200, verbose_name="寄件人联系地址", default='')
 
@@ -145,7 +145,7 @@ class SampleInfoForm(models.Model):
     sample_diwenzhuangtai = models.IntegerField(choices=Arrive_Status,verbose_name="低温介质到达时状态",default=1)
     note_receive = models.TextField(verbose_name="样品接收备注",blank=True,null=True)
     #颜色显示
-    color_code = models.CharField(max_length=6,default='')
+    color_code = models.CharField(max_length=200,default='')
     color_code1 = models.CharField(max_length=6, default='')
 
     def __str__(self):
@@ -262,11 +262,8 @@ class SampleInfo(models.Model):
             self.color_code2)
 
     def __str__(self):
-        return format_html(
-            '<h5 >{}{}</h5>',
-            self.sample_number,
-            self.color_code)
+        return self.sample_number + "--{}--".format(self.sample_receiver_name)  + self.color_code
 
     class Meta:
-        verbose_name = "样品池管理"
-        verbose_name_plural = "样品池管理"
+        verbose_name = "样品信息"
+        verbose_name_plural = "样品信息"

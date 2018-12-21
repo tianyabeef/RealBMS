@@ -178,8 +178,24 @@ class SampleInfoResource(resources.ModelResource):
         else:
             instance.id = str(int(SampleInfo.objects.latest('id').id) + 1)
         instance.sampleinfoform = SampleInfoForm.objects.get(sampleinfoformid=row['概要信息编号'])
-        instance.sample_name = row['样品名']
-        instance.sample_receiver_name = row['实际收到样品名']
+        # print(type(row["样品名"]))
+        # print(type(row["实际收到样品名"]))
+        # print(str(row["样品名"])+ "-----------" + str(type(row["样品名"])))
+        # print(str(row["实际收到样品名"])+ "-----------" + str(type(row["实际收到样品名"])))
+        if isinstance(row["样品名"],float):
+            if row["样品名"] - int(row["样品名"]) == 0.0:
+                instance.sample_name = str(int(row['样品名']))
+            else:
+                instance.sample_name = row['样品名']
+        else:
+            instance.sample_name = row['样品名']
+        if isinstance(row["实际收到样品名"],float):
+            if row["实际收到样品名"] - int(row["实际收到样品名"]) == 0.0:
+                instance.sample_receiver_name = str(int(row['实际收到样品名']))
+            else:
+                instance.sample_receiver_name = row['实际收到样品名']
+        else:
+            instance.sample_receiver_name = row['实际收到样品名']
         instance.sample_type = row['样品类型(没有写无)']
         instance.tube_number = int(row['管数'])
         instance.is_extract = row['是否需要提取(0-不需要，1-需要)']
@@ -232,7 +248,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         "sample_diwenzhuangtai": admin.HORIZONTAL,
     }
 
-    list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link', 'jindu_status')
+    list_display = ('sampleinfoformid', "partner", 'time_to_upload', 'color_status', 'file_link'
+                   #  陈夏婷提出 字段暂时无用
+                    #, 'jindu_status'
+                    )
 
     list_display_links = ('sampleinfoformid',)
 
@@ -389,9 +408,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "saler":
-            kwargs["queryset"] = User.objects.filter(groups__name="业务员（销售）")
-        if db_field.name == "transform_contact":
-            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
+            kwargs["queryset"] = User.objects.filter(groups__id=3)
         if db_field.name == "sample_receiver":
             kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         if db_field.name == "sample_checker":
@@ -606,7 +623,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
             , ['客户信息', {
                 'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
-            }], ['收货信息', {
+            }], ['收样信息', {
                 'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
             }], ['项目信息', {
                 'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
@@ -632,7 +649,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                    'management_to_rest', 'file_teacher',
                                    "sampleinfoformid",
                                    "time_to_upload"),
-                    }], ['收货信息', {
+                    }], ['收样信息', {
                         'fields': ("arrive_time", 'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
                                    'sample_diwenzhuangtai', "note_receive"),
                     }])
@@ -661,7 +678,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 , ['客户信息', {
                     'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
-                }], ['收货信息', {
+                }], ['收样信息', {
                     'fields': (('man_to_upload', 'sample_receiver', 'sample_checker', 'sample_diwenzhuangtai'),),
                 }], ['项目信息', {
                     'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',

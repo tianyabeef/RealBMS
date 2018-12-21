@@ -55,7 +55,7 @@ class SubProject(models.Model):
     sample_count = models.IntegerField('样品数量',default=0)
     # data_amount = models.CharField('数据量要求', max_length=10)
     file_to_start = models.FileField('提前启动文件', upload_to='pm/', null=True, blank=True)
-    is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1)
+    is_status = models.IntegerField('项目状态 ', choices=STATUS_CHOICES, default=1)
     is_balance = models.BooleanField('结算', default=False)
     start_up_amount = models.DecimalField('启动金额', max_digits=12, decimal_places=2, null=True, blank=True)
     settlement_amount = models.DecimalField('结算金额', max_digits=12, decimal_places=2, null=True, blank=True)
