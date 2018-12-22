@@ -45,10 +45,10 @@ class WeeklyReport(models.Model):
         verbose_name="提交日期", auto_now_add=True
     )
     start_date = models.DateField(
-        verbose_name="起始日期", null=True, blank=True
+        verbose_name="起始日期", null=True
     )
     end_date = models.DateField(
-        verbose_name="截止日期", null=True, blank=True
+        verbose_name="截止日期", null=True
     )
     attachment = models.FileField(
         verbose_name="附件", null=True, blank=True,

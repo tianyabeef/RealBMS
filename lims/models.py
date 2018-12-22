@@ -29,7 +29,7 @@ class Testmethod(models.Model):
 
 
 class ExtExecute(models.Model):
-    extSubmit = models.OneToOneField(
+    extSubmit = models.ForeignKey(
         ExtSubmit,
         verbose_name='子项目编号(抽提)',
         on_delete=models.CASCADE,blank= True,null=True
@@ -62,7 +62,7 @@ class ExtExecute(models.Model):
 #建库执行
 class LibExecute(models.Model):
 
-    libSubmit = models.OneToOneField(
+    libSubmit = models.ForeignKey(
         LibSubmit,
         verbose_name='子项目编号(建库)',
         on_delete=models.CASCADE,blank= True,null=True
@@ -104,7 +104,7 @@ class LibExecute(models.Model):
 
 #测序执行
 class SeqExecute(models.Model):
-    seqSubmit = models.OneToOneField(
+    seqSubmit = models.ForeignKey(
         SeqSubmit,
         verbose_name='子项目编号(测序)',
         on_delete=models.CASCADE,blank=True,null=True
@@ -183,12 +183,12 @@ class SampleInfoExt(models.Model):
         (2, '否'),
     )
 
-    Quality_control_conclusion = (
-        (1, 'A'),
-        (2, 'B'),
-        (3, 'C'),
-        (4, 'D'),
-    )
+    # Quality_control_conclusion = (
+    #     (1, 'A'),
+    #     (2, 'B'),
+    #     (3, 'C'),
+    #     (4, 'D'),
+    # )
 
     Type_of_Sample = (
         (1, 'g DNA'),
@@ -217,7 +217,7 @@ class SampleInfoExt(models.Model):
     # preservation_medium = models.IntegerField(choices=Preservation_medium,verbose_name="样品保存介质",default=1)
     # is_RNase_processing = models.IntegerField(choices=Is_RNase_processing,verbose_name="是否经过RNase处理",default=1)
     species = models.CharField(max_length=200,verbose_name="物种")
-    sample_type = models.IntegerField(choices=Type_of_Sample,verbose_name="样品类型",default=1)
+    sample_type = models.CharField(max_length=50,verbose_name="样品类型",default="")
     ##以下字段为抽提的的结果
     sample_used = models.CharField(max_length=200,verbose_name="样品提取用量",blank=True,null=True)
     sample_rest = models.CharField(max_length=200,verbose_name="样品剩余用量",blank=True,null=True)
@@ -227,19 +227,19 @@ class SampleInfoExt(models.Model):
     D260_230 = models.CharField(max_length=50,verbose_name="D260/230",blank=True,null=True)
     DNA_totel = models.CharField(max_length=200,verbose_name="DNA总量",blank=True,null=True)
     note = models.TextField('备注', blank=True, null=True)
-    quality_control_conclusion = models.IntegerField(choices=Quality_control_conclusion,verbose_name="质检结论",default=1)##ABC
+    quality_control_conclusion = models.CharField(max_length=20,verbose_name="质检结论",default="")##ABC
     is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提",default=0)
     def __str__(self):
         return str(self.sample_number)
 
     def type_sample(self):
-        return self.Type_of_Sample[self.sample_type - 1][1]
+        return self.sample_type
 
     def rebuild(self):
         return self.Rebulid[self.is_rebuild][1]
 
     def quality(self):
-        return self.Quality_control_conclusion[self.quality_control_conclusion - 1][1]
+        return self.quality_control_conclusion
 
     class Meta:
         verbose_name = "样品池---抽提"
