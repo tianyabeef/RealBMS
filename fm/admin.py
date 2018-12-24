@@ -88,7 +88,7 @@ class InvoiceInfoResource(resources.ModelResource):
     def dehydrate_contract_salesman(self,invoice):
         return '%s%s' % (invoice.invoice.contract.salesman.last_name,invoice.invoice.contract.salesman.first_name)
     def dehydrate_contract_range(self,invoice):
-        return invoice.invoice.contract.get_range_display()
+        return invoice.invoice.contract.get_price_range_display()
     def dehydrate_invoice_type(self,invoice):
         return invoice.invoice.get_type_display()
     def dehydrate_invoice_amount(self,invoice):

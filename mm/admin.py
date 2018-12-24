@@ -379,7 +379,7 @@ class ContractResource(resources.ModelResource):
     def dehydrate_contract_type(self,contract):
         return contract.get_type_display()
     def dehydrate_contract_range(self,contract):
-        return contract.get_range_display()
+        return contract.get_price_range_display()
     def dehydrate_contract_salesman(self,contract):
         return "%s%s"%(contract.salesman.last_name,contract.salesman.first_name)
 
