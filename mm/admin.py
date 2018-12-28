@@ -510,7 +510,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         # 只允许管理员,拥有该模型新增权限的人员，销售总监才能查看所有#TODO 给财务开通查询所有合同的权限，暂时先用
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 2 or group.id == 12:# 市场部总监，项目管理，销售总监
+            if group.id == 7 or group.id == 2 or group.id == 12 or  group.id==15:# 市场部总监，项目管理，销售总监,市场部产品组
                 haved_perm=True
         qs = super(ContractAdmin, self).get_queryset(request)
 
@@ -522,7 +522,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         #销售总监，admin，有新增权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 2 or group.id == 12:  # 市场部总监，项目管理，销售总监
+            if group.id == 7 or group.id == 2 or group.id == 12 or  group.id==15:  # 市场部总监，项目管理，销售总监,市场部产品组
                 haved_perm=True
         if request.user.is_superuser or request.user.has_perm('mm.add_contract') or haved_perm:
             return [SaleListFilter, 'type', ('send_date', DateRangeFilter),('receive_date',DateRangeFilter)]
