@@ -222,6 +222,10 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
             obj=obj
         )
     
+    @staticmethod
+    def date_format(date):
+        return date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
+    
     def save_model(self, request, obj, form, change):
         table_context = {
             "storage_select": {
@@ -252,6 +256,11 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         # 准备上下文字典，特殊的字段用单独的字典集中更新
         paragraph_context = {f: getattr(obj, f, "") for f in fields}
         price_upper = {
+            "signed_date": self.date_format(obj.signed_date),
+            "valid_period": "{}至{}".format(
+                self.date_format(obj.signed_date),
+                self.date_format(obj.valid_date),
+            ),
             "pay_type": obj.get_pay_type_display(),
             "second_party": obj.get_second_party_display(),
             "total_price_upper": Price2UpperChinese(obj.total_price),
