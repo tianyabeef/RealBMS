@@ -413,7 +413,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     )
     autocomplete_fields = ('salesman',)
     search_fields = ('contract_number', 'name', 'salesman__username')
-    # actions = ('make_receive',)
+    actions = ('make_receive',)
     form = ContractForm
     readonly_fields = ["consume_money",]
     def partner_company_modify(self,obj):
@@ -472,22 +472,22 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
             return format_html('<span style="color:{};">{}</span>', 'blue','%s/%s/%s' % (income,amount,obj.fin_date))
     fin_income.short_description = '尾款'
 
-    # def make_receive(self, request, queryset):
-    #     # 批量记录合同回寄时间戳   方华琦确定删除20181224
-    #     rows_updated = queryset.update(receive_date=datetime.now())
-    #     for obj in queryset:
-    #         if rows_updated:
-    #             #合同寄到日 通知项目管理2
-    #             content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,合同号：%s寄回日期%s已经记录"% (obj.contract_number, obj.receive_date)
-    #             if Employees.objects.filter(user=obj.salesman):
-    #                 user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
-    #             if user_id:
-    #                 self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
-    #                 self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
-    #             self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
-    #         else:
-    #             self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
-    # make_receive.short_description = '登记所选合同已收到'
+    def make_receive(self, request, queryset):
+        # 批量记录合同回寄时间戳
+        rows_updated = queryset.update(receive_date=datetime.now())
+        for obj in queryset:
+            if rows_updated:
+                #合同寄到日 通知项目管理2
+                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,合同号：%s寄回日期%s已经记录"% (obj.contract_number, obj.receive_date)
+                if Employees.objects.filter(user=obj.salesman):
+                    user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+                if user_id:
+                    self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+                    self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+                self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
+            else:
+                self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
+    make_receive.short_description = '登记所选合同已收到'
 
     def get_changelist(self, request):
         return ContractChangeList
@@ -541,12 +541,12 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         if instances:
             fis_amount = instances[0].contract.fis_amount
             fin_amount = instances[0].contract.fin_amount
-            # if (fis_amount < formset.instance.__total__['fis']) or (fin_amount < formset.instance.__total__['fin']):
-            #     self.message_user(request, '首款已开票金额%s元，超出可开票总额，未成功添加开票' % fis_amount)
-            # else:
-            for instance in instances:
-                instance.save()
-            formset.save_m2m()
+            if (fis_amount < formset.instance.__total__['fis']) or (fin_amount < formset.instance.__total__['fin']):
+                self.message_user(request, '首款已开票金额%s元，超出可开票总额，未成功添加开票' % fis_amount)
+            else:
+                for instance in instances:
+                    instance.save()
+                formset.save_m2m()
 
 
     def save_model(self, request, obj, form, change):
