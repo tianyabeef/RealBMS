@@ -387,7 +387,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
         # 只允许管理员和拥有该模型删除权限的人员，销售总监才能查看所有
         haved_perm = False
         for group in request.user.groups.all():
-            if (group.id == 7) or (group.id == 14) or (group.id == 5) or (group.id == 4):  #财务总监，销售总监,财务部,商务部
+            if (group.id == 7) or (group.id == 14) or (group.id == 5) or (group.id == 4) or (group.id == 12) or (group.id == 15):  #销售总监、财务总监,财务部、市场部、市场总监、市场部项目组
                 haved_perm=True
         qs = super().get_queryset(request)
         if request.user.is_superuser or haved_perm:
@@ -398,7 +398,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
         #销售总监，admin，有删除权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 5 or group.id == 14:#财务总监，财务部，市场总监
+            if (group.id == 7) or (group.id == 5) or (group.id == 14) or (group.id == 4) or (group.id==12)  or (group.id == 15):#销售总监、财务总监,财务部、市场部、市场总监、市场部项目组
                 haved_perm=True
         if request.user.is_superuser or haved_perm:
             return [
