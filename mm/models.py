@@ -29,6 +29,7 @@ class Contract(models.Model):
         (4, '转录组'),
         (5, '其它'),
         (6, '无'),
+        (7, '代谢组'),
     )
     CONTRACT_TYPE = (
         (1, '流程合同'),
@@ -104,6 +105,8 @@ class Contract_execute(models.Model):
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     contract_number = models.CharField('执行合同号', max_length=30, unique=True)
     contact_note = models.TextField('执行合同备注', blank=True)
+    saler = models.ForeignKey(User,
+                              verbose_name='业务员', on_delete=models.SET_NULL, null=True)
     submit = models.BooleanField("提交",default=False)
 
     def __str__(self):
@@ -128,6 +131,7 @@ class Invoice(models.Model):
         ('hz', '杭州拓宏'),
         ('sd', '山东锐翌'),
         ('sz', '金锐生物'),
+        ('qd', '青岛锐翌'),
     )
     contract = models.ForeignKey(
         Contract,
