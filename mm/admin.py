@@ -11,7 +11,7 @@ from datetime import datetime
 from django.utils.html import format_html
 from django import forms
 from django.forms.models import BaseInlineFormSet
-from daterange_filter.filter import DateRangeFilter
+from rangefilter.filter import DateRangeFilter
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Sum
 from django.contrib.auth.models import User,Group
@@ -85,8 +85,12 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
     """
     form = ContractExecuteForm
     list_display_links = ("contract_number",)
-    list_display = ("contract_number","income","all_amount","contact_note","submit")
+    list_display = ("contract_number","income",'saler',"all_amount","contact_note","submit")
     filter_horizontal = ["contract", ]
+    readonly_fields = ["income"]
+    fields = ["contract_number","contract","saler","income","all_amount",
+              "contact_note","submit"]
+
 
     def income(self, obj):
         income = 0
@@ -103,10 +107,16 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
             kwargs["queryset"] = con
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "saler":
+            saler_ = User.objects.filter(Q(groups__id=3) | Q(groups__id=6))
+            kwargs["queryset"] = saler_
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     def get_readonly_fields(self, request, obj=None):
         try:
             if obj.submit:
-                return ["contract","all_amount","contract_number","contact_note","submit"]
+                return ["saler","contract","all_amount","contract_number","contact_note","submit"]
             else:
                 return self.readonly_fields
         except:
@@ -161,7 +171,7 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     fields = (('contract', 'title'), ('issuingUnit', 'period', 'type'), 'amount',('content', 'note'),"submit")
     # raw_id_fields = ['title',]
     autocomplete_fields = ('contract', 'title',)
-    radio_fields = {'issuingUnit':admin.HORIZONTAL, 'period': admin.HORIZONTAL, 'type': admin.HORIZONTAL}
+    radio_fields = {'issuingUnit':admin.HORIZONTAL, 'period': admin.HORIZONTAL,'type': admin.HORIZONTAL}
     list_per_page = 50
     ordering = ['-id']
     readonly_fields = ["amount",]
@@ -243,7 +253,7 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
             obj.submit = True
             obj.save()
             fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id  # TODO改为财务的钉钉群
-            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请" % (
+            content = "【上海锐翌生物科技有限公司-BMS通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请" % (
             obj.contract.name, obj.period, obj.amount)
             self.send_group_message(content, fm_chat_id)
         else:
@@ -412,8 +422,8 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         })
     )
     autocomplete_fields = ('salesman',)
-    search_fields = ('contract_number', 'name', 'salesman__username')
-    actions = ('make_receive',)
+    search_fields = ('contract_number', 'name', 'salesman__username','contacts')
+    #actions = ('make_receive',)
     form = ContractForm
     readonly_fields = ["consume_money",]
     def partner_company_modify(self,obj):
@@ -472,25 +482,25 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
             return format_html('<span style="color:{};">{}</span>', 'blue','%s/%s/%s' % (income,amount,obj.fin_date))
     fin_income.short_description = '尾款'
 
-    def make_receive(self, request, queryset):
-        # 批量记录合同回寄时间戳
-        rows_updated = queryset.update(receive_date=datetime.now())
-        for obj in queryset:
-            if rows_updated:
-                #合同寄到日 通知项目管理2
-                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,合同号：%s寄回日期%s已经记录"% (obj.contract_number, obj.receive_date)
-                if Employees.objects.filter(user=obj.salesman):
-                    user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
-                if user_id:
-                    self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
-                    self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
-                self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
-            else:
-                self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
-    make_receive.short_description = '登记所选合同已收到'
+    #def make_receive(self, request, queryset):
+    #    # 批量记录合同回寄时间戳
+    #    rows_updated = queryset.update(receive_date=datetime.now())
+    #    for obj in queryset:
+    #        if rows_updated:
+    #            #合同寄到日 通知项目管理2
+    #            content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,合同号：%s寄回日期%s已经记录"% (obj.contract_number, obj.receive_date)
+    #            if Employees.objects.filter(user=obj.salesman):
+    #                user_id = Employees.objects.get(user=obj.salesman).dingtalk_id
+    #            if user_id:
+    #                self.send_work_notice(content, DINGTALK_AGENT_ID, user_id)
+    #                self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
+    #            self.message_user(request, '%s 个合同寄到登记已完成' % rows_updated)
+    #        else:
+    #            self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
+    #make_receive.short_description = '登记所选合同已收到'
 
-    def get_changelist(self, request):
-        return ContractChangeList
+    # def get_changelist(self, request):
+    #     return ContractChangeList
 
     def get_actions(self, request):
         actions = super().get_actions(request)
@@ -510,7 +520,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         # 只允许管理员,拥有该模型新增权限的人员，销售总监才能查看所有#TODO 给财务开通查询所有合同的权限，暂时先用
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 2 or group.id == 12:# 市场部总监，项目管理，销售总监
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id==15:# 市场部总监，项目管理，销售总监
                 haved_perm=True
         qs = super(ContractAdmin, self).get_queryset(request)
 
@@ -522,11 +532,12 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         #销售总监，admin，有新增权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 2 or group.id == 12:  # 市场部总监，项目管理，销售总监
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id==15:  # 市场部总监，项目管理，销售总监
                 haved_perm=True
         if request.user.is_superuser or request.user.has_perm('mm.add_contract') or haved_perm:
-            return [SaleListFilter, 'type', ('send_date', DateRangeFilter),('receive_date',DateRangeFilter)]
-        return ['type', ('send_date', DateRangeFilter),('receive_date',DateRangeFilter)]
+            return [SaleListFilter, 'type',
+                    ('send_date', DateRangeFilter), ('receive_date', DateRangeFilter)]
+        return ['type', ('send_date', DateRangeFilter),('receive_date', DateRangeFilter)]
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -541,12 +552,12 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
         if instances:
             fis_amount = instances[0].contract.fis_amount
             fin_amount = instances[0].contract.fin_amount
-            if (fis_amount < formset.instance.__total__['fis']) or (fin_amount < formset.instance.__total__['fin']):
-                self.message_user(request, '首款已开票金额%s元，超出可开票总额，未成功添加开票' % fis_amount)
-            else:
-                for instance in instances:
-                    instance.save()
-                formset.save_m2m()
+            #if (fis_amount < formset.instance.__total__['fis']) or (fin_amount < formset.instance.__total__['fin']):
+            #    self.message_user(request, '首款已开票金额%s元，超出可开票总额，未成功添加开票' % fis_amount)
+            #else:
+            for instance in instances:
+                instance.save()
+            formset.save_m2m()
 
 
     def save_model(self, request, obj, form, change):
@@ -564,7 +575,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                                              email=obj.contacts_email, is_staff=True)
                     group_info = Group.objects.get(name="合作伙伴")
                     tt.groups.add(group_info)
-                    content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
+                    content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
                         obj.contacts_email)
                 # else:
                 #     content = content + "修改合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (
@@ -572,10 +583,10 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
                 if contract:
                     if obj.receive_date and contract[0].receive_date and (obj.receive_date != contract[0].receive_date):
-                        content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                        content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
                     elif obj.receive_date and (not contract[0].receive_date):
-                        content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                        content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
         else:
             if not user:#合同联系人的邮箱在系统中没有账号
@@ -583,11 +594,11 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                                          email=obj.contacts_email, is_staff=True)
                 group_info = Group.objects.get(name="合作伙伴")
                 tt.groups.add(group_info)
-                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
             else:
-                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
             if obj.receive_date:
-                content = content + "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                           (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
 
             message_content = ""
@@ -620,7 +631,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
-            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7))
+            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7) | Q(groups__id=6))
             kwargs["queryset"] =  sales_users
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
