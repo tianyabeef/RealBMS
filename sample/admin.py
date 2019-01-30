@@ -256,14 +256,14 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
     list_display_links = ('sampleinfoformid',)
 
     def process_result(self, result, request):
-        sample = SampleInfo.objects.latest("id").sampleinfoform
-        try:
-            send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
-                      settings.EMAIL_FROM,
-                      [sample.partner_email, ],
-                      fail_silently=False)
-        except:
-            self.message_user(request, "邮件发送失败")
+#        sample = SampleInfo.objects.latest("id").sampleinfoform
+#        try:
+#          send_mail('样品核对通知', '<h3>编号{0}的样品核对信息已上传，请查看核对</h3>'.format(sample.sampleinfoformid),
+#                   settings.EMAIL_FROM,
+#                  [sample.partner_email, ],
+#                 fail_silently=False)
+#        except:
+#     self.message_user(request, "邮件发送失败")
         return super(SampleInfoFormAdmin, self).process_result(result, request)
 
     actions = ['make_sampleinfoform_submit', 'insure_sampleinfoform']
@@ -509,7 +509,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 msg = "<h3>{0}客户的样品概要信息已上传，请核对</h3>".format(obj.partner)
                 try:
                     send_mail('样品收到通知', '{0}客户的样本已经上传，请查看核对'.format(obj.partner), settings.EMAIL_FROM,
-                              ["love949872618@qq.com", ],
+                              ["microlab@realbio.cn", ],
                               fail_silently=False)
                 except:
                     self.message_user(request, "邮箱发送失败")
