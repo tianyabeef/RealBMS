@@ -110,9 +110,12 @@ class IntentionRecord(models.Model):
 class Analyses(models.Model):
     """分析条目管理"""
     ANALYSIS_TYPE_CHOICES = (
-        (1, '标准分析'),
-        (2, '高级分析'),
-        (3, '个性化分析'),
+        (1, '16S--标准分析'),
+        (2, '16S--高级分析'),
+        (3, '16S--个性化分析'),
+        (4, 'META--标准分析'),
+        (5, 'META--高级分析'),
+        (6, 'META--个性化分析'),
     )
     union_id = models.CharField(
         verbose_name="分析统一编号", max_length=32, primary_key=True
@@ -130,7 +133,7 @@ class Analyses(models.Model):
 
     def __str__(self):
         return '【{}】-【{}】-【{}】'.format(
-            self.union_id, self.analysis_name, self.get_analysis_type_display()
+            self.get_analysis_type_display(), self.analysis_name, self.union_id
         )
 
 
