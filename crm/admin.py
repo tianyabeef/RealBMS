@@ -264,8 +264,8 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         obj.save()
     
     def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
         self.contract_produce(obj)
-        return super().save_model(request, obj, form, change)
 
 
 BMS_admin_site.register(Analyses, AnalysesAdmin)
