@@ -213,7 +213,9 @@ class WeeklyReportAdmin(ImportExportModelAdmin, NotificationMixin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if obj and obj.is_submit:
-            content = "{0}:{1}---{2}周报已提交".format(request.user.username,obj.start_date,obj.end_date)
+            content = "{0}:{1}---{2}周报已提交".format(
+                request.user.username,obj.start_date,obj.end_date
+            )
             self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
             call_back = self.send_dingtalk_result
             message = "已钉钉通知项目部门总监" if call_back else "钉钉通知失败"
