@@ -1,1 +1,1 @@
-default_app_config = 'pm.apps.PmConfig'
+default_app_config = 'crm.apps.CrmConfig'
