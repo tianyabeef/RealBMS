@@ -116,7 +116,8 @@ class ContractExecuteAdmin(ExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         try:
             if obj.submit:
-                return ["saler","contract","all_amount","contract_number","contact_note","submit"]
+                return ["saler","contract","all_amount",
+                        "income","contract_number","contact_note","submit"]
             else:
                 return self.readonly_fields
         except:
