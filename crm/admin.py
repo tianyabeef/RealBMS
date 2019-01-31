@@ -9,7 +9,7 @@ from BMS.admin_bms import BMS_admin_site
 from crm.models import Customer, Intention, IntentionRecord, Analyses, \
     ContractApplications
 from crm.forms import IntentionForm
-from BMS.settings import TEMPLATE_FROM_PATH, TEMPLATE_TO_PATH
+from BMS.settings import TEMPLATE_FROM_PATH, TEMPLATE_TO_PATH, TABLE_CONTEXT
 
 
 class CustomerAdmin(admin.ModelAdmin):
@@ -214,7 +214,7 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         
         # 默认当前分析项目包含所有高级分析项目
         analyses_init = initial.get("analyses")
-        analyses_objs = Analyses.objects.filter(union_id__contains="SE")
+        analyses_objs = Analyses.objects.filter(union_id__contains="16S")
         analyses = analyses_init if analyses_init else analyses_objs
         initial["analyses"] = analyses
         return super().render_change_form(
@@ -226,34 +226,10 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
     def date_format(date):
         return date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
     
-    def save_model(self, request, obj, form, change):
-        table_context = {
-            "storage_select": {
-                "attr": {"style": "Table Grid", "rows": 6, "cols": 4, },
-                "data": (
-                    ("选择", "存储设备", "存储量", "售价（元）"),
-                    ("", "百度网盘", "<50G", "0.00（零圆整）"),
-                    ("", "U盘", "16G", "70.00（柒拾圆整）"),
-                    ("", "U盘", "32G", "150.00（壹佰伍拾圆整）"),
-                    ("", "硬盘", "500G", "500.00（伍佰圆整）"),
-                    ("", "硬盘", "1T", "700.00（柒佰圆整）"),
-                )
-            },
-            "delivery_type": {
-                "attr": {"style": "Table Grid", "rows": 5, "cols": 2, },
-                "data": (
-                    ("存储设备", "存储量"), ("U盘", "16G"), ("U盘", "32G"),
-                    ("硬盘", "500G"), ("硬盘", "1T"),
-                ),
-            },
-        }
-        
-        # 从文本模板读取字段总列表，并从数据库表中获取可能的字段值
+    def contract_produce(self, obj):
         template_text = "{}{}".format(TEMPLATE_FROM_PATH, "template_text.txt")
         template_docx = "{}{}".format(TEMPLATE_FROM_PATH, "template_docx.docx")
         fields = ContextFields(template_text=template_text).fields
-        
-        # 准备上下文字典，特殊的字段用单独的字典集中更新
         paragraph_context = {f: getattr(obj, f, "") for f in fields}
         price_upper = {
             "signed_date": self.date_format(obj.signed_date),
@@ -273,40 +249,22 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
             "first_payment_upper": Price2UpperChinese(obj.first_payment),
             "final_payment_upper": Price2UpperChinese(obj.final_payment),
         }
-        
-        # TODO: 需要从数据库表中读取选择的分析条目，并生成分析条目字典，作为上下文更新到
-        # 总的字典当中
-        analyses = {
-            # optional: advanced analysis
-            "advanced_a": "a. 物种STAMP差异分析（每组样品数≥5）",
-            "advanced_b": "b. 功能STAMP差异分析（每组样品数≥5）",
-            "advanced_c": "c. Network网络分析（总样本量≥30）",
-            "advanced_d": "d. 差异物种与代谢通路关联分析（总样品数≥30）",
-            "advanced_e": "e. GraPhlAn分析每组样品数≥5）",
-            "advanced_f": "f. 典范相关/冗余分析（CCA/RDA）（总样品数≥5，环境因子数≤6）",
-    
-            # optional: personalized analysis
-            "personalized_a": "a. 疾病监测模型分析（Random Forest-ROC曲线）（总样本量≥60）",
-            "personalized_b": "b. 肠型分析（总样本量≥100）",
-            "personalized_c": "c. 阴道分型分析（总样本量≥60）",
-            "personalized_d": "d. Fishtaco分析（每组样品数≥10，展示代谢通路≤5）",
-            "personalized_e": "e. SourceTracker分析",
-            "personalized_f": "f. （Partial）Mantel test分析（每组样品数≥5）",
-            "personalized_g": "g. 个性化PCA分析（每组样品数≥5）",
-        }
+        analyses = {a.union_id: a.analysis_name for a in obj.analyses.all()}
         paragraph_context.update(price_upper)
         paragraph_context.update(analyses)
-        
-        # 加载所有上下文数据，在选定路径下生成合同模板
         contract = DocxProduce(
             template_text=template_text, template_docx=template_docx,
-            paragraph_context=paragraph_context, table_context=table_context,
+            paragraph_context=paragraph_context, table_context=TABLE_CONTEXT,
         )
-        to_path, file_name = TEMPLATE_TO_PATH, "{}".format(request.user)
-        contract.save(file_name=file_name, to_path=to_path)
-        
-        # 最后将合同模板路径存入数据库表
-        obj.contract_file = "uploads/{}.docx".format(request.user)
+        contract_name = "{}-{}".format(
+            obj.contract_name, self.date_format(obj.signed_date)
+        )
+        contract.save(to_path=TEMPLATE_TO_PATH, file_name=contract_name)
+        obj.contract_file = "uploads/{}.docx".format(contract_name)
+        obj.save()
+    
+    def save_model(self, request, obj, form, change):
+        self.contract_produce(obj)
         return super().save_model(request, obj, form, change)
 
 
