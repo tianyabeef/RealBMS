@@ -500,8 +500,8 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
     #            self.message_user(request, '%s 未能成功登记' % rows_updated, level=messages.ERROR)
     #make_receive.short_description = '登记所选合同已收到'
 
-    # def get_changelist(self, request):
-    #     return ContractChangeList
+    def get_changelist(self, request):
+        return ContractChangeList
 
     def get_actions(self, request):
         actions = super().get_actions(request)
