@@ -8,3 +8,6 @@ def send(request):
                '目标邮箱',
                html_message=msg)
     return HttpResponse('ok')
+if __name__ == '__main__':
+    a = 5.0
+    print(str(a))
