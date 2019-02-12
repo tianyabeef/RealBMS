@@ -137,7 +137,6 @@ class Analyses(models.Model):
         )
 
 
-
 class ContractApplications(models.Model):
     """销售合同申请"""
     PROJECT_TYPE_CHOICES = (
@@ -150,7 +149,7 @@ class ContractApplications(models.Model):
     )
     PAY_TYPE_CHOICES = (
         (1, '全款'),
-        (2, '收尾款'),
+        (2, '首尾款'),
     )
     SECOND_PARTY_CHOICES = (
         (1, '上海锐翌生物科技有限公司'),
@@ -214,13 +213,13 @@ class ContractApplications(models.Model):
         verbose_name="有效日期至", default=now
     )
     platform = models.CharField(
-        verbose_name="测序平台", max_length=256, default="Illumina 250",
+        verbose_name="测序平台", max_length=256, default="Illumina PE250",
     )
     reads_minimum = models.SmallIntegerField(
-        verbose_name="序列读长下限(万条)", default=5
+        verbose_name="序列读长下限(万条)", default=3
     )
     start_delay_sample_counts = models.SmallIntegerField(
-        verbose_name="延迟启动样品数量", null=True, blank=True, default=0
+        verbose_name="延迟启动样品数量", null=True, blank=True, default=100
     )
     extract_sample_counts = models.SmallIntegerField(
         verbose_name="提取样本数量", null=True, blank=True, default=100
@@ -240,10 +239,10 @@ class ContractApplications(models.Model):
         verbose_name="项目总价", max_digits=16, decimal_places=2
     )
     sequence_single_price = models.DecimalField(
-        verbose_name="测序单价", max_digits=16, decimal_places=2, default=300
+        verbose_name="测序分析单价", max_digits=16, decimal_places=2, default=300
     )
     sequence_total_price = models.DecimalField(
-        verbose_name="测序总价", max_digits=16, decimal_places=2
+        verbose_name="测序分析总价", max_digits=16, decimal_places=2
     )
     extract_total_price = models.DecimalField(
         verbose_name="提取总价", max_digits=16, decimal_places=2

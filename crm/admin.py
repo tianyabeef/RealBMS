@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html
+from django.contrib.auth.models import User
 
 from docx_parsing_gmdzy2010.renderer import DocxProduce, ContextFields
 from docx_parsing_gmdzy2010.utilities import Price2UpperChinese
@@ -197,7 +198,15 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         html = "<a href='%s'>下载</a>" % field.url if field else "无"
         return format_html(html)
     contract_download.short_description = '合同下载'
-
+    
+    def get_readonly_fields(self, request, obj=None):
+        users_qs = User.objects.filter(groups__id=3).order_by("id")
+        self.readonly_fields = (
+            'start_delay_sample_counts', 'databasing_upper_limit',
+            'delivery_upper_limit',
+        ) if obj and request.user in users_qs else ()
+        return self.readonly_fields
+    
     def render_change_form(self, request, context, add=False, change=False,
                            form_url='', obj=None):
         initial = context["adminform"].form.initial
@@ -252,6 +261,7 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         analyses = {a.union_id: a.analysis_name for a in obj.analyses.all()}
         paragraph_context.update(price_upper)
         paragraph_context.update(analyses)
+        print(paragraph_context)
         contract = DocxProduce(
             template_text=template_text, template_docx=template_docx,
             paragraph_context=paragraph_context, table_context=TABLE_CONTEXT,
