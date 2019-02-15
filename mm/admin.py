@@ -632,8 +632,8 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
-            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7) | Q(groups__id=6))
-            kwargs["queryset"] =  sales_users
+            sales_users = User.objects.filter(Q(groups__id=3) | Q(groups__id=7) | Q(groups__id=6)).distinct()
+            kwargs["queryset"] = sales_users
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 

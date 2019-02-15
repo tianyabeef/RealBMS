@@ -268,13 +268,10 @@ class ExtExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         try:
             if obj.is_submit:
-                self.readonly_fields = ("contacts","sample_count", 'contract_number', 'partner_company',
+                return("contacts","sample_count", 'contract_number', 'partner_company',
                        'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang",'contacts', 'contract_number', 'partner_company', 'sub_project_name', 'sample_receiver', 'arrive_time',"is_fanyang",'extSubmit','ext_experimenter',"extract_method","test_method",'upload_file','ext_end_date', 'note',"is_submit",)
-                return self.readonly_fields
         except:
-
             return self.readonly_fields
-
         return self.readonly_fields
 
     def sample_count(self,obj):
