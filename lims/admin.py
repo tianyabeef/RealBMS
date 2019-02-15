@@ -846,12 +846,12 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
     actions = ["processing_experiment","submit" ]
 
     def kehu(self,obj):
-        return obj.libSubmit.subProject.contract.contacts
+        return obj.seqSubmit.subProject.contract.contacts
 
     kehu.short_description = '客户姓名'
 
     def pro_name(self,obj):
-        return obj.libSubmit.subProject.contract.name
+        return obj.seqSubmit.subProject.contract.name
 
     pro_name.short_description = '项目'
 
