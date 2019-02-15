@@ -954,20 +954,19 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
         names = [i.name for i in current_group_set]
         try:
             if obj.is_submit:
-                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
+                return("contacts", "sample_count", 'contract_number', 'partner_company',
                        'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit','seq_experimenter','upload_file','seq_end_date', 'note',"is_submit",)
-                return self.readonly_fields
             if "实验部" in names:
                 return ["contacts", "sample_count", 'contract_number', 'partner_company',
                        'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang","is_submit"]
             elif "项目管理" in names:
-                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
-                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note',)
-                return self.readonly_fields
+                return("contacts", "sample_count", 'contract_number', 'partner_company',
+                       'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit', 'seq_experimenter', 'seq_end_date', 'note',)
+
             else:
-                self.readonly_fields = ("contacts", "sample_count", 'contract_number', 'partner_company',
+                return("contacts", "sample_count", 'contract_number', 'partner_company',
                        'sub_project_name', 'sample_receiver', 'arrive_time', "is_fanyang",'seqSubmit', 'seq_experimenter', 'upload_file', 'seq_end_date', 'note', "is_submit",)
-                return self.readonly_fields
+
         except:
             return self.readonly_fields
 
