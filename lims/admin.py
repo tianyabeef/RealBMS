@@ -973,7 +973,7 @@ class SeqExecuteAdmin(ImportExportActionModelAdmin,NotificationMixin):
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "seq_experimenter":
-            kwargs["queryset"] = User.objects.filter(groups__name="测序组")
+            kwargs["queryset"] = User.objects.filter(groups__name="实验部")
         return super().formfield_for_manytomany( db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):
