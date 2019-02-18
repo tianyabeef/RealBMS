@@ -112,14 +112,14 @@ class SampleInfoLibInline(admin.StackedInline):
 class SampleInfoSeqInline(admin.StackedInline):
     model = SampleInfoSeq
     fields = (("seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
-               "seq_data", "seq_result",  "is_rebuild"),)
+               "seq_data", "raw_reads","pand_reads","hq_reads","need_com","seq_result", "seq_note", "is_rebuild"),)
     radio_fields = {
         "seq_result": admin.HORIZONTAL,
         "is_rebuild": admin.HORIZONTAL,
     }
 
     readonly_fields = ["seqExecute", "unique_code", "sample_number", "sample_name", "seq_code", "seq_index", "data_request",
-               "seq_data", "seq_result",  "is_rebuild"]
+               "seq_data","raw_reads","pand_reads","hq_reads","need_com", "seq_result", "seq_note",  "is_rebuild"]
 
 
     def has_change_permission(self, request, obj=None):
@@ -451,19 +451,12 @@ class SampleInfoLibResource(resources.ModelResource,):
 
     def get_export_headers(self):
         return ["id","sample_number","样品名称","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
-            ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
-
-    def get_diff_headers(self):
-        return ["id","sample_number","样品名称","文库号","Index","体积uL(文库)","浓度ng/uL(文库)"
-                ,"总量ng(文库)","结论(文库)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
+            ,"总量ng(文库)","结论(1-合格，2-不合格)","备注(文库)","选择是否重建库(0代表不重建库,1代表重建库)"]
 
     def export(self, queryset=None, *args, **kwargs):
         queryset_result = SampleInfoLib.objects.filter(id=None)
-        print(queryset)
         for i in queryset:
-            print(i)
             queryset_result |= SampleInfoLib.objects.filter(libExecute=i)
-        print(queryset_result)
         return super().export(queryset=queryset_result, *args, **kwargs)
 
     def get_or_init_instance(self, instance_loader, row):
@@ -483,7 +476,7 @@ class SampleInfoLibResource(resources.ModelResource,):
             instance.lib_volume = row['体积uL(文库)']
             instance.lib_concentration = row['浓度ng/uL(文库)']
             instance.lib_total = row['总量ng(文库)']
-            instance.lib_result = row['结论(文库)']
+            instance.lib_result = row['结论(1-合格，2-不合格)']
             instance.lib_note = row['备注(文库)']
             instance.is_rebuild = row['选择是否重建库(0代表不重建库,1代表重建库)']
             instance.save()
@@ -753,17 +746,14 @@ class SampleInfoSeqResource(resources.ModelResource):
         skip_unchanged = True
         import_id_fields = ("sample_number",)
         fields = ("id",'sample_number',"sample_name",'seq_code',
-        'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
+        'seq_index', 'data_request','seq_data',"raw_reads","pand_reads","hq_reads","need_com", 'seq_result', 'seq_note','is_rebuild')
         # export_order = ('sample_number','seq_code',
         # 'seq_index', 'data_request','seq_data', 'seq_result', 'seq_note','is_rebuild')
 
     def get_export_headers(self):
-        return ["id","sample_number","样品名称","文库号","Index","数据量要求","测序数据量"
-            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
-
-    def get_diff_headers(self):
-        return ["id","sample_number","样品名称","文库号","Index","数据量要求","测序数据量"
-            ,"结论(测序)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
+        return ["id","sample_number","样品名称","文库号","Index","数据量要求","测序数据量",
+                "Raw_reads","Pand_reads","Hq_reads","需补测"
+            ,"结论(1-合格,2-不合格)","备注(测序)","选择是否重测序(0代表不重测序,1代表重测序)"]
 
     def export(self, queryset=None, *args, **kwargs):
         queryset_result = SampleInfoSeq.objects.filter(id=None)
@@ -787,8 +777,12 @@ class SampleInfoSeqResource(resources.ModelResource):
                 instance.seq_index = row['Index']
             instance.data_request = row['数据量要求']
             instance.seq_data = row['测序数据量']
-            instance.seq_result = row['结论(测序)']
+            instance.seq_result = row['结论(1-合格,2-不合格)']
             instance.seq_note = row['备注(测序)']
+            instance.raw_reads = row['Raw_reads']
+            instance.pand_reads = row['Pand_reads']
+            instance.hq_reads = row['Hq_reads']
+            instance.need_com = row['需补测']
             instance.is_rebuild = row['选择是否重测序(0代表不重测序,1代表重测序)']
             instance.save()
             return (instance, False)
