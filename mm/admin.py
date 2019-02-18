@@ -254,7 +254,7 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
             obj.submit = True
             obj.save()
             fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id  # TODO改为财务的钉钉群
-            content = "【上海锐翌生物科技有限公司-BMS通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请" % (
+            content = "【上海锐翌生物科技有限公司-BMS通知】" + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请" % (
             obj.contract.name, obj.period, obj.amount)
             self.send_group_message(content, fm_chat_id)
         else:
@@ -576,7 +576,7 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                                              email=obj.contacts_email, is_staff=True)
                     group_info = Group.objects.get(name="合作伙伴")
                     tt.groups.add(group_info)
-                    content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
+                    content = content + "【上海锐翌生物科技有限公司-BMS通知】:修改合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
                         obj.contacts_email)
                 # else:
                 #     content = content + "修改合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (
@@ -584,10 +584,10 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
 
                 if contract:
                     if obj.receive_date and contract[0].receive_date and (obj.receive_date != contract[0].receive_date):
-                        content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                        content = content + "【上海锐翌生物科技有限公司-BMS通知】:收到客户新合同,合同寄回日有变更，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
                     elif obj.receive_date and (not contract[0].receive_date):
-                        content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                        content = content + "【上海锐翌生物科技有限公司-BMS通知】:客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                                   (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
         else:
             if not user:#合同联系人的邮箱在系统中没有账号
@@ -595,11 +595,11 @@ class ContractAdmin(ExportActionModelAdmin,NotificationMixin):
                                          email=obj.contacts_email, is_staff=True)
                 group_info = Group.objects.get(name="合作伙伴")
                 tt.groups.add(group_info)
-                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (obj.contacts_email)
             else:
-                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息:新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】:新增合同操作，合同编号" + obj.contract_number + "系统中已经存在老师账户一个，账户名：%s，" % (obj.contacts_email)
             if obj.receive_date:
-                content = content + "【上海锐翌生物科技有限公司-BMS通知】测试消息,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
+                content = content + "【上海锐翌生物科技有限公司-BMS通知】,客户收到新合同，" + "合同号：%s\t合同名称：%s\t合同联系人：%s\t电话：%s" % \
                           (obj.contract_number, obj.name, obj.contacts, obj.contact_phone)
 
             message_content = ""

@@ -32,14 +32,14 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     autocomplete_fields = ("analyst", )
     change_list_template = "admin/am/change_list_am.html"
     fields = (
-        "ana_submit", "analyst", "ana_start_date", "end_date",
-        "depart_data_path", "baidu_link", "is_submit", "notes"
+        "ana_submit", "analyst", "sample_count", "ana_start_date", "end_date",
+        "depart_data_path", "baidu_link", "is_submit", "notes",
     )
     form = AnaExecuteModelForm
     list_per_page = 30
     list_display = (
-        "ana_submit", "contract_name", "sample_count", "analyst", "notes",
-        "end_date", "confirmation_sheet", "depart_data_path", "baidu_link",
+        "ana_submit", "contract_name", "analyst", "notes",
+        "end_date", "confirmation_sheet",  "baidu_link",
         "is_submit", "submit_date",
     )
     list_display_links = ('ana_submit', )
@@ -171,7 +171,9 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             name_list = set([n.sub_project for n in all_sub_project])
             content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
             dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
-            self.send_work_notice(content, DINGTALK_AGENT_ID, dingdingid)
+            dingdingid_ = DingtalkChat.objects.get(chat_name="生信分析钉钉群-BMS")
+            send_to = [dingdingid, dingdingid_]
+            self.send_work_notice(content, DINGTALK_AGENT_ID, send_to)
             call_back = self.send_dingtalk_result
             message = "已钉钉通知项目管理进度" if call_back else "钉钉通知失败"
             self.message_user(request, message)
