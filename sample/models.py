@@ -137,7 +137,7 @@ class SampleInfoForm(models.Model):
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
 
     #样品接收信息
-    arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
+    arrive_time = models.DateField(verbose_name="样品接收时间(发给客户核对前必须选择时间)",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
     sample_checker = models.ForeignKey(User,related_name="物流接收人",verbose_name="样品核对人",blank=True,null=True,on_delete=models.SET_NULL)
     sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)
