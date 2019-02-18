@@ -168,7 +168,7 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     appsecret = DINGTALK_SECRET
     list_display = ('contract', 'title', 'period', 'amount', 'issuingUnit','note', 'submit')
     list_display_links = ('contract',)
-    actions = ['',]
+    actions = ['make_invoice_submit',]
     fields = (('contract', 'title'), ('issuingUnit', 'period', 'type'), 'amount',('content', 'note'),"submit")
     # raw_id_fields = ['title',]
     autocomplete_fields = ('contract', 'title',)
@@ -178,50 +178,49 @@ class InvoiceAdmin(admin.ModelAdmin, NotificationMixin):
     readonly_fields = ["amount",]
     # form = InvoiceForm
 
-    # def make_invoice_submit(self, request, queryset):
-    #     """
-    #     批量提交开票申请
-    #     """
-    #     i = 0  #提交成功的数量
-    #     n = 0  #提交过的数量
-    #     t = 0  #选中的总数量
-    #     for obj in queryset:
-    #         t += 1
-    #         if not obj.submit:
-    #             fm_Invoice.objects.create(invoice=obj, tax_amount=6)
-    #             obj.submit = True
-    #             obj.save()
-    #             i += 1
-    #             # if obj.contract.is_status != 2:  #与市场部（方华琦）沟通不做任何限制
-    #             #     obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
-    #             #     obj.contract.save()
-    #             #新的开票申请 通知财务部5
-    #             for j in User.objects.filter(groups__id=5):
-    #                 fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
-    #                 content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息," + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请"%(obj.contract.name, obj.period, obj.amount)
-    #                 self.send_group_message(content,fm_chat_id)
-    #         else:
-    #             n += 1
-    #     if i > 0 and n > 0:
-    #         self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交，%s个提交了开票申请' % (t,n,i), level=messages.ERROR)
-    #     elif i>0 and n==0:
-    #         self.message_user(request, '您选中了%s个，其中%s个提交了开票申请' % (t, i), level=messages.ERROR)
-    #     else:
-    #         self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交' % (t, n), level=messages.ERROR)
-    # make_invoice_submit.short_description = '提交开票申请到财务'
+    def make_invoice_submit(self, request, queryset):
+        """
+        批量提交开票申请
+        """
+        i = 0  #提交成功的数量
+        n = 0  #提交过的数量
+        t = 0  #选中的总数量
+        for obj in queryset:
+            t += 1
+            if not obj.submit:
+                fm_Invoice.objects.create(invoice=obj, tax_amount=6)
+                obj.submit = True
+                obj.save()
+                i += 1
+                # if obj.contract.is_status != 2:  #与市场部（方华琦）沟通不做任何限制
+                #     obj.contract.is_status = 2   #提交第一个发票申请的状态,改为：已申请开票。合同就不能在修改了
+                #     obj.contract.save()
+                #新的开票申请 通知财务部5
+                fm_chat_id = DingtalkChat.objects.get(chat_name="财务钉钉群-BMS").chat_id # TODO改为财务的钉钉群
+                content = "【上海锐翌生物科技有限公司-BMS系统通知】" + " 合同名称：%s 款期： %s  金额：%s  提交了开票申请"%(obj.contract.name, obj.period, obj.amount)
+                self.send_group_message(content,fm_chat_id)
+            else:
+                n += 1
+        if i > 0 and n > 0:
+            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交，%s个提交了开票申请' % (t,n,i), level=messages.ERROR)
+        elif i>0 and n==0:
+            self.message_user(request, '您选中了%s个，其中%s个提交了开票申请' % (t, i), level=messages.ERROR)
+        else:
+            self.message_user(request, '您选中了%s个，其中%s 个开票申请已提交过，不能再次提交' % (t, n), level=messages.ERROR)
+    make_invoice_submit.short_description = '提交开票申请到财务'
 
     # def get_form(self, request, obj=None, change=False, **kwargs):
     #     if not change:
     #         self.form = InvoiceForm
     #     else:
     #         super().get_form(request, obj=obj, change=change, **kwargs)
-    # def get_actions(self, request):
-    #     actions = super().get_actions(request)
-    #     for group in request.user.groups.all():
-    #         if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
-    #             if "make_invoice_submit" in actions:
-    #                 del actions["make_invoice_submit"]
-    #     return actions
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 12:  # 市场部总监，销售总监
+                if "make_invoice_submit" in actions:
+                    del actions["make_invoice_submit"]
+        return actions
 
     # def change_view(self, request, object_id, form_url='', extra_context=None):
     #     extra_context = extra_context or {}
