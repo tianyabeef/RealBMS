@@ -644,7 +644,8 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 project = SubProject.objects.filter(id=id).first()
                 if project.is_status < 2:
                     project.is_status = 2
-                    project.save()
+                project.time_ext_start = obj.ext_start_date
+                project.save()
                 extExecute = lims_ExtExecute.objects.create(extSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in = [i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -674,10 +675,12 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         # self.send_group_message("编号{0}的抽提下单完成------，抽提下单人员:{1}".format(obj.ext_number, obj.project_manager),
         #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
         # print(self.send_dingtalk_result)
-        sub_number = obj.subProject.sub_number
-        project = SubProject.objects.filter(sub_number=sub_number).first()
-        project.time_ext_start = datetime.datetime.now()
-        project.save()
+        # sub_number = obj.subProject.sub_number
+        # project = SubProject.objects.filter(sub_number=sub_number).first()
+        # project.time_ext_start = datetime.datetime.now()
+        # if obj.:
+        #     project.time_ext_start = obj.ext_start_date
+        # project.save()
     make_ExtSubmit_submit.short_description = '提交提取任务'
 
     def get_readonly_fields(self, request, obj=None):
@@ -850,7 +853,8 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                 project = SubProject.objects.filter(id=id).first()
                 if project.is_status < 5:
                     project.is_status = 5
-                    project.save()
+                project.time_lib_start = obj.lib_start_date
+                project.save()
                 libExecute = lims_LibExecute.objects.create(libSubmit=obj)
                 sampleInfos = SampleInfo.objects.filter(id__in=[i.id for i in obj.sample.all()])
                 for sampleInfo in sampleInfos:
@@ -878,11 +882,11 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
         # # 新增建库的时候，给实验发钉钉通知
         # self.send_group_message("编号{0}的建库下单完成------，建库下单人员:{1}".format(obj.lib_number, obj.project_manager),
         #                         "chat62dbddc59ef51ae0f4a47168bdd2a65b")
-        # print(self.send_dingtalk_result)
-        sub_number = obj.subProject.sub_number
-        project = SubProject.objects.filter(sub_number=sub_number).first()
-        project.time_lib_start = datetime.datetime.now()
-        project.save()
+        # # print(self.send_dingtalk_result)
+        # sub_number = obj.subProject.sub_number
+        # project = SubProject.objects.filter(sub_number=sub_number).first()
+        # project.time_lib_start = datetime.datetime.now()
+        # project.save()
     make_LibSubmit_submit.short_description = '提交建库任务'
 
     def get_readonly_fields(self, request, obj=None):
