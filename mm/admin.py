@@ -505,7 +505,8 @@ class ContractAdmin(ExportActionModelAdmin, NotificationMixin):
     'fin_income', 'send_date', 'tracking_number', 'receive_date', 'file_link')
     date_hierarchy = 'send_date'
     inlines = [InvoiceInline, ]
-    radio_fields = {'type': admin.HORIZONTAL, 'price_range': admin.HORIZONTAL}
+    radio_fields = {'type': admin.HORIZONTAL, 'price_range': admin.HORIZONTAL,
+                    "management_to_rest":admin.HORIZONTAL}
     list_per_page = 50
     ordering = ['-id']
     fieldsets = (
@@ -513,7 +514,7 @@ class ContractAdmin(ExportActionModelAdmin, NotificationMixin):
             'fields': (("contract_type",), ('contract_number', 'name', 'type'),
                        ('contacts', 'contact_phone', 'contacts_email'),
                        ('contact_address', 'partner_company', 'salesman'),
-                       ('price', 'price_range'),
+                       ('price', 'price_range', "management_to_rest"),
                        ('fis_amount', 'fin_amount', 'all_amount'),
                        ('contact_note'), "consume_money")
         }),
