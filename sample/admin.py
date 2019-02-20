@@ -243,7 +243,6 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
     radio_fields = {
         "transform_status": admin.HORIZONTAL,
         "sample_diwenjiezhi": admin.HORIZONTAL,
-        "management_to_rest": admin.HORIZONTAL,
         "sample_status": admin.HORIZONTAL,
         "sample_diwenzhuangtai": admin.HORIZONTAL,
     }
@@ -563,7 +562,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                        'partner_phone', 'partner_email', 'saler',
                                        'project_type',
                                        'sample_num', 'extract_to_pollute_DNA',
-                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       'file_teacher', "download_teacher", "download_tester",
                                        "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
                                        'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
                                        'sample_diwenzhuangtai', "note_receive")
@@ -575,7 +574,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                        'partner_phone', 'partner_email', 'saler',
                                        'project_type',
                                        'sample_num', 'extract_to_pollute_DNA',
-                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       'file_teacher', "download_teacher", "download_tester",
                                        "sampleinfoformid", "time_to_upload", "information_email",)
                     return readonly_fields
                 elif names[0] == "合作伙伴":
@@ -588,7 +587,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                            'arrive_time', 'sample_diwenjiezhi',
                                            'sample_num', 'extract_to_pollute_DNA', "download_teacher",
                                            "download_tester",
-                                           'management_to_rest', 'file_teacher',
+                                           'file_teacher',
                                            "sampleinfoformid", "time_to_upload", "information_email")
                         return readonly_fields
                     else:
@@ -600,7 +599,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                        'partner_phone', 'partner_email', 'saler',
                                        'project_type',
                                        'sample_num', 'extract_to_pollute_DNA',
-                                       'management_to_rest', 'file_teacher', "download_teacher", "download_tester",
+                                       'file_teacher', "download_teacher", "download_tester",
                                        "sampleinfoformid", "time_to_upload", "information_email", "arrive_time",
                                        'sample_receiver', 'sample_checker', 'sample_diwenjiezhi',
                                        'sample_diwenzhuangtai', "note_receive")
@@ -620,7 +619,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                             'transform_contact', 'transform_phone'),
                            'transform_status', 'sender_address'),
             }]
-            , ['客户信息', {
+            , ['客户信息（与合同中信息一致）', {
                 'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
             }], ['收样信息', {
@@ -628,7 +627,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
             }], ['项目信息', {
                 'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
                            'sample_num', 'extract_to_pollute_DNA',
-                           'management_to_rest', 'file_teacher',
+                           'file_teacher',
                            "sampleinfoformid", "time_to_upload"),
             }])
         try:
@@ -640,13 +639,13 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                         'fields': ('transform_company', 'transform_number',
                                    'transform_contact', 'transform_phone',
                                    'transform_status', 'sender_address'),
-                    }], ['客户信息', {
+                    }], ['客户信息（与合同中信息一致）', {
                         'fields': (
                         'partner', 'partner_company', 'partner_phone', "information_email", 'partner_email', 'saler'),
                     }], ['项目信息', {
                         'fields': ('project_type',
                                    'sample_num', 'extract_to_pollute_DNA',
-                                   'management_to_rest', 'file_teacher',
+                                   'file_teacher',
                                    "sampleinfoformid",
                                    "time_to_upload"),
                     }], ['收样信息', {
@@ -660,12 +659,12 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                         'fields': (('transform_company', 'transform_number'), (
                             'transform_contact', 'transform_phone',
                             'sender_address',), ('transform_status',)),
-                    }], ['客户信息', {
+                    }], ['客户信息（与合同中信息一致）', {
                         'fields': (("partner", "information_email"), ('partner_company', 'partner_phone'), ('saler'),),
                     }], ['项目信息', {
                         'fields': ('project_type',
                                    'sample_num', 'extract_to_pollute_DNA',
-                                   'management_to_rest', 'file_teacher',
+                                   'file_teacher',
                                    ),
                     }])
         except:
@@ -675,7 +674,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                 'transform_contact', 'transform_phone'),
                                'transform_status', 'sender_address'),
                 }]
-                , ['客户信息', {
+                , ['客户信息（与合同中信息一致）', {
                     'fields': (
                     ('partner', 'partner_company'), ('partner_phone', "information_email", 'partner_email'), 'saler'),
                 }], ['收样信息', {
@@ -683,7 +682,7 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 }], ['项目信息', {
                     'fields': ('project_type', 'arrive_time', 'sample_diwenzhuangtai',
                                'sample_num', 'extract_to_pollute_DNA',
-                               'management_to_rest', 'file_teacher',
+                               'file_teacher',
                                "sampleinfoformid", "time_to_upload"),
                 }])
         return fieldsets

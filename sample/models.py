@@ -122,8 +122,8 @@ class SampleInfoForm(models.Model):
     #样品信息
     sample_num = models.IntegerField(verbose_name="样品数量")
     extract_to_pollute_DNA = models.NullBooleanField("DNA提取是否可能有大量非目标DNA污染",default=False)
-    management_to_rest = models.IntegerField(choices=Management_to_the_rest,
-                                             verbose_name="剩余样品处理方式",default=2)
+    # management_to_rest = models.IntegerField(choices=Management_to_the_rest,
+    #                                          verbose_name="剩余样品处理方式",default=2)
 
     sample_diwenjiezhi = models.IntegerField(choices=TransForm_Status,verbose_name="低温保存介质",default=0)
 

@@ -159,7 +159,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     list_display = ('contract_number', 'contract_name', 'sub_number', 'sub_project', 'contacts', 'saleman',
-                    'project_manager',  'project_start_time', 'time_ext_start', 'time_lib_start', 'time_ext', 'time_lib', 'time_ana', 'file_link','is_status', 'status',  'is_submit',)
+                    'project_manager',  'project_start_time', 'time_ext_start', 'time_lib_start', 'time_ext', 'time_lib', 'time_ana', "contract_management_to_rest", 'file_link','is_status', 'status',  'is_submit',)
     list_display_links = ['sub_number', ]
     actions = ['make_submit', 'make_subProject_submit']
     fieldsets = (
@@ -188,7 +188,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     )
     readonly_fields = ['contract_number', 'contract_name', 'contacts','contacts_phone', 'saleman','company',
                        'project_type','income_notes','customer_name', 'customer_phone', 'service_types',
-                       'sample_receiver','arrive_time']
+                       'sample_receiver','arrive_time', "contract_management_to_rest"]
     raw_id_fields = ['contract', ]
     filter_horizontal = ['sampleInfoForm', ]
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
@@ -209,6 +209,10 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                 "chat62dbddc59ef51ae0f4a47168bdd2a65b")
         print(self.send_dingtalk_result)
     make_subProject_submit.short_description = '终止'
+
+    def contract_management_to_rest(self, obj):
+        return obj.contract.Management_to_the_rest[obj.contract.management_to_rest-1][1]
+    contract_management_to_rest.short_description = '是否返样'
 
     def contract_number(self, obj):
         return obj.contract.contract_number
@@ -300,7 +304,7 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                 readonly_fields = ['contract', 'contract_number', 'contract_name','contacts', 'contacts_phone',
                                 'saleman', 'company', 'project_type','income_notes','sampleInfoForm','customer_name',
                                 'customer_phone', 'service_types','sample_receiver', 'arrive_time','sub_number',
-                                'sub_project', 'sample_count','is_ext', 'is_lib', 'is_seq', 'is_ana','sub_project_note','is_submit']
+                                'sub_project', 'sample_count','is_ext', 'is_lib', 'is_seq', 'is_ana','sub_project_note','is_submit', "contract_management_to_rest"]
                 if obj.is_balance:
                     readonly_fields = ['contract', 'contract_number', 'contract_name', 'contacts', 'contacts_phone',
                                        'saleman', 'company', 'project_type', 'income_notes', 'sampleInfoForm',
@@ -308,13 +312,13 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
                                        'customer_phone', 'service_types', 'sample_receiver', 'arrive_time',
                                        'sub_number',
                                        'sub_project', 'sample_count', 'is_ext', 'is_lib', 'is_seq', 'is_ana',
-                                       'sub_project_note', 'is_submit',"settlement_amount","is_balance","start_up_amount"]
+                                       'sub_project_note', 'is_submit',"settlement_amount","is_balance","start_up_amount", "contract_management_to_rest"]
 
         else:
             #新增的时候不能点确定
             return ['contract_number', 'contract_name', 'contacts', 'contacts_phone', 'saleman', 'company',
                                'project_type', 'income_notes', 'customer_name', 'customer_phone', 'service_types',
-                               'sample_receiver', 'arrive_time','is_submit']
+                               'sample_receiver', 'arrive_time','is_submit', "contract_management_to_rest"]
         return readonly_fields
 
     def get_queryset(self, request):
