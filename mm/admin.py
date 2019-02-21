@@ -790,7 +790,7 @@ class ContractAdmin(ExportActionModelAdmin, NotificationMixin):
                 # msg = EmailMultiAlternatives(subject, text_email, from_email,
                 #                              [to])
                 # msg.attach_alternative(heml_email, "text/html")
-                # image0 = add_img("./templates/0.png", "no0")
+                # image0 = add_img("./static/0.png", "no0")
                 # msg.attach(image0)
                 # msg.send()
                 group_info = Group.objects.get(name="合作伙伴")

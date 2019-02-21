@@ -3,60 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <title>锐翌生物科技</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/js/jquery-3.3.1.min.js"></script>
 </head>
-<body>
+<body background="/static/foot.png">
+<div class="container">
+<img src="/static/0.png" style="width: 40%;height: 30%;"  class="img-rounded"><br><br>
 {% if error %}
     <h1>{{ error }}</h1>
 {% endif %}
 {% if type %}
     {% if subject %}
-        项目名称：<label>{{ subject.sub_project }}</label><hr>
-        合同号：<label>{{ subject.contract.contract_number }}</label>
-        合同名称：<label>{{ subject.contract.name }}</label><br>
-        客户姓名：<label>{{ subject.contract.contacts }}</label>
-        客户单位：<label>{{ subject.contract.partner_company }}</label>
+        <h1 class="text-primary">{{ subject.sub_project }}</h1>
+        <h4 class="text-success">合同号：{{ subject.contract.contract_number }}</h4>
+        <h4 class="text-success">合同名称：{{ subject.contract.name }}</h4>
+        <h4 class="text-success">客户姓名：{{ subject.contract.contacts }}</h4>
+        <h4 class="text-success">客户单位：{{ subject.contract.partner_company }}</h4>
     {% endif %}
+    <br>
     {% if type == 1 %}
-        <h1>项目{{ subject.sub_number }}抽提结果</h1>
-        <br><table><tr><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量
+        <h1 class="text-muted">抽提结果</h1>
+        <br><table  class="table table-bordered"><tr class="success"><th>抽提样品编号</th><th>样品名称</th><th>物种</th><th>样品类型</th><th>样品提取用量
         </th><th>样品剩余用量</th><th>浓度ng/uL(公司检测)</th><th>体积uL(公司检测)</th><th>D260_280</th><th>D260_230</th>
         <th>DNA总量</th><th>选择是否重抽提</th><th>质检结论</th><th>备注</th></tr>
     {% for i in data %}
-        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.species }}</td><td>{{ i.type_sample }}</td><td>{{ i.sample_used }}</td><td>{{ i.sample_rest }}</td><td>{{ i.density_checked }}</td><td>{{ i.volume_checked }}</td>
-            <td>{{ i.D260_280 }}</td><td>{{ i.D260_230 }}</td><td>{{ i.DNA_totel }}</td><td>{{ i.rebuild }}</td><td>{{ i.quality }}</td><td>{{ i.note }}</td>></tr>
+        <tr class="info"><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.species }}</td><td>{{ i.type_sample }}</td><td>{{ i.sample_used }}</td><td>{{ i.sample_rest }}</td><td>{{ i.density_checked }}</td><td>{{ i.volume_checked }}</td>
+            <td>{{ i.D260_280 }}</td><td>{{ i.D260_230 }}</td><td>{{ i.DNA_totel }}</td><td>{{ i.rebuild }}</td><td>{{ i.quality }}</td><td>{{ i.note }}</td></tr>
     {% endfor %}
     </table>
 
     {% elif type == 2 %}
 
-        <h1>{{ sub_number }}建库结果</h1>
-        <br><table><tr><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)
+        <h1 class="text-muted">{{ sub_number }}建库结果</h1>
+        <br><table class="table table-bordered"><tr class="success"><th>建库样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>体积uL(文库)
         </th><th>浓度ng/uL(文库)</th><th>总量ng(文库)</th><th>结论(文库)</th><th>选择是否重建库</th><th>备注(文库)</th>
         </tr>
     {% for i in data %}
-        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.lib_code }}</td><td>{{ i.index }}</td><td>{{ i.lib_volume }}</td><td>{{ i.lib_concentration }}</td><td>{{ i.lib_total }}</td><td>{{ i.result }}</td>
+        <tr class="info"><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.lib_code }}</td><td>{{ i.index }}</td><td>{{ i.lib_volume }}</td><td>{{ i.lib_concentration }}</td><td>{{ i.lib_total }}</td><td>{{ i.result }}</td>
             <td>{{ i.rebuild }}</td><td>{{ i.lib_note }}</td></tr>
     {% endfor %}
     </table>
 
     {% elif type == 3 %}
 
-    <h1>{{ sub_number }}测序结果</h1>
-        <br><table><tr><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求
+    <h1 class="text-muted">{{ sub_number }}测序结果</h1>
+        <br><table class="table table-bordered"><tr class="success"><th>测序样品编号</th><th>样品名称</th><th>文库号</th><th>Index</th><th>数据量要求
         </th><th>测序数据量</th><th>结论(测序)</th><th>选择是否重测序</th><th>备注(测序)</th>
         </tr>
     {% for i in data %}
-        <tr><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.seq_code }}</td><td>{{ i.seq_index }}</td><td>{{ i.data_request }}</td><td>{{ i.seq_data }}</td><td>{{ i.result }}</td><td>{{ i.rebuild }}</td>
+        <tr class="info"><td>{{ i.sample_number }}</td><td>{{ i.sample_name }}</td><td>{{ i.seq_code }}</td><td>{{ i.seq_index }}</td><td>{{ i.data_request }}</td><td>{{ i.seq_data }}</td><td>{{ i.result }}</td><td>{{ i.rebuild }}</td>
             <td>{{ i.seq_note }}</td></tr>
     {% endfor %}
     </table>
 {% endif %}
 {% endif %}
+
+<hr><ul>
+    {% if type == 1 %}
+        <h4>A类样本，样品质量满足建库测序要求，且总量满足2次或者2次以上建库需要；可正常启动建库。</h4>
+        <h4>B类样本，样品质量满足建库测序要求，且总量满足1次但不足2次建库需要；也可正常启动建库。</h4>
+        <h4>C类样品，样品质量不完全满足建库测序要求，可进行风险建库，以目前项目经验来看可以进行，但总体建库成功率可能低于常规方法，请老师知悉（风险是指实验成功率不高，不是指测序结果不可靠）。</h4>
+        <h4>D类样本，样品质量完全不满足建库测序要求，建议老师重新送样。</h4>
+        <h4 class="text-info"><strong>请老师反馈进行下一步建库的样本。</strong></h4>
+
+    {% elif type == 2 %}
+        <li><h4>合格样本，可正常启动上机测序。</h4>
+        <li><h4>不合格样本，文库浓度偏低，下机数据和正常浓度（5ng/ul以上）的相比，测出来的数据量较少，如果浓度相差不多，可风险上机且可以通过增加排机数据量来解决，但如果浓度太低（如低于3-4ng/ul）,建议老师重新建库，也可风险上机（无法保证数据量产出）；</h4>
+        <li><h4>建库失败样本，即文库扩增不出来，建议重新建库；</h4>
+        <li><h4 class="text-info"><strong>请老师反馈下一步上机测序的样本。</strong></h4>
+    {% endif %}</ul>
+<br><br>
 {% if pic %}
 {% for foo in pic %}
-    <img src={{ foo }}>
+    <img style="width: 70%;height: 30%" class="img-polaroid" src= {{ foo }} >
 {% endfor %}
 {% endif %}
-
+</div>
 </body>
 </html>
