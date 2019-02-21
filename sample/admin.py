@@ -1,6 +1,5 @@
 from django.core.mail import EmailMultiAlternatives
 from email.mime.image import MIMEImage
-from django.contrib.staticfiles import finders
 
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
@@ -297,162 +296,80 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
 
     def process_result(self, result, request):
         sample = SampleInfo.objects.latest("id").sampleinfoform
-        try:
-            msg_ = """
-                                    <table border="0" cellspacing="0" cellpadding="0" style="font-family:'微软雅黑',Helvetica,Arial,sans-serif;font-size:14px " width="100%">
-                        <tbody>
-                        <tr>
-                            <td style="font-family:Helvetica,Arial,sans-serif;font-size:14px;">
-                                <table width="100%" border="0" cellpadding="5" cellspacing="0">
-                                    <tbody>
-                                    <tr>
-                                        <td>
-                                            <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                <br><img src="cid:no0" style="height: 75px;width: 260px;">
-                                            <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                <br>尊敬的老师,您好！<br>　　　　　　　　　　　　　　　　　　　　　　　　</p>
-                                            <p style="color:#000;margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;">
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                锐翌基因科服实验室已于{0}接收到您寄送的样品，将实际收到的样品与信息单进行一一核对，并已录入到BMS系统中，辛苦老师登录系统核对样品是否有误，若无误，请点击确认，若有误，请备注说明。<br>
-                                            <br><p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                登录网址：http://bms.realbio.cn/login/?next=/<br></p>
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                登录账号：合同签订的老师邮箱<br></p>
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                登录密码：合同签订的老师邮箱<br></p>
-                                            <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                操作说明<br></p>
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                1、点击以上链接，登录后找到您录入样品的概要编号，点击编号进入<br></p>
-                                            　　　　　　　　　　　　　　　　　　　　　　　　
-                                            <img style="width: 60%;height: 80%" src="cid:no1">
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                2、页面内信息查看无误后，点击页面最下方保存即可<br></p>
-                                            　　　　　　　　　　　　　　　　　　　　　　　　
-                                            <img  src="cid:no2">
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                3、若您确认且保存成功，页面更新如下<br></p>
-                                            <img style="width: 60%;height: 32%;padding-left: 18%" src="cid:no3">
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                4、若信息有误，<strong>请勿点击保存</strong>，并联系相关人员（销售）<br></p>
-                                            <hr><p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                老师，您好！<br>
-                                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;已根据您与锐翌公司签订合同中的邮箱信息开通锐翌BMS账号；账号为您的邮箱，初始密码为您的邮箱，请及时更改。该账号只用于登入锐翌BMS系统，不涉及到老师邮箱信息的安全及信息外泄，请老师放心使用。
-                                                您可登入锐翌BMS系统录入样本信息，用于启动项目。
-                                                祝实验顺利！
-                                                <br></p>
-                                            <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                <br></p>
-
-                                        </td>
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-
-                        </tbody>
-                    </table>       
-                                """.format(sample.arrive_time)
-            subject, from_email, to = "【上海锐翌生物科技有限公司-BMS系统通知】样品核对通知", "锐翌生物科技<pm@realbio.cn>", "love949872618@qq.com"
-            text_email = ""
-            heml_email = msg_
-            msg = EmailMultiAlternatives(subject, text_email, from_email, [to])
-            msg.attach_alternative(heml_email, "text/html")
-            image0 = add_img("./templates/0.png", "no0")
-            image1 = add_img("./templates/1.png", "no1")
-            image2 = add_img("./templates/2.png", "no2")
-            image3 = add_img("./templates/3.png", "no3")
-            msg.attach(image0)
-            msg.attach(image1)
-            msg.attach(image2)
-            msg.attach(image3)
-            msg.send()
-        except:
-            self.message_user(request, "邮件发送失败")
+        # try:
+        #     msg_ = """
+        #                             <table border="0" cellspacing="0" cellpadding="0" style="font-family:'微软雅黑',Helvetica,Arial,sans-serif;font-size:14px " width="100%">
+        #                 <tbody>
+        #                 <tr>
+        #                     <td style="font-family:Helvetica,Arial,sans-serif;font-size:14px;">
+        #                         <table width="100%" border="0" cellpadding="5" cellspacing="0">
+        #                             <tbody>
+        #                             <tr>
+        #                                 <td>
+        #                                     <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         <br><img src="cid:no0" style="height: 75px;width: 260px;">
+        #                                     <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         <br>尊敬的老师,您好！<br>　　　　　　　　　　　　　　　　　　　　　　　　</p>
+        #                                     <p style="color:#000;margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;">
+        #                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        #                                         锐翌基因科服实验室已于{0}接收到您寄送的样品，将实际收到的样品与信息单进行一一核对，并已录入到BMS系统中，辛苦老师登录系统核对样品是否有误，若无误，请点击确认，若有误，请备注说明。<br>
+        #                                     <br><p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        #                                         登录网址：http://bms.realbio.cn/login/?next=/<br></p>
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        #                                         登录账号：合同签订的老师邮箱<br></p>
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        #                                         登录密码：合同签订的老师邮箱<br></p>
+        #                                     <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         操作说明<br></p>
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         1、点击以上链接，登录后找到您录入样品的概要编号，点击编号进入<br></p>
+        #                                     　　　　　　　　　　　　　　　　　　　　　　　　
+        #                                     <img style="width: 60%;height: 80%" src="cid:no1">
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         2、页面内信息查看无误后，点击页面最下方保存即可<br></p>
+        #                                     　　　　　　　　　　　　　　　　　　　　　　　　
+        #                                     <img  src="cid:no2">
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         3、若您确认且保存成功，页面更新如下<br></p>
+        #                                     <img style="width: 60%;height: 32%;padding-left: 18%" src="cid:no3">
+        #                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+        #                                         4、若信息有误，<strong>请勿点击保存</strong>，并联系相关人员（销售）<br></p>
+        #                                     <hr>
+        #
+        #                                 </td>
+        #                             </tr>
+        #                             </tbody>
+        #                         </table>
+        #                     </td>
+        #                 </tr>
+        #
+        #                 </tbody>
+        #             </table>
+        #                         """.format(sample.arrive_time)
+        #     subject, from_email, to = "【上海锐翌生物科技有限公司-BMS系统通知】样品核对通知", "锐翌生物科技<pm@realbio.cn>", "love949872618@qq.com"
+        #     text_email = ""
+        #     heml_email = msg_
+        #     msg = EmailMultiAlternatives(subject, text_email, from_email, [to])
+        #     msg.attach_alternative(heml_email, "text/html")
+        #     image0 = add_img("./static/0.png", "no0")
+        #     image1 = add_img("./static/1.png", "no1")
+        #     image2 = add_img("./static/2.png", "no2")
+        #     image3 = add_img("./static/3.png", "no3")
+        #     msg.attach(image0)
+        #     msg.attach(image1)
+        #     msg.attach(image2)
+        #     msg.attach(image3)
+        #     msg.send()
+        # except:
+        #     self.message_user(request, "邮件发送失败")
         return super(SampleInfoFormAdmin, self).process_result(result, request)
 
     actions = ['make_sampleinfoform_submit', 'insure_sampleinfoform']
 
     def get_queryset(self, request):
-        #测试邮件
-        msg_ = """
-                                            <table border="0" cellspacing="0" cellpadding="0" style="font-family:'微软雅黑',Helvetica,Arial,sans-serif;font-size:14px " width="100%">
-                                <tbody>
-                                <tr>
-                                    <td style="font-family:Helvetica,Arial,sans-serif;font-size:14px;">
-                                        <table width="100%" border="0" cellpadding="5" cellspacing="0">
-                                            <tbody>
-                                            <tr>
-                                                <td>
-                                                    <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        <br><img src="cid:no0" style="height: 75px;width: 260px;">
-                                                    <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        <br>尊敬的老师,您好！<br>　　　　　　　　　　　　　　　　　　　　　　　　</p>
-                                                    <p style="color:#000;margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;">
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        锐翌基因科服实验室已于{0}接收到您寄送的样品，将实际收到的样品与信息单进行一一核对，并已录入到BMS系统中，辛苦老师登录系统核对样品是否有误，若无误，请点击确认，若有误，请备注说明。<br>
-                                                    <br><p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        登录网址：http://bms.realbio.cn/login/?next=/<br></p>
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        登录账号：合同签订的老师邮箱<br></p>
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        登录密码：合同签订的老师邮箱<br></p>
-                                                    <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        操作说明<br></p>
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        1、点击以上链接，登录后找到您录入样品的概要编号，点击编号进入<br></p>
-                                                    　　　　　　　　　　　　　　　　　　　　　　　　
-                                                    <img style="width: 60%;height: 80%" src="cid:no1">
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        2、页面内信息查看无误后，点击页面最下方保存即可<br></p>
-                                                    　　　　　　　　　　　　　　　　　　　　　　　　
-                                                    <img  src="cid:no2">
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        3、若您确认且保存成功，页面更新如下<br></p>
-                                                    <img style="width: 60%;height: 32%;padding-left: 18%" src="cid:no3">
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        4、若信息有误，<strong>请勿点击保存</strong>，并联系相关人员（销售）<br></p>
-                                                    <hr><p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        老师，您好！<br>
-                                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;已根据您与锐翌公司签订合同中的邮箱信息开通锐翌BMS账号；账号为您的邮箱，初始密码为您的邮箱，请及时更改。该账号只用于登入锐翌BMS系统，不涉及到老师邮箱信息的安全及信息外泄，请老师放心使用。
-                                                        您可登入锐翌BMS系统录入样本信息，用于启动项目。
-                                                        祝实验顺利！
-                                                        <br></p>
-                                                    <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
-                                                        <br></p>
-
-                                                </td>
-                                            </tr>
-                                            </tbody>
-                                        </table>
-                                    </td>
-                                </tr>
-
-                                </tbody>
-                            </table>       
-                                        """.format("2001.01.01")
-        subject, from_email, to = "【上海锐翌生物科技有限公司-BMS系统通知】样品核对通知", "锐翌生物科技<pm@realbio.cn>", "love949872618@qq.com"
-        text_email = ""
-        heml_email = msg_
-        msg = EmailMultiAlternatives(subject, text_email, from_email, [to])
-        msg.attach_alternative(heml_email, "text/html")
-        image0 = add_img("./templates/0.png", "no0")
-        image1 = add_img("./templates/1.png", "no1")
-        image2 = add_img("./templates/2.png", "no2")
-        image3 = add_img("./templates/3.png", "no3")
-        msg.attach(image0)
-        msg.attach(image1)
-        msg.attach(image2)
-        msg.attach(image3)
-        msg.send()
-        #########
         qs = super(SampleInfoFormAdmin, self).get_queryset(request)
         try:
             current_group_set = Group.objects.filter(user=request.user)
