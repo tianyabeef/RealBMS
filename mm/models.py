@@ -17,6 +17,11 @@ class InvoiceTitle(models.Model):
 
 
 class Contract(models.Model):
+    Management_to_the_rest = (
+        (1, '由公司暂时保管（历史合同）'),
+        (2, '需返样'),
+        (3, "项目结题3个月后，公司自行处理")
+    )
     RANGE_CHOICES = (
         (2, '总监底价'),
         (1, '高于销售底价'),
@@ -73,6 +78,9 @@ class Contract(models.Model):
     use_amount = models.DecimalField("已使用的金额", null=True, blank=True, max_digits=12, decimal_places=2, default=0)
     contact_note = models.TextField('合同备注', blank=True,null=True,default="")
     is_status = models.IntegerField('状态', choices=STATUS_CHOICES, default=1) #1初始状态，2首款到齐，3尾款到齐
+    management_to_rest = models.IntegerField(choices=Management_to_the_rest,
+                                             verbose_name="剩余样品处理方式",
+                                             default=1)
 
     consume_money = models.DecimalField('预存款合同已消耗金额', max_digits=12, decimal_places=2, default=0)
     contract_type = models.IntegerField('合同类型', choices=CONTRACT_TYPE, default=1)

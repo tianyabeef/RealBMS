@@ -11,6 +11,8 @@ from import_export.admin import ImportExportModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
+from em.models import Employees
+from nm.models import DingtalkChat
 
 
 class UserForAutocompleteAdmin(UserAdmin):
@@ -30,14 +32,15 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     autocomplete_fields = ("analyst", )
     change_list_template = "admin/am/change_list_am.html"
     fields = (
-        "ana_submit", "analyst", "end_date", "baidu_link", "is_submit", "notes"
+        "ana_submit", "analyst", "sample_count", "ana_start_date", "end_date",
+        "depart_data_path", "baidu_link", "is_submit", "notes",
     )
     form = AnaExecuteModelForm
     list_per_page = 30
     list_display = (
-        "ana_submit", "contract_name", "analyst", "notes", "end_date",
-        "confirmation_sheet", "depart_data_path", "baidu_link", "is_submit",
-        "submit_date",
+        "ana_submit", "contract_name", "analyst", "notes",
+        "end_date", "confirmation_sheet",  "baidu_link",
+        "is_submit", "submit_date",
     )
     list_display_links = ('ana_submit', )
     list_filter = ("is_submit", )
@@ -46,9 +49,26 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     search_fields = ("analyst__username", "ana_submit__ana_number", )
 
     def depart_data_path(self, obj):
-        return obj.ana_submit.depart_data_path
+        if obj:
+            return obj.ana_submit.depart_data_path
+        else:
+            return None
     depart_data_path.short_description = '数据分析路径'
-    
+
+    def sample_count(self, obj):
+        if obj:
+            return obj.ana_submit.sample_count
+        else:
+            return None
+    sample_count.short_description = '样品数量'
+
+    def ana_start_date(self, obj):
+        if obj:
+            return obj.ana_submit.ana_start_date
+        else:
+            return None
+    ana_start_date.short_description = '分析开始日期'
+
     def confirmation_sheet(self, obj):
         field = obj.ana_submit.confirmation_sheet
         html = "<a href='%s'>下载</a>" % field.url if field else "未上传"
@@ -70,8 +90,9 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
             "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
-            "notes",
-        ) if obj and obj.is_submit else ("ana_submit", )
+            "notes","depart_data_path", "sample_count", "ana_start_date"
+        ) if obj and obj.is_submit else ("ana_submit", "depart_data_path",
+                                         "sample_count", "ana_start_date")
         return self.readonly_fields
     
     def get_queryset(self, request):
@@ -149,11 +170,25 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             all_sub_project.update(is_status=13, time_ana=obj.end_date)
             name_list = set([n.sub_project for n in all_sub_project])
             content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
-            self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
+            dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
+            dingdingid_ = DingtalkChat.objects.get(chat_name="生信分析钉钉群-BMS")
+            send_to = [dingdingid, dingdingid_]
+            self.send_work_notice(content, DINGTALK_AGENT_ID, send_to)
             call_back = self.send_dingtalk_result
             message = "已钉钉通知项目管理进度" if call_back else "钉钉通知失败"
             self.message_user(request, message)
         else:
+            if change:
+                all_sub_project = obj.ana_submit.subProject.all()
+                all_sub_project.update(is_status=13, time_ana=obj.end_date)
+                name_list = set([n.sub_project for n in all_sub_project])
+                analyst = form.cleaned_data["analyst"]
+                analyst_dingid = Employees.objects.get(dingtalk_name=analyst.username)
+                content = "项目：{}待分析，请在BMS系统中查看详细信息，辛苦开展分析".format(name_list)
+                self.send_work_notice(content, DINGTALK_AGENT_ID, analyst_dingid)
+                call_back = self.send_dingtalk_result
+                message = "已钉钉通知分析员{}".format(analyst.username) if call_back else "钉钉通知失败"
+                self.message_user(request, message)
             obj.ana_submit.subProject.all().update(is_status=12)
             self.message_user(request, "项目状态已变更为【分析中】，请及时跟进")
     
@@ -213,7 +248,9 @@ class WeeklyReportAdmin(ImportExportModelAdmin, NotificationMixin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if obj and obj.is_submit:
-            content = "{0}:{1}---{2}周报已提交".format(request.user.username,obj.start_date,obj.end_date)
+            content = "{0}:{1}---{2}周报已提交".format(
+                request.user.username,obj.start_date,obj.end_date
+            )
             self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
             call_back = self.send_dingtalk_result
             message = "已钉钉通知项目部门总监" if call_back else "钉钉通知失败"

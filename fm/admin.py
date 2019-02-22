@@ -284,7 +284,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
         if change:
             if obj.invoice_code and obj.date:
                 if (obj.invoice_code != fm_Invoice[0].invoice_code) and fm_Invoice:
-                    content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,修改发票，原发票号码：%s   发票号码：%s 开票金额：%s" % (fm_Invoice[0].invoice_code,obj.invoice_code, obj.invoice.amount)
+                    content = "【上海锐翌生物科技有限公司-BMS系统通知】修改发票，原发票号码：%s   发票号码：%s 开票金额：%s" % (fm_Invoice[0].invoice_code,obj.invoice_code, obj.invoice.amount)
                     if Employees.objects.filter(user=obj.invoice.contract.salesman):
                         user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
                     if user_id:
@@ -294,7 +294,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     self.send_group_message(content, DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id)
         else:
             if obj.invoice_code and obj.date:
-                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,开出发票，发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount)
+                content = "【上海锐翌生物科技有限公司-BMS系统通知】开出发票，发票号码：%s 开票金额：%s"%(obj.invoice_code,obj.invoice.amount)
                 if Employees.objects.filter(user=obj.invoice.contract.salesman):
                     user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id
                 if user_id:
@@ -347,7 +347,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     #     obj_contract.is_status = 3
                 obj_contract.save()
                 #新的到账 通知财务部5
-                content = "【上海锐翌生物科技有限公司-BMS系统测试通知】测试消息,有一笔新到账，发票号：%s 总到账金额：%s"%(obj_invoice,sum_income)
+                content = "【上海锐翌生物科技有限公司-BMS系统通知】有一笔新到账，发票号：%s 总到账金额：%s"%(obj_invoice,sum_income)
                 # 新到账 通知相应的销售
                 # if Employees.objects.filter(user=obj.invoice.contract.salesman):
                 #     user_id = Employees.objects.get(user=obj.invoice.contract.salesman).dingtalk_id

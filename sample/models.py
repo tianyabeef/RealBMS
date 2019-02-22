@@ -122,8 +122,8 @@ class SampleInfoForm(models.Model):
     #样品信息
     sample_num = models.IntegerField(verbose_name="样品数量")
     extract_to_pollute_DNA = models.NullBooleanField("DNA提取是否可能有大量非目标DNA污染",default=False)
-    management_to_rest = models.IntegerField(choices=Management_to_the_rest,
-                                             verbose_name="剩余样品处理方式",default=2)
+    # management_to_rest = models.IntegerField(choices=Management_to_the_rest,
+    #                                          verbose_name="剩余样品处理方式",default=2)
 
     sample_diwenjiezhi = models.IntegerField(choices=TransForm_Status,verbose_name="低温保存介质",default=0)
 
@@ -137,7 +137,7 @@ class SampleInfoForm(models.Model):
     sampleinfoformid = models.CharField(max_length=200, verbose_name="客户上传表格编号")
 
     #样品接收信息
-    arrive_time = models.DateField(verbose_name="样品接收时间",null=True,blank=True)
+    arrive_time = models.DateField(verbose_name="样品接收时间(发给客户核对前必须选择时间)",null=True,blank=True)
     sample_receiver = models.ForeignKey(User,related_name="样品接收人",verbose_name="样品接收人",null=True,blank=True,on_delete=models.SET_NULL)
     sample_checker = models.ForeignKey(User,related_name="物流接收人",verbose_name="样品核对人",blank=True,null=True,on_delete=models.SET_NULL)
     sample_status = models.IntegerField(choices=Sample_status,verbose_name="样品状态",default=0)

@@ -194,7 +194,7 @@ class AnaSubmit(models.Model):
     note = models.TextField('备注', blank=True, null=True)
     sample_count = models.IntegerField('样品数量',default=0)
     is_submit = models.BooleanField('提交', default=False)
-    depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=50)
+    depart_data_path = models.CharField(verbose_name="数据拆分路径", max_length=500)
     confirmation_sheet = models.FileField(verbose_name="数据分析确认单", upload_to="uploads/ana/%Y/%m/%d/")
 
     # def save(self, *args, **kwargs):

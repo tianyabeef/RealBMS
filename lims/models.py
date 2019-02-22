@@ -227,8 +227,9 @@ class SampleInfoExt(models.Model):
     D260_230 = models.CharField(max_length=50,verbose_name="D260/230",blank=True,null=True)
     DNA_totel = models.CharField(max_length=200,verbose_name="DNA总量",blank=True,null=True)
     note = models.TextField('备注', blank=True, null=True)
-    quality_control_conclusion = models.CharField(max_length=20,verbose_name="质检结论",default="")##ABC
-    is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提",default=0)
+    quality_control_conclusion = models.CharField(max_length=20,verbose_name="质检结论", blank=True,null=True)##ABC
+    is_rebuild = models.IntegerField(choices=Rebulid,verbose_name="选择是否重抽提", default=0)
+
     def __str__(self):
         return str(self.sample_number)
 
@@ -272,7 +273,7 @@ class SampleInfoLib(models.Model):
     lib_volume = models.CharField('体积uL(文库)',max_length=50,blank=True,null=True)
     lib_concentration = models.CharField('浓度ng/uL(文库)', max_length=50,blank=True,null=True)
     lib_total = models.CharField('总量ng(文库)', max_length=50,blank=True,null=True)
-    lib_result = models.IntegerField(choices=Lib_result,verbose_name='结论(文库)',default=1)
+    lib_result = models.IntegerField(choices=Lib_result,verbose_name='结论(文库)', blank=True,null=True)
     lib_note = models.TextField('备注(文库)', blank=True, null=True)
     is_rebuild = models.IntegerField(choices=Rebulid, verbose_name="选择是否重建库", default=0)
     def __str__(self):
@@ -313,7 +314,11 @@ class SampleInfoSeq(models.Model):
     seq_index = models.CharField('Index', max_length=20,blank=True,null=True)##需要项目管理填写
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
     seq_data = models.CharField(max_length=200,verbose_name="测序数据量",blank=True,null=True)
-    seq_result = models.IntegerField(choices=Seq_result,verbose_name='结论(测序)',default=1)
+    raw_reads = models.CharField(max_length=200,verbose_name="Raw_reads",blank=True,null=True)
+    pand_reads = models.CharField(max_length=200,verbose_name="Pand_reads",blank=True,null=True)
+    hq_reads = models.CharField(max_length=200, verbose_name="HQ_reads",blank=True, null=True)
+    need_com = models.CharField(max_length=200, verbose_name="需补测", blank=True, null=True)
+    seq_result = models.IntegerField(choices=Seq_result,verbose_name='结论(测序)', blank=True, null=True)
     seq_note = models.TextField('备注(测序)', blank=True, null=True)
     is_rebuild = models.IntegerField(choices=Rebulid, verbose_name="选择是否重测序", default=0)
     def __str__(self):
