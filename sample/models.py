@@ -248,7 +248,7 @@ class SampleInfo(models.Model):
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
     color_code = models.CharField(max_length=16,blank=True,null=True,default="")
-    sample_type = models.CharField(max_length=200,verbose_name="样品类型",default="")
+    sample_type = models.CharField(max_length=200,verbose_name="样品类型",blank=True,null=True)
     color_code2 = models.CharField(max_length=16,blank=True,null=True,default="")
 
     @property
