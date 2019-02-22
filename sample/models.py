@@ -235,7 +235,7 @@ class SampleInfo(models.Model):
     unique_code = models.CharField(max_length=60, verbose_name="对应样品池唯一编号",default='')
     sampleinfoform = models.ForeignKey(SampleInfoForm,verbose_name="对应样品概要编号",blank=True,null=True,on_delete=models.CASCADE)
     sample_number = models.CharField(max_length=50,verbose_name="样品编号", blank=True,null=True)
-    sample_name = models.CharField(max_length=50,verbose_name="样品名称")
+    sample_name = models.CharField(max_length=50,verbose_name="样品名称", blank=True,null=True)
     sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称(与客户所给名称不同时标红)") #*
     density = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3, blank=True,null=True)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3,blank=True, null=True)
