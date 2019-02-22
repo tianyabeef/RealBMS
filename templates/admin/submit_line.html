@@ -1,18 +1,20 @@
 {% load i18n admin_urls %}
 <div class="submit-row">
-    {% if "合作伙伴" in group_id %}
-        {% if show_check %}
+{#    {% if "合作伙伴" in group_id %}#}
+        {% if show_check and "合作伙伴" in group_id %}
             <input type="submit" value="{% trans '审核并确认' %}" class="default"
-                   name="_save"/>{% endif %}
+                   name="_save"/>
 
-        {% if show_save %}
+        {% else %}
+            {% if show_save %}
             <input type="submit" value="{% trans 'Save' %}" class="default"
                    name="_save"/>{% endif %}
-    {% else %}
-        {% if show_save %}
-            <input type="submit" value="{% trans 'Save' %}" class="default"
-                   name="_save"/>{% endif %}
-    {% endif %}
+        {% endif %}
+{#    {% else %}#}
+{#        {% if show_save %}#}
+{#            <input type="submit" value="{% trans 'Save' %}" class="default"#}
+{#                   name="_save"/>{% endif %}#}
+{#    {% endif %}#}
     {% if show_delete_link %}
         {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
         <p class="deletelink-box"><a
