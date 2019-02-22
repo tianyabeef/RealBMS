@@ -595,9 +595,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")
             else:
-                obj.save()
+                pass
         except:
-            obj.save()
+            pass
+        obj.save()
         # 根据身份获取动作
 
     def get_actions(self, request):
