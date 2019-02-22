@@ -424,6 +424,8 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         if object_id:
             if SampleInfoForm.objects.get(id=object_id).sample_status == 1:
                 extra_context['show_check'] = True
+                # extra_context['show_save'] = False
+            elif SampleInfoForm.objects.get(id=object_id).sample_status == 2:
                 extra_context['show_save'] = False
 
         return super().change_view(request, object_id, form_url,
