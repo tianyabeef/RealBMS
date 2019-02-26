@@ -262,7 +262,7 @@ class SampleInfo(models.Model):
             self.color_code2)
 
     def __str__(self):
-        return self.sample_number + "--{}--".format(self.sample_receiver_name)  + self.color_code
+        return self.sample_receiver_name + "--{}--".format(self.sample_receiver_name)  + self.color_code
 
     class Meta:
         verbose_name = "样品信息"
