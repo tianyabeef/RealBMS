@@ -136,7 +136,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
     filter_horizontal = ["contract", ]
     readonly_fields = ["income"]
     fields = ["contract_number", "contract", "saler", "income", "all_amount",
-              "contact_note", "submit"]
+              "contract_file", "contact_note", "submit"]
 
     def income(self, obj):
         income = 0
