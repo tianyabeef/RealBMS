@@ -658,7 +658,7 @@ class ExtSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoExt = lims_SampleInfoExt.objects.create(extExecute=extExecute)
                     sampleInfoExt.unique_code = sampleInfo.unique_code
                     sampleInfoExt.sample_number = sampleInfo.sample_number
-                    sampleInfoExt.sample_name = sampleInfo.sample_name
+                    sampleInfoExt.sample_name = sampleInfo.sample_receiver_name
                     sampleInfoExt.species = sampleInfo.sample_species
                     sampleInfoExt.sample_type = sampleInfo.sample_type
                     sampleInfoExt.save()
@@ -867,7 +867,7 @@ class LibSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                     sampleInfoLib = lims_SampleInfoLib.objects.create(libExecute=libExecute)
                     sampleInfoLib.unique_code = sampleInfo.unique_code
                     sampleInfoLib.sample_number = sampleInfo.sample_number
-                    sampleInfoLib.sample_name = sampleInfo.sample_name
+                    sampleInfoLib.sample_name = sampleInfo.sample_receiver_name
                     sampleInfoLib.save()
                 obj.save()
                 # 新增建库的时候，给实验发钉钉通知
@@ -1083,7 +1083,7 @@ class SeqSubmitAdmin(admin.ModelAdmin,NotificationMixin):
                         sampleInfoseq = lims_SampleInfoSeq.objects.create(seqExecute=seqExecute)
                         sampleInfoseq.unique_code = sampleInfo.unique_code
                         sampleInfoseq.sample_number = sampleInfo.sample_number
-                        sampleInfoseq.sample_name = sampleInfo.sample_name
+                        sampleInfoseq.sample_name = sampleInfo.sample_receiver_name
                         sampleInfoseq.save()
                     obj.save()
                     # 新增测序的时候，给实验发钉钉通知
