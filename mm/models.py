@@ -116,7 +116,9 @@ class Contract_execute(models.Model):
     saler = models.ForeignKey(User,
                               verbose_name='业务员', on_delete=models.SET_NULL, null=True)
     submit = models.BooleanField("提交",default=False)
-
+    contract_file = models.FileField('附件',
+                                     upload_to='uploads/Contract_execute/%Y/%m',
+                                     blank=True)
     def __str__(self):
         return self.contract_number
 
