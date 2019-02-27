@@ -136,7 +136,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
     filter_horizontal = ["contract", ]
     readonly_fields = ["income"]
     fields = ["contract_number", "contract", "saler", "income", "all_amount",
-              "contact_note", "submit"]
+              "contract_file", "contact_note", "submit"]
 
     def income(self, obj):
         income = 0
@@ -169,6 +169,18 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
                 return self.readonly_fields
         except:
             return self.readonly_fields
+
+    def get_queryset(self, request):
+        haved_perm = False
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15:  # 市场部总监，项目管理，销售总监
+                haved_perm = True
+        qs = super(ContractExecuteAdmin, self).get_queryset(request)
+
+        if request.user.is_superuser or request.user.has_perm(
+                'mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
+            return qs
+        return qs.filter(saler=request.user)
 
     def save_model(self, request, obj, form, change):
         if obj.submit:
@@ -852,6 +864,21 @@ class BzContractAdmin(admin.ModelAdmin):
     list_per_page = 50
     filter_horizontal = ["contract", ]
     autocomplete_fields = ('salesman',)
+
+
+
+    def get_queryset(self, request):
+
+        haved_perm = False
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15:  # 市场部总监，项目管理，销售总监
+                haved_perm = True
+        qs = super(BzContractAdmin, self).get_queryset(request)
+
+        if request.user.is_superuser or request.user.has_perm(
+                'mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
+            return qs
+        return qs.filter(salesman=request.user)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
