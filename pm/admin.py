@@ -192,7 +192,8 @@ class SubProjectAdmin(ImportExportActionModelAdmin, NotificationMixin):
     raw_id_fields = ['contract', ]
     filter_horizontal = ['sampleInfoForm', ]
     search_fields = ['contract__contract_number', 'contract__name', 'sub_number', "sub_project", 'contract__contacts',
-                     'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext', 'time_lib', 'time_ana']
+                     'contract__salesman__username', 'project_manager__username',  'project_start_time', 'time_ext',
+                     'time_lib', 'time_ana', "sampleInfoForm__sampleinfoformid"]
     autocomplete_fields = ('contract',)
     ordering = ['-project_start_time', ]
     list_per_page = 50
