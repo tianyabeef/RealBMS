@@ -466,6 +466,10 @@ class ContractResource(resources.ModelResource):
                                        attribute="fin_amount")
     contract_send_date = fields.Field(column_name="合同寄出日",
                                       attribute="send_date")
+    contract_contact_address = fields.Field(column_name="合同联系人地址",
+                                      attribute="contact_address")
+    contract_contact_note = fields.Field(column_name="合同备注",
+                                      attribute="contact_note")
 
     class Meta:
         model = Contract
@@ -479,7 +483,8 @@ class ContractResource(resources.ModelResource):
                   'contract_price',
                   'contract_range',
                   'contract_all_amount', 'contract_fis_amount',
-                  'contract_fin_amount', 'contract_send_date')
+                  'contract_fin_amount', 'contract_send_date',
+                  "contract_contact_address", "contract_contact_note")
         export_order =\
                   ('contract_number', 'contract_name', 'invoice_issuingUnit',
                   'receive_date', 'invoice_times', 'invoice_date',
@@ -490,7 +495,8 @@ class ContractResource(resources.ModelResource):
                    'contract_price',
                   'contract_range',
                   'contract_all_amount', 'contract_fis_amount',
-                  'contract_fin_amount', 'contract_send_date')
+                  'contract_fin_amount', 'contract_send_date',
+                  "contract_contact_address", "contract_contact_note")
 
     def dehydrate_invoice_issuingUnit(self, contract):
         invoices = Invoice.objects.filter(contract=contract)
