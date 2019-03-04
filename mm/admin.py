@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.core.mail import EmailMultiAlternatives
+from email.mime.image import MIMEImage
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.admin import ModelAdmin
 from django.contrib.auth.hashers import make_password, check_password
@@ -28,6 +30,31 @@ from em.models import Employees
 from nm.models import DingtalkChat
 import re
 from django.db.models import Q
+
+
+def add_img(src, img_id):
+
+  """
+
+  在富文本邮件模板里添加图片
+
+  :param src:
+
+  :param img_id:
+
+  :return:
+
+  """
+
+  fp = open(src, 'rb')
+
+  msg_image = MIMEImage(fp.read())
+
+  fp.close()
+
+  msg_image.add_header('Content-ID', '<'+img_id+'>')
+
+  return msg_image
 
 
 class InvoiceTitleAdmin(ImportExportActionModelAdmin):
@@ -109,7 +136,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
     filter_horizontal = ["contract", ]
     readonly_fields = ["income"]
     fields = ["contract_number", "contract", "saler", "income", "all_amount",
-              "contact_note", "submit"]
+              "contract_file", "contact_note", "submit"]
 
     def income(self, obj):
         income = 0
@@ -142,6 +169,18 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
                 return self.readonly_fields
         except:
             return self.readonly_fields
+
+    def get_queryset(self, request):
+        haved_perm = False
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15:  # 市场部总监，项目管理，销售总监
+                haved_perm = True
+        qs = super(ContractExecuteAdmin, self).get_queryset(request)
+
+        if request.user.is_superuser or request.user.has_perm(
+                'mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
+            return qs
+        return qs.filter(saler=request.user)
 
     def save_model(self, request, obj, form, change):
         if obj.submit:
@@ -427,6 +466,10 @@ class ContractResource(resources.ModelResource):
                                        attribute="fin_amount")
     contract_send_date = fields.Field(column_name="合同寄出日",
                                       attribute="send_date")
+    contract_contact_address = fields.Field(column_name="合同联系人地址",
+                                      attribute="contact_address")
+    contract_contact_note = fields.Field(column_name="合同备注",
+                                      attribute="contact_note")
 
     class Meta:
         model = Contract
@@ -440,7 +483,8 @@ class ContractResource(resources.ModelResource):
                   'contract_price',
                   'contract_range',
                   'contract_all_amount', 'contract_fis_amount',
-                  'contract_fin_amount', 'contract_send_date')
+                  'contract_fin_amount', 'contract_send_date',
+                  "contract_contact_address", "contract_contact_note")
         export_order =\
                   ('contract_number', 'contract_name', 'invoice_issuingUnit',
                   'receive_date', 'invoice_times', 'invoice_date',
@@ -451,7 +495,8 @@ class ContractResource(resources.ModelResource):
                    'contract_price',
                   'contract_range',
                   'contract_all_amount', 'contract_fis_amount',
-                  'contract_fin_amount', 'contract_send_date')
+                  'contract_fin_amount', 'contract_send_date',
+                  "contract_contact_address", "contract_contact_note")
 
     def dehydrate_invoice_issuingUnit(self, contract):
         invoices = Invoice.objects.filter(contract=contract)
@@ -725,6 +770,47 @@ class ContractAdmin(ExportActionModelAdmin, NotificationMixin):
                                              obj.contacts_email),
                                          email=obj.contacts_email,
                                          is_staff=True)
+                #创建成功后发邮件
+                # msg_ = """
+                #                                             <table border="0" cellspacing="0" cellpadding="0" style="font-family:'微软雅黑',Helvetica,Arial,sans-serif;font-size:14px " width="100%">
+                #                                 <tbody>
+                #                                 <tr>
+                #                                     <td style="font-family:Helvetica,Arial,sans-serif;font-size:14px;">
+                #                                         <table width="100%" border="0" cellpadding="5" cellspacing="0">
+                #                                             <tbody>
+                #                                             <tr>
+                #                                                 <td>
+                #                                                     <p style="margin:0;font-size:24px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+                #                                                     <br><img src="cid:no0" style="height: 75px;width: 260px;">
+                #                                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+                #                                                         <strong>老师，您好！</strong><br>
+                #                                                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;已根据您与锐翌公司签订合同中的邮箱信息开通锐翌BMS账号；账号为您的邮箱，初始密码为您的邮箱，请及时更改。该账号只用于登入锐翌BMS系统，不涉及到老师邮箱信息的安全及信息外泄，请老师放心使用。
+                #                                                         您可登入锐翌BMS系统录入样本信息，用于启动项目。
+                #                                                         祝实验顺利！
+                #                                                         <br></p>
+                #                                                     <p style="margin:0;font-size:20px;line-height:24px;font-family:'微软雅黑',Helvetica,Arial,sans-serif;margin-bottom: 20px">
+                #                                                         <br></p>
+                #
+                #                                                 </td>
+                #                                             </tr>
+                #                                             </tbody>
+                #                                         </table>
+                #                                     </td>
+                #                                 </tr>
+                #
+                #                                 </tbody>
+                #                             </table>
+                #                                         """.format(
+                #     "2001.01.01")
+                # subject, from_email, to = "【上海锐翌生物科技有限公司-BMS系统通知】", "锐翌生物科技<pm@realbio.cn>", obj.contacts_email
+                # text_email = ""
+                # heml_email = msg_
+                # msg = EmailMultiAlternatives(subject, text_email, from_email,
+                #                              [to])
+                # msg.attach_alternative(heml_email, "text/html")
+                # image0 = add_img("./static/0.png", "no0")
+                # msg.attach(image0)
+                # msg.send()
                 group_info = Group.objects.get(name="合作伙伴")
                 tt.groups.add(group_info)
                 content = content + "【上海锐翌生物科技有限公司-BMS通知】:新增合同操作，合同编号" + obj.contract_number + "系统自动开通了老师账户一个，账户名：%s，" % (
@@ -784,6 +870,21 @@ class BzContractAdmin(admin.ModelAdmin):
     list_per_page = 50
     filter_horizontal = ["contract", ]
     autocomplete_fields = ('salesman',)
+
+
+
+    def get_queryset(self, request):
+
+        haved_perm = False
+        for group in request.user.groups.all():
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15:  # 市场部总监，项目管理，销售总监
+                haved_perm = True
+        qs = super(BzContractAdmin, self).get_queryset(request)
+
+        if request.user.is_superuser or request.user.has_perm(
+                'mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
+            return qs
+        return qs.filter(salesman=request.user)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "salesman":
