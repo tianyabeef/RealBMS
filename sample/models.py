@@ -235,20 +235,20 @@ class SampleInfo(models.Model):
     unique_code = models.CharField(max_length=60, verbose_name="对应样品池唯一编号",default='')
     sampleinfoform = models.ForeignKey(SampleInfoForm,verbose_name="对应样品概要编号",blank=True,null=True,on_delete=models.CASCADE)
     sample_number = models.CharField(max_length=50,verbose_name="样品编号", blank=True,null=True)
-    sample_name = models.CharField(max_length=50,verbose_name="样品名称")
-    sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称(与客户所给名称不同时标红)") #*
+    sample_name = models.CharField(max_length=50,verbose_name="样品名称", blank=True,null=True)
+    sample_receiver_name = models.CharField(max_length=50,verbose_name="实际接收样品名称(与客户所给名称不同时标红)",blank=True,null=True) #*
     density = models.DecimalField('浓度ng/uL', max_digits=5, decimal_places=3, blank=True,null=True)
     volume = models.DecimalField('体积uL', max_digits=5, decimal_places=3,blank=True, null=True)
     purity = models.CharField(max_length=200,verbose_name="纯度",blank=True,null=True)
-    tube_number = models.IntegerField(verbose_name="管数量") #*
+    tube_number = models.IntegerField(verbose_name="管数量",blank=True,null=True) #*
     is_extract = models.NullBooleanField(verbose_name="是否需要提取",default=False)
     remarks = models.CharField(max_length=200,verbose_name="备注",blank=True,null=True)
     status = models.IntegerField(choices=Sample_status,verbose_name="样品可用状态",blank=True,default=0)
-    sample_species = models.CharField(max_length=200, verbose_name="物种", default='')
+    sample_species = models.CharField(max_length=200, verbose_name="物种",blank=True,null=True)
     #数据量要求
     data_request = models.CharField(max_length=200,verbose_name="数据量要求",blank=True,null=True)
     color_code = models.CharField(max_length=16,blank=True,null=True,default="")
-    sample_type = models.CharField(max_length=200,verbose_name="样品类型",default="")
+    sample_type = models.CharField(max_length=200,verbose_name="样品类型",blank=True,null=True)
     color_code2 = models.CharField(max_length=16,blank=True,null=True,default="")
 
     @property
@@ -262,7 +262,7 @@ class SampleInfo(models.Model):
             self.color_code2)
 
     def __str__(self):
-        return self.sample_number + "--{}--".format(self.sample_receiver_name)  + self.color_code
+        return self.sample_receiver_name + "--{}--".format(self.sample_receiver_name)  + self.color_code
 
     class Meta:
         verbose_name = "样品信息"

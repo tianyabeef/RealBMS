@@ -1,14 +1,34 @@
 {% load i18n admin_urls %}
 <div class="submit-row">
-{% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />{% endif %}
-{% if show_delete_link %}
-    {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
-    <p class="deletelink-box"><a href="{% add_preserved_filters delete_url %}" class="deletelink">{% trans "Delete" %}</a></p>
-{% endif %}
-{% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" name="_saveasnew" />{% endif %}
-{% if really_hide_save_and_add_another_damnit %}
-{% else %}
-{#{% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" name="_addanother" />{% endif %}#}
-{% endif %}
-{% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" name="_continue" />{% endif %}
+{#    {% if "合作伙伴" in group_id %}#}
+        {% if show_check and "合作伙伴" in group_id %}
+            <input type="submit" value="{% trans '审核并确认' %}" class="default"
+                   name="_save"/>
+
+        {% else %}
+            {% if show_save %}
+            <input type="submit" value="{% trans 'Save' %}" class="default"
+                   name="_save"/>{% endif %}
+        {% endif %}
+{#    {% else %}#}
+{#        {% if show_save %}#}
+{#            <input type="submit" value="{% trans 'Save' %}" class="default"#}
+{#                   name="_save"/>{% endif %}#}
+{#    {% endif %}#}
+    {% if show_delete_link %}
+        {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+        <p class="deletelink-box"><a
+                href="{% add_preserved_filters delete_url %}"
+                class="deletelink">{% trans "Delete" %}</a></p>
+    {% endif %}
+    {% if show_save_as_new %}
+        <input type="submit" value="{% trans '保存并新建' %}"
+               name="_saveasnew"/>{% endif %}
+    {% if really_hide_save_and_add_another_damnit %}
+    {% else %}
+        {#{% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" name="_addanother" />{% endif %}#}
+    {% endif %}
+{#    {% if show_save_and_continue %}#}
+{#        <input type="submit" value="{% trans 'Save and continue editing' %}"#}
+{#               name="_continue"/>{% endif %}#}
 </div>

@@ -419,9 +419,24 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
         # if not Invoice.objects.get(id=object_id).invoice_code and not request.user.has_perm('fm.add_invoice'):
         extra_context['show_save'] = True
         extra_context['show_save_as_new'] = True
-        # extra_context['show_save_and_continue'] = False
+        extra_context['show_save_and_continue'] = False
+        extra_context['show_check'] = False
+        if object_id:
+            if SampleInfoForm.objects.get(id=object_id).sample_status == 1:
+                extra_context['show_check'] = True
+                # extra_context['show_save'] = False
+            elif SampleInfoForm.objects.get(id=object_id).sample_status == 2:
+                extra_context['show_save'] = False
+
         return super().change_view(request, object_id, form_url,
                                    extra_context=extra_context)
+
+    def add_view(self, request, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['show_save_as_new'] = True
+        extra_context['show_save_and_continue'] = False
+        return self.changeform_view(request, None, form_url, extra_context=extra_context)
+
 
     def has_change_permission(self, request, obj=None):
         try:
@@ -595,9 +610,10 @@ class SampleInfoFormAdmin(ImportExportActionModelAdmin, NotificationMixin):
                     #     self.message_user(request, "钉钉发送失败")
                     self.message_user(request, "审核成功！")
             else:
-                obj.save()
+                pass
         except:
-            obj.save()
+            pass
+        obj.save()
         # 根据身份获取动作
 
     def get_actions(self, request):
