@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.timezone import now
+
+from docx_parsing_gmdzy2010.utilities import Price2UpperChinese
 # from datetime import date
 
 
@@ -132,8 +134,8 @@ class Analyses(models.Model):
         verbose_name_plural = '分析条目'
 
     def __str__(self):
-        return '【{}】-【{}】-【{}】'.format(
-            self.get_analysis_type_display(), self.analysis_name, self.union_id
+        return '{}（{}）'.format(
+            self.analysis_name, self.union_id
         )
 
 
@@ -157,6 +159,13 @@ class ContractApplications(models.Model):
         (3, '山东锐翌基因技术有限公司'),
         (4, '杭州拓宏生物科技有限公司'),
         (5, '深圳金锐生物科技有限公司'),
+    )
+    DATA_DELIVERY_CHOICES = (
+        (1, '项目数据小于50G，甲方选择使用百度网盘进行数据交付，费用￥0.00（零圆整）'),
+        (2, '项目数据小于16G，甲方选择使用U盘进行数据交付，费用￥70.00（柒拾圆整）'),
+        (3, '项目数据小于32G，甲方选择使用U盘进行数据交付，费用￥150.00（壹佰伍拾圆整）'),
+        (4, '项目数据小于500G，甲方选择使用移动硬盘进行数据交付，费用￥500.00（伍佰圆整）'),
+        (5, '项目数据小于1T，甲方选择使用移动硬盘进行数据交付，费用￥700.00（柒佰圆整）'),
     )
     contract_name = models.CharField(
         verbose_name="合同名称", max_length=512,
@@ -233,34 +242,87 @@ class ContractApplications(models.Model):
     delivery_upper_limit = models.SmallIntegerField(
         verbose_name="交付天数上限", default=45
     )
+    data_delivery_type = models.SmallIntegerField(
+        verbose_name="数据交付形式", default=1, choices=DATA_DELIVERY_CHOICES,
+    )
     
     # 价格信息
     total_price = models.DecimalField(
         verbose_name="项目总价", max_digits=16, decimal_places=2
     )
     sequence_single_price = models.DecimalField(
-        verbose_name="测序分析单价", max_digits=16, decimal_places=2, default=300
+        verbose_name="测序分析单价", max_digits=16, decimal_places=2,
+        default=300,
     )
     sequence_total_price = models.DecimalField(
         verbose_name="测序分析总价", max_digits=16, decimal_places=2
     )
     extract_total_price = models.DecimalField(
-        verbose_name="提取总价", max_digits=16, decimal_places=2
+        verbose_name="提取总价", max_digits=16, decimal_places=2,
+    )
+    sample_return_price = models.DecimalField(
+        verbose_name="返样总价", max_digits=16, decimal_places=2,
+        default=500,
+    )
+    data_delivery_price = models.DecimalField(
+        verbose_name="数据交付总价", max_digits=16, decimal_places=2,
+        default=500,
     )
     first_payment =  models.DecimalField(
-        verbose_name="首款", max_digits=16, decimal_places=2
+        verbose_name="首款", max_digits=16, decimal_places=2,
+        null=True, blank=True,
     )
     final_payment = models.DecimalField(
-        verbose_name="尾款", max_digits=16, decimal_places=2
+        verbose_name="尾款", max_digits=16, decimal_places=2,
+        null=True, blank=True,
     )
-    analyses = models.ManyToManyField(
-        Analyses, verbose_name="分析类别",
+    analyses_aa = models.ManyToManyField(
+        Analyses, verbose_name="高级分析", blank=True,
+        limit_choices_to={"union_id__contains": "AA"},
+        related_name="analyses_aa"
+    )
+    analyses_pa = models.ManyToManyField(
+        Analyses, verbose_name="个性化分析", blank=True,
+        limit_choices_to={"union_id__contains": "PA"},
+        related_name="analyses_pa"
     )
     contract_file = models.FileField(
         verbose_name="合同", null=True, blank=True,
         upload_to="uploads/contract/%Y/%m/%d/"
     )
     
+    @property
+    def total_price_upper(self):
+        return Price2UpperChinese(self.total_price)
+    
+    @property
+    def sequence_single_price_upper(self):
+        return Price2UpperChinese(self.sequence_single_price)
+    
+    @property
+    def sequence_total_price_upper(self):
+        return Price2UpperChinese(self.sequence_total_price)
+    
+    @property
+    def extract_total_price_upper(self):
+        return Price2UpperChinese(self.extract_total_price)
+    
+    @property
+    def sample_return_price_upper(self):
+        return Price2UpperChinese(self.sample_return_price)
+    
+    @property
+    def data_delivery_price_upper(self):
+        return Price2UpperChinese(self.data_delivery_price)
+    
+    @property
+    def first_payment_upper(self):
+        return Price2UpperChinese(self.first_payment)
+    
+    @property
+    def final_payment_upper(self):
+        return Price2UpperChinese(self.final_payment)
+        
     class Meta:
         verbose_name = '合同申请'
         verbose_name_plural = '合同申请'
