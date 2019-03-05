@@ -235,6 +235,14 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
             obj=obj
         )
     
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        manager_qs = User.objects.filter(groups__id=7)
+        current_qs = User.objects.filter(pk=request.user.pk)
+        if not request.user.is_superuser and not current_qs & manager_qs:
+            queryset = queryset.filter(reporter=request.user)
+        return queryset
+
     @staticmethod
     def date_format(_date):
         return _date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
