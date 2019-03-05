@@ -49,24 +49,15 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     search_fields = ("analyst__username", "ana_submit__ana_number", )
 
     def depart_data_path(self, obj):
-        if obj:
-            return obj.ana_submit.depart_data_path
-        else:
-            return None
+        return obj.ana_submit.depart_data_path if obj else None
     depart_data_path.short_description = '数据分析路径'
 
     def sample_count(self, obj):
-        if obj:
-            return obj.ana_submit.sample_count
-        else:
-            return None
+        return obj.ana_submit.sample_count if obj else None
     sample_count.short_description = '样品数量'
 
     def ana_start_date(self, obj):
-        if obj:
-            return obj.ana_submit.ana_start_date
-        else:
-            return None
+        return obj.ana_submit.ana_start_date if obj else None
     ana_start_date.short_description = '分析开始日期'
 
     def confirmation_sheet(self, obj):
@@ -90,7 +81,7 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
     def get_readonly_fields(self, request, obj=None):
         self.readonly_fields = (
             "ana_submit", "analyst", "end_date", "baidu_link", "is_submit",
-            "notes","depart_data_path", "sample_count", "ana_start_date"
+            "notes", "depart_data_path", "sample_count", "ana_start_date"
         ) if obj and obj.is_submit else ("ana_submit", "depart_data_path",
                                          "sample_count", "ana_start_date")
         return self.readonly_fields
@@ -249,7 +240,7 @@ class WeeklyReportAdmin(ImportExportModelAdmin, NotificationMixin):
         super().save_model(request, obj, form, change)
         if obj and obj.is_submit:
             content = "{0}:{1}---{2}周报已提交".format(
-                request.user.username,obj.start_date,obj.end_date
+                request.user.username, obj.start_date, obj.end_date
             )
             self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
             call_back = self.send_dingtalk_result

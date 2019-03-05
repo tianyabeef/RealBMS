@@ -11,3 +11,4 @@ dev.db
 BMS/settings.py
 templates/template_docx.docx
 templates/template_text.txt
+crm/clauses.py

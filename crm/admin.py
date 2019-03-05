@@ -1,15 +1,16 @@
 from django.contrib import admin, messages
 from django.utils.html import format_html
+from django.contrib.auth.models import User
 
 from docx_parsing_gmdzy2010.renderer import DocxProduce, ContextFields
-from docx_parsing_gmdzy2010.utilities import Price2UpperChinese
-
 from datetime import date
+
 from BMS.admin_bms import BMS_admin_site
+from BMS.settings import TEMPLATE_FROM_PATH, TEMPLATE_TO_PATH, TABLE_CONTEXT
 from crm.models import Customer, Intention, IntentionRecord, Analyses, \
     ContractApplications
-from crm.forms import IntentionForm
-from BMS.settings import TEMPLATE_FROM_PATH, TEMPLATE_TO_PATH, TABLE_CONTEXT
+from crm.forms import IntentionForm, ContractApplicationsForm
+from crm.clauses import clauses_decision
 
 
 class CustomerAdmin(admin.ModelAdmin):
@@ -152,6 +153,7 @@ class AnalysesAdmin(admin.ModelAdmin):
 
 class ContractApplicationsAdmin(admin.ModelAdmin):
     autocomplete_fields = ("second_party_contact", )
+    form = ContractApplicationsForm
     list_display = (
         'second_party_contact', 'contract_name', 'project_type', 'pay_type',
         'first_party', 'second_party', 'total_price', 'signed_date',
@@ -163,17 +165,20 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         'second_party': admin.VERTICAL,
         'project_type': admin.HORIZONTAL,
         'pay_type': admin.HORIZONTAL,
+        'data_delivery_type': admin.VERTICAL,
     }
     search_fields = ['union_id', 'analysis_name', 'analysis_type']
-    filter_horizontal = ("analyses", )
+    filter_horizontal = ('analyses_aa', 'analyses_pa', )
     fieldsets = (
         ("变更信息", {
             'fields': (
                 'contract_name', 'project_type', 'pay_type',
                 ('extract_sample_counts', 'sequence_sample_counts'),
                 'total_price', 'sequence_single_price', 'sequence_total_price',
-                'extract_total_price', ('first_payment', 'final_payment'),
-                'analyses',
+                'extract_total_price', 'sample_return_price',
+                ('first_payment', 'final_payment'),
+                'analyses_aa', 'analyses_pa', 'data_delivery_type',
+                ('signed_date', 'valid_date')
             )
         }), ("甲方信息", {
             'fields': (
@@ -197,7 +202,15 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         html = "<a href='%s'>下载</a>" % field.url if field else "无"
         return format_html(html)
     contract_download.short_description = '合同下载'
-
+    
+    def get_readonly_fields(self, request, obj=None):
+        users_qs = User.objects.filter(groups__id=3).order_by("id")
+        self.readonly_fields = (
+            'start_delay_sample_counts', 'databasing_upper_limit',
+            'delivery_upper_limit',
+        ) if obj and request.user in users_qs else ()
+        return self.readonly_fields
+    
     def render_change_form(self, request, context, add=False, change=False,
                            form_url='', obj=None):
         initial = context["adminform"].form.initial
@@ -223,35 +236,31 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         )
     
     @staticmethod
-    def date_format(date):
-        return date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
+    def date_format(_date):
+        return _date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
     
     def contract_produce(self, obj):
         template_text = "{}{}".format(TEMPLATE_FROM_PATH, "template_text.txt")
         template_docx = "{}{}".format(TEMPLATE_FROM_PATH, "template_docx.docx")
         fields = ContextFields(template_text=template_text).fields
         paragraph_context = {f: getattr(obj, f, "") for f in fields}
-        price_upper = {
+        extra_fields = {
             "signed_date": self.date_format(obj.signed_date),
+            "pay_type": obj.get_pay_type_display(),
+            "data_delivery_type": obj.get_data_delivery_type_display(),
+            "second_party": obj.get_second_party_display(),
             "valid_period": "{}至{}".format(
                 self.date_format(obj.signed_date),
                 self.date_format(obj.valid_date),
             ),
-            "pay_type": obj.get_pay_type_display(),
-            "second_party": obj.get_second_party_display(),
-            "total_price_upper": Price2UpperChinese(obj.total_price),
-            "sequence_total_price_upper": Price2UpperChinese(
-                obj.sequence_total_price
-            ),
-            "extract_total_price_upper": Price2UpperChinese(
-                obj.extract_total_price
-            ),
-            "first_payment_upper": Price2UpperChinese(obj.first_payment),
-            "final_payment_upper": Price2UpperChinese(obj.final_payment),
         }
-        analyses = {a.union_id: a.analysis_name for a in obj.analyses.all()}
-        paragraph_context.update(price_upper)
-        paragraph_context.update(analyses)
+        clauses = clauses_decision(obj)
+        aa = {a.union_id: a.analysis_name for a in obj.analyses_aa.all()}
+        pa = {a.union_id: a.analysis_name for a in obj.analyses_pa.all()}
+        paragraph_context.update(extra_fields)
+        paragraph_context.update(aa)
+        paragraph_context.update(pa)
+        paragraph_context.update(clauses)
         contract = DocxProduce(
             template_text=template_text, template_docx=template_docx,
             paragraph_context=paragraph_context, table_context=TABLE_CONTEXT,
@@ -265,6 +274,10 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
+        obj.analyses_aa.add(*form.cleaned_data["analyses_aa"])
+        obj.analyses_pa.add(*form.cleaned_data["analyses_pa"])
+        obj.save()
+        form.save_m2m()
         self.contract_produce(obj)
 
 
