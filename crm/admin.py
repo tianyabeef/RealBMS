@@ -69,7 +69,7 @@ class IntentionAdmin(admin.ModelAdmin):
     ]
     fields = (
         'customer_organization', 'customer', 'project_name', 'project_type',
-        'amount', 'closing_date', 'price'
+        'amount', 'price'
     )
     raw_id_fields = ('customer',)
 
@@ -226,15 +226,23 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         initial["second_party_contact_email"] = email
         
         # 默认当前分析项目包含所有高级分析项目
-        analyses_init = initial.get("analyses")
-        analyses_objs = Analyses.objects.filter(union_id__contains="16S")
-        analyses = analyses_init if analyses_init else analyses_objs
-        initial["analyses"] = analyses
+        analyses_init = initial.get("analyses_aa")
+        analyses_objs = Analyses.objects.filter(union_id__contains="AA")
+        analyses_aa = analyses_init if analyses_init else analyses_objs
+        initial["analyses_aa"] = analyses_aa
         return super().render_change_form(
             request, context, add=add, change=change, form_url=form_url,
             obj=obj
         )
     
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        manager_qs = User.objects.filter(groups__id=7)
+        current_qs = User.objects.filter(pk=request.user.pk)
+        if not request.user.is_superuser and not current_qs & manager_qs:
+            queryset = queryset.filter(second_party_contact=request.user)
+        return queryset
+
     @staticmethod
     def date_format(_date):
         return _date.strftime('%Y{y}%m{m}%d{d}').format(y='年', m='月', d='日')
