@@ -69,7 +69,7 @@ class IntentionAdmin(admin.ModelAdmin):
     ]
     fields = (
         'customer_organization', 'customer', 'project_name', 'project_type',
-        'amount', 'closing_date', 'price'
+        'amount', 'price'
     )
     raw_id_fields = ('customer',)
 
@@ -240,7 +240,7 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         manager_qs = User.objects.filter(groups__id=7)
         current_qs = User.objects.filter(pk=request.user.pk)
         if not request.user.is_superuser and not current_qs & manager_qs:
-            queryset = queryset.filter(reporter=request.user)
+            queryset = queryset.filter(second_party_contact=request.user)
         return queryset
 
     @staticmethod
