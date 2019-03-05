@@ -226,10 +226,10 @@ class ContractApplicationsAdmin(admin.ModelAdmin):
         initial["second_party_contact_email"] = email
         
         # 默认当前分析项目包含所有高级分析项目
-        analyses_init = initial.get("analyses")
-        analyses_objs = Analyses.objects.filter(union_id__contains="16S")
-        analyses = analyses_init if analyses_init else analyses_objs
-        initial["analyses"] = analyses
+        analyses_init = initial.get("analyses_aa")
+        analyses_objs = Analyses.objects.filter(union_id__contains="AA")
+        analyses_aa = analyses_init if analyses_init else analyses_objs
+        initial["analyses_aa"] = analyses_aa
         return super().render_change_form(
             request, context, add=add, change=change, form_url=form_url,
             obj=obj
