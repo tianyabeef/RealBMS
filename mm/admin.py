@@ -116,7 +116,7 @@ class ContractExecuteForm(forms.ModelForm):
         # print(contract)
         income = 0
         for i in contract:
-            income += (i.fis_amount_in + i.fin_amount_in) - i.consume_money
+            income += (i.fis_amount_in or 0 + i.fin_amount_in or 0) - i.consume_money
         if income < self.cleaned_data["all_amount"]:
             raise forms.ValidationError(
                 "余额不足：预存款合同可用{}元，本项目花费{}元".format(income, self.cleaned_data[
@@ -142,7 +142,7 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
         income = 0
         consume = 0
         for i in obj.contract.all():
-            income += (i.fis_amount_in + i.fin_amount_in)
+            income += (i.fis_amount_in or 0 + i.fin_amount_in or 0)
             consume += i.consume_money
         return income - consume
 
