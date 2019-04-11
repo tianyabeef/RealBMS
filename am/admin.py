@@ -161,8 +161,8 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
             all_sub_project.update(is_status=13, time_ana=obj.end_date)
             name_list = set([n.sub_project for n in all_sub_project])
             content = "项目【%s】状态已变更为【完成】" % "，".join(name_list)
-            dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS")
-            dingdingid_ = DingtalkChat.objects.get(chat_name="生信分析钉钉群-BMS")
+            dingdingid = DingtalkChat.objects.get(chat_name="项目管理钉钉群-BMS").chat_id
+            dingdingid_ = DingtalkChat.objects.get(chat_name="生信分析钉钉群-BMS").chat_id
             send_to = [dingdingid, dingdingid_]
             self.send_work_notice(content, DINGTALK_AGENT_ID, send_to)
             call_back = self.send_dingtalk_result
@@ -174,7 +174,11 @@ class AnaExecuteAdmin(ImportExportModelAdmin, NotificationMixin):
                 all_sub_project.update(is_status=13, time_ana=obj.end_date)
                 name_list = set([n.sub_project for n in all_sub_project])
                 analyst = form.cleaned_data["analyst"]
-                analyst_dingid = Employees.objects.get(dingtalk_name=analyst.username)
+                analyst_dingid = Employees.objects.filter(dingtalk_name=analyst.username)
+                if analyst_dingid.exists():
+                    analyst_dingid = analyst_dingid.first().dingtalk_id
+                else:
+                    analyst_dingid = None
                 content = "项目：{}待分析，请在BMS系统中查看详细信息，辛苦开展分析".format(name_list)
                 self.send_work_notice(content, DINGTALK_AGENT_ID, analyst_dingid)
                 call_back = self.send_dingtalk_result
