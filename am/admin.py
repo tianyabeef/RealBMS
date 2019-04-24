@@ -1,13 +1,18 @@
+import datetime
+from django.contrib import admin
 from am.forms import AnaExecuteModelForm, WeeklyReportModelForm
-from am.models import AnaExecute, WeeklyReport
-from am.resources import AnaExecuteResource, WeeklyReportResource
+from am.models import AnaExecute, WeeklyReport, ProjectTask, DevelopmentTask, \
+    OtherTask
+from am.resources import AnaExecuteResource, WeeklyReportResource, \
+    ProjectTaskResource, DevelopmentTaskResource, OtherTaskResource
 from am.views import AnaAutocompleteJsonView
 from django.contrib.auth.models import Group, User
 from django.contrib.auth.admin import UserAdmin
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.html import format_html
-from import_export.admin import ImportExportModelAdmin
+from import_export.admin import ImportExportModelAdmin,\
+    ImportExportActionModelAdmin
 from BMS.admin_bms import BMS_admin_site
 from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
@@ -254,5 +259,116 @@ class WeeklyReportAdmin(ImportExportModelAdmin, NotificationMixin):
             self.message_user(request, "周报记录已保存，请及时跟进")
 
 
+class AnalystListFilter(admin.SimpleListFilter):
+    title = "分析员"
+    parameter_name = "analyst"
+
+    def lookups(self, request, model_admin):
+        analysts = []
+        analysts_id = []
+        for i in User.objects.filter(groups__id=9):
+            analysts.append(i.username)
+            analysts_id.append(i.id)
+        return zip(analysts_id, analysts)
+
+    def queryset(self, request, queryset):
+        if self.value():
+            user = User.objects.filter(id=self.value()).first()
+            return queryset.filter(analyst=user)
+        else:
+            return queryset
+
+
+class ProjectTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    """项目任务管理"""
+    list_display = ("contract", 'project_name', 'analyst', 'category', 'type',
+                    'write_date')
+    list_display_links = ("contract", 'project_name')
+    search_fields = ("contract", 'project_name')
+    exclude = ("write_date",)
+    list_filter = (AnalystListFilter, 'category', 'type', 'write_date')
+    autocomplete_fields = ("analyst", "review_user")
+    resource_class = ProjectTaskResource
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        manager_qs = User.objects.filter(groups__id=10)
+        current_qs = User.objects.filter(pk=request.user.pk)
+        if not request.user.is_superuser and not current_qs & manager_qs:
+            queryset = queryset.filter(analyst=request.user)
+        return queryset
+
+    def save_model(self, request, obj, form, change):
+        obj.write_date = datetime.date.today()
+        obj.history_date = obj.history_date + datetime.date.today().__str__() + " -----"
+        obj.save()
+
+
+class WriterListFilter(admin.SimpleListFilter):
+    title = "开发任务填写人"
+    parameter_name = "writer"
+
+    def lookups(self, request, model_admin):
+        analysts = []
+        analysts_id = []
+        for i in User.objects.filter(groups__id=9):
+            analysts.append(i.username)
+            analysts_id.append(i.id)
+        return zip(analysts_id, analysts)
+
+    def queryset(self, request, queryset):
+        if self.value():
+            user = User.objects.filter(id=self.value()).first()
+            return queryset.filter(writer=user)
+        else:
+            return queryset
+
+
+class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    list_display = ("product_name", "rd_tasks", "cycle", "finish_time",
+                    'is_finish', "writer", 'note')
+    list_display_links = ("product_name", )
+    list_filter = (WriterListFilter, "product_name")
+    autocomplete_fields = ("writer", )
+    resource_class = DevelopmentTaskResource
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        manager_qs = User.objects.filter(groups__id=10)
+        current_qs = User.objects.filter(pk=request.user.pk)
+        if not request.user.is_superuser and not current_qs & manager_qs:
+            queryset = queryset.filter(writer=request.user)
+        return queryset
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        initial["writer"] = request.user.id
+        return initial
+
+
+class OtherTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    list_display = ("task_detail", "finish_status", "start_time", "end_time",
+                    'writer', "user_in_charge", 'is_finish')
+    list_display_links = ("task_detail", )
+    list_filter = (WriterListFilter, )
+    autocomplete_fields = ("writer", )
+    resource_class = OtherTaskResource
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        manager_qs = User.objects.filter(groups__id=10)
+        current_qs = User.objects.filter(pk=request.user.pk)
+        if not request.user.is_superuser and not current_qs & manager_qs:
+            queryset = queryset.filter(writer=request.user)
+        return queryset
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        initial["writer"] = request.user.id
+        return initial
+
+
+BMS_admin_site.register(OtherTask, OtherTaskAdmin)
+BMS_admin_site.register(DevelopmentTask, DevelopmentTaskAdmin)
+BMS_admin_site.register(ProjectTask, ProjectTaskAdmin)
 BMS_admin_site.register(AnaExecute, AnaExecuteAdmin)
 BMS_admin_site.register(WeeklyReport, WeeklyReportAdmin)
