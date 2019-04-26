@@ -73,16 +73,17 @@ class InvoiceInfoResource(resources.ModelResource):
     income_set = fields.Field(column_name='到账金额集', attribute="income_set")
     income_date_set = fields.Field(column_name='到账时间集', attribute="income_date_set")
     invoice_receive_date = fields.Field(column_name='合同寄回日')
+    invoice_product_type = fields.Field(column_name="产品类型")
 
     class Meta:
         model = Invoice
         skip_unchanged = True
         fields = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                   'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date")
+                  'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date", "invoice_product_type")
         export_order = ('contract_salesman','invoice_contract_number','contract_name','invoice_title','contract_price','contract_range',
                         'contract_amount','invoice_amount','contract_income','date','contract_income_date','invoice_code',
-                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date")
+                        'invoice_type','invoice_tax_amount','invoice_content','invoice_issuingUnit', 'income_set', 'income_date_set',"invoice_receive_date", "invoice_product_type")
     def dehydrate_contract_amount(self, invoice):
         return '%.2f' % (invoice.invoice.contract.fis_amount+invoice.invoice.contract.fin_amount)
     def dehydrate_contract_salesman(self,invoice):
@@ -109,7 +110,8 @@ class InvoiceInfoResource(resources.ModelResource):
             result = "无"
         return result
         # return format(invoice.invoice.contract.receive_date,"Y年-m月-d日")
-
+    def dehydrate_invoice_product_type(self,invoice):
+        return invoice.invoice.contract.TYPE_CHOICES[invoice.invoice.contract.type-1][1]
     # def export(self, queryset=None, *args, **kwargs):
     #     queryset_result = Bill.objects.filter(id=None)
     #     for i in queryset:
