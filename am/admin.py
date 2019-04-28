@@ -283,6 +283,8 @@ class AnalystListFilter(admin.SimpleListFilter):
 
 class ProjectTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     """项目任务管理"""
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ("contract", 'project_name', 'analyst', 'category', 'type',
                     'write_date')
     list_display_links = ("contract", 'project_name')
@@ -335,6 +337,8 @@ class WriterListFilter(admin.SimpleListFilter):
 
 
 class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ("product_name", "rd_tasks", "cycle", "finish_time",
                     'is_finish', "writer", 'note')
     list_display_links = ("product_name", )
@@ -369,6 +373,8 @@ class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
         self.message_user(request, message)
 
 class OtherTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
     list_display = ("task_detail", "finish_status", "start_time", "end_time",
                     'writer', "user_in_charge", 'is_finish')
     list_display_links = ("task_detail", )
