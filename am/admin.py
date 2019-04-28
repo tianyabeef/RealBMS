@@ -18,6 +18,8 @@ from BMS.notice_mixin import NotificationMixin
 from BMS.settings import DINGTALK_APPKEY, DINGTALK_SECRET, DINGTALK_AGENT_ID
 from em.models import Employees
 from nm.models import DingtalkChat
+from rangefilter.filter import DateRangeFilter
+
 
 
 class UserForAutocompleteAdmin(UserAdmin):
@@ -286,7 +288,8 @@ class ProjectTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     list_display_links = ("contract", 'project_name')
     search_fields = ("contract", 'project_name')
     exclude = ("write_date",)
-    list_filter = (AnalystListFilter, 'category', 'type', 'write_date')
+    list_filter = (AnalystListFilter, 'category', 'type',
+                   ('write_date', DateRangeFilter))
     autocomplete_fields = ("analyst", "review_user")
     resource_class = ProjectTaskResource
 
@@ -301,7 +304,14 @@ class ProjectTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     def save_model(self, request, obj, form, change):
         obj.write_date = datetime.date.today()
         obj.history_date = obj.history_date + datetime.date.today().__str__() + " -----"
+        content = "{0}的项目任务已提交".format(
+            request.user.username)
+        self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
+        call_back = self.send_dingtalk_result
+        message = "已钉钉通知项目部门总监" if call_back else "钉钉通知失败"
         obj.save()
+        self.message_user(request, message)
+
 
 
 class WriterListFilter(admin.SimpleListFilter):
@@ -328,9 +338,12 @@ class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     list_display = ("product_name", "rd_tasks", "cycle", "finish_time",
                     'is_finish', "writer", 'note')
     list_display_links = ("product_name", )
-    list_filter = (WriterListFilter, "product_name")
+    list_filter = (WriterListFilter, "product_name",
+                   ('write_date', DateRangeFilter))
     autocomplete_fields = ("writer", )
     resource_class = DevelopmentTaskResource
+    exclude = ("write_date",)
+
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         manager_qs = User.objects.filter(groups__id=10)
@@ -344,14 +357,25 @@ class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
         initial["writer"] = request.user.id
         return initial
 
+    def save_model(self, request, obj, form, change):
+        obj.write_date = datetime.date.today()
+        obj.history_date = obj.history_date + datetime.date.today().__str__() + " -----"
+        content = "{0}的开发任务已提交".format(
+            request.user.username)
+        self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
+        call_back = self.send_dingtalk_result
+        message = "已钉钉通知项目部门总监" if call_back else "钉钉通知失败"
+        obj.save()
+        self.message_user(request, message)
 
 class OtherTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     list_display = ("task_detail", "finish_status", "start_time", "end_time",
                     'writer', "user_in_charge", 'is_finish')
     list_display_links = ("task_detail", )
-    list_filter = (WriterListFilter, )
+    list_filter = (WriterListFilter, ('write_date', DateRangeFilter))
     autocomplete_fields = ("writer", )
     resource_class = OtherTaskResource
+    exclude = ["write_date"]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -365,6 +389,17 @@ class OtherTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
         initial = super().get_changeform_initial_data(request)
         initial["writer"] = request.user.id
         return initial
+
+    def save_model(self, request, obj, form, change):
+        obj.write_date = datetime.date.today()
+        obj.history_date = obj.history_date + datetime.date.today().__str__() + " -----"
+        content = "{0}的其他任务已提交".format(
+            request.user.username)
+        self.send_work_notice(content, DINGTALK_AGENT_ID, "03561038053843")
+        call_back = self.send_dingtalk_result
+        message = "已钉钉通知项目部门总监" if call_back else "钉钉通知失败"
+        obj.save()
+        self.message_user(request, message)
 
 
 BMS_admin_site.register(OtherTask, OtherTaskAdmin)

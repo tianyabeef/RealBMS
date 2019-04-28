@@ -117,6 +117,9 @@ class ProjectTask(models.Model):
                                       ('售后分析', '售后分析')),
         max_length=50, blank=True, null=True
     )
+    analysis_times = models.IntegerField(
+        verbose_name="总分析次数", blank=True, null=True
+    )
     begin_time = models.DateField(
         verbose_name="开始时间", blank=True, null=True
     )
@@ -173,11 +176,12 @@ class DevelopmentTask(models.Model):
         科技服务生信部门的开发任务管理
     """
     product_name = models.CharField(
-        verbose_name="产品名称", choices=(("扩增子", "扩增子"), ("基因组", "基因组"),
+        verbose_name="产品名称", choices=(("扩增子", "扩增子"), ("宏基因组", "宏基因组"),
                                       ("转录组", "转录组"), ("代谢组", "代谢组"),
-                                      ("单菌", "单菌"),
+                                      ("单菌", "单菌"), ("集群管理", "集群管理"),
                                       ("扩增子+代谢组", "扩增子+代谢组"),
-                                      ("宏基因组+代谢组", "宏基因组+代谢组")),
+                                      ("宏基因组+代谢组", "宏基因组+代谢组"),
+                                      ("系统开发", "系统开发")),
         max_length=100, blank=True, null=True
     )
     rd_tasks = models.CharField(
@@ -207,6 +211,12 @@ class DevelopmentTask(models.Model):
         verbose_name="填写人", to=User, on_delete=models.SET_NULL,
         blank=True, null=True
     )
+    write_date = models.DateField(
+        verbose_name="填写日期", blank=True, null=True
+    )
+    history_date = models.TextField(
+        verbose_name="历史填写日期", blank=True, null=True
+    )
 
     class Meta:
         verbose_name_plural = verbose_name = "02开发任务"
@@ -235,6 +245,12 @@ class OtherTask(models.Model):
     writer = models.ForeignKey(
         verbose_name="填写人", to=User, on_delete=models.SET_NULL,
         blank=True, null=True)
+    history_date = models.TextField(
+        verbose_name="历史填写日期", blank=True, null=True
+    )
+    write_date = models.DateField(
+        verbose_name="填写日期", blank=True, null=True
+    )
 
     class Meta:
         verbose_name_plural = verbose_name = "03其他任务"
