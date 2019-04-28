@@ -340,7 +340,7 @@ class DevelopmentTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     list_display = ("product_name", "rd_tasks", "cycle", "finish_time",
-                    'is_finish', "writer", 'note')
+                    'is_finish', "writer", 'note', "write_date")
     list_display_links = ("product_name", )
     list_filter = (WriterListFilter, "product_name",
                    ('write_date', DateRangeFilter))
@@ -376,7 +376,7 @@ class OtherTaskAdmin(ImportExportActionModelAdmin, NotificationMixin):
     appkey = DINGTALK_APPKEY
     appsecret = DINGTALK_SECRET
     list_display = ("task_detail", "finish_status", "start_time", "end_time",
-                    'writer', "user_in_charge", 'is_finish')
+                    'writer', "user_in_charge", 'is_finish', "write_date")
     list_display_links = ("task_detail", )
     list_filter = (WriterListFilter, ('write_date', DateRangeFilter))
     autocomplete_fields = ("writer", )
