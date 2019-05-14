@@ -7,7 +7,7 @@ from django.contrib.auth.hashers import make_password, check_password
 from BMS.notice_mixin import NotificationMixin
 from BMS.admin_bms import BMS_admin_site
 from .models import Invoice, Contract, InvoiceTitle, BzContract, \
-    Contract_execute
+    Contract_execute, OutSourceContract
 from fm.models import Invoice as fm_Invoice
 from django.contrib import messages
 from datetime import datetime
@@ -894,6 +894,70 @@ class BzContractAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+class OutSourceContractResource(resources.ModelResource):
+    """Provide OutSourceContract Export Resource"""
+    contract_type = fields.Field(
+        column_name='合同类型', attribute='contract_type', default=None
+    )
+    contract_num = fields.Field(
+        column_name='合同号', attribute='contract_type', default=None
+    )
+    contract_name = fields.Field(
+        column_name='合同名称', attribute='contract_name', default=None
+    )
+    type = fields.Field(
+        column_name='类型', attribute='type', default=None
+    )
+    contract_contacts = fields.Field(
+        column_name='合同联系人', attribute='contract_contacts', default=None
+    )
+    contract_contacts_phone = fields.Field(
+        column_name='合同联系人电话', attribute='contract_contacts_phone',
+        default=None
+    )
+    contract_contacts_email = fields.Field(
+        column_name='合同联系人邮箱', attribute='contract_contacts_email',
+        default=None
+    )
+    price = fields.Field(
+        column_name='单价', attribute='price', default=None
+    )
+    price_total = fields.Field(
+        column_name='总价', attribute='price_total', default=None
+    )
+    send_num = fields.Field(
+        column_name='快递单号', attribute='send_num', default=None
+    )
+    date = fields.Field(
+        column_name='合同日期', attribute='date', default=None
+    )
+    note = fields.Field(
+        column_name='备注', attribute='note', default=None
+    )
+
+
+class OutSourceContractAdmin(ImportExportActionModelAdmin, NotificationMixin):
+    appkey = DINGTALK_APPKEY
+    appsecret = DINGTALK_SECRET
+    resource_class = OutSourceContractResource
+    list_display_links = ("contract_num", "contract_name")
+    list_display = (
+        "contract_type", "contract_num", 'contract_name', "contract_contacts",
+        "contract_contacts_phone", "date", "contract_file", "contract_scan")
+    search_fields = ["contract_contacts", "contract_num", "contract_name"]
+    list_filter = [('date', DateRangeFilter), ]
+
+    def save_model(self, request, obj, form, change):
+        obj.save()
+        if obj.submit:
+            content ="【上海锐翌生物科技有限公司-BMS通知】:新增外包合同操作，合同名称：{}，合同编号：{}".format(obj.contract_name, obj.contract_num)
+            self.send_group_message(content, DingtalkChat.objects.get(
+                                chat_name="项目管理钉钉群-BMS").chat_id)
+            call_back = self.send_dingtalk_result
+            message = "提交成功，已钉钉项目管理群" if call_back else "钉钉通知失败"
+            self.message_user(request, message)
+
+BMS_admin_site.register(OutSourceContract, OutSourceContractAdmin)
 BMS_admin_site.register(BzContract, BzContractAdmin)
 BMS_admin_site.register(Contract, ContractAdmin)
 BMS_admin_site.register(Invoice, InvoiceAdmin)
