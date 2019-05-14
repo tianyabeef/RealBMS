@@ -18,12 +18,12 @@ class IntentionForm(forms.ModelForm):
 
 class ContractApplicationsForm(forms.ModelForm):
     analyses_aa = forms.ModelMultipleChoiceField(
-        label="高级分析",
+        label="高级分析", required=False,
         queryset=Analyses.objects.filter(union_id__contains="AA"),
         widget=forms.CheckboxSelectMultiple()
     )
     analyses_pa = forms.ModelMultipleChoiceField(
-        label="个性化分析",
+        label="个性化分析", required=False,
         queryset=Analyses.objects.filter(union_id__contains="PA"),
         widget=forms.CheckboxSelectMultiple()
     )
