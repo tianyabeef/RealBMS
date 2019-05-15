@@ -947,6 +947,17 @@ class OutSourceContractAdmin(ImportExportActionModelAdmin, NotificationMixin):
     search_fields = ["contract_contacts", "contract_num", "contract_name"]
     list_filter = [('date', DateRangeFilter), ]
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            if obj.submit:
+                return ["contract_type", "contract_num", "contract_name",
+                        "type", "contract_contacts", "contract_contacts_phone",
+                        "contract_contacts_email", "price", "price_total",
+                        "send_num", "date", "contract_file", "contract_scan",
+                        "note", "submit"]
+        else:
+            return []
+
     def save_model(self, request, obj, form, change):
         obj.save()
         if obj.submit:
