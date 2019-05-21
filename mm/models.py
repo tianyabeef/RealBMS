@@ -113,6 +113,7 @@ class Contract_execute(models.Model):
     contract = models.ManyToManyField(Contract, verbose_name="对应预存款合同")
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     contract_number = models.CharField('执行合同号', max_length=30, unique=True)
+    contacts = models.CharField('客户', max_length=15, blank=True, null=True)
     contact_note = models.TextField('执行合同备注', blank=True)
     saler = models.ForeignKey(User,
                               verbose_name='业务员', on_delete=models.SET_NULL, null=True)
@@ -120,6 +121,7 @@ class Contract_execute(models.Model):
     contract_file = models.FileField('附件',
                                      upload_to='uploads/Contract_execute/%Y/%m',
                                      blank=True)
+
     def __str__(self):
         return self.contract_number
 

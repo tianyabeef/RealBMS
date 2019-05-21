@@ -130,13 +130,13 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
     """
     form = ContractExecuteForm
     list_display_links = ("contract_number",)
-    list_display = (
-    "contract_number", "income", 'saler', "all_amount", "contact_note",
-    "submit")
+    list_display = ("contract_number", "income", "contacts", "contacts_",
+                    'saler', "all_amount", "contact_note","submit")
     filter_horizontal = ["contract", ]
     readonly_fields = ["income"]
-    fields = ["contract_number", "contract", "saler", "income", "all_amount",
-              "contract_file", "contact_note", "submit"]
+    search_fields = ["contacts", "contract_number"]
+    fields = ["contract_number", "contract", "saler", "contacts",
+              "income", "all_amount","contract_file", "contact_note", "submit"]
 
     def income(self, obj):
         income = 0
@@ -147,6 +147,16 @@ class ContractExecuteAdmin(ExportActionModelAdmin, NotificationMixin):
         return income - consume
 
     income.short_description = "预存款合同内剩余金额"
+
+    def contacts_(self, obj):
+        if obj.contract:
+            res = []
+            for i in obj.contract.all():
+                res.append(i.contract_number + "---" + i.contacts)
+            return res
+        else:
+            return None
+    contacts_.short_description = "预存款合同对应客户"
 
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "contract":
