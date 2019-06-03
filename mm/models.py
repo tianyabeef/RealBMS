@@ -218,7 +218,7 @@ class OutSourceContract(models.Model):
     contract_contacts_phone = models.CharField(
         verbose_name="合同联系人电话", max_length=50, blank=True, null=True)
     contract_contacts_email = models.EmailField(
-        verbose_name="合同类型", blank=True, null=True)
+        verbose_name="合同联系人邮箱", blank=True, null=True)
     price = models.DecimalField(
         verbose_name='单价', max_digits=7, decimal_places=2, blank=True,
         null=True)

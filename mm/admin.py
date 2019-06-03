@@ -965,6 +965,8 @@ class OutSourceContractAdmin(ImportExportActionModelAdmin, NotificationMixin):
                         "contract_contacts_email", "price", "price_total",
                         "send_num", "date", "contract_file", "contract_scan",
                         "note", "submit"]
+            else:
+                return []
         else:
             return []
 
@@ -977,6 +979,7 @@ class OutSourceContractAdmin(ImportExportActionModelAdmin, NotificationMixin):
             call_back = self.send_dingtalk_result
             message = "提交成功，已钉钉项目管理群" if call_back else "钉钉通知失败"
             self.message_user(request, message)
+
 
 BMS_admin_site.register(OutSourceContract, OutSourceContractAdmin)
 BMS_admin_site.register(BzContract, BzContractAdmin)
