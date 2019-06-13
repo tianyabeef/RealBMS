@@ -9,8 +9,8 @@ class InvoiceTitle(models.Model):
     tariffItem = models.CharField("税号", max_length=50, unique=True)
 
     class Meta:
-        verbose_name = '发票抬头'
-        verbose_name_plural = '发票抬头'
+        verbose_name = '01发票抬头'
+        verbose_name_plural = '01发票抬头'
 
     def __str__(self):
         return '%s-%s' % (self.title, self.tariffItem)
@@ -86,8 +86,8 @@ class Contract(models.Model):
     contract_type = models.IntegerField('合同类型', choices=CONTRACT_TYPE, default=1)
 
     class Meta:
-        verbose_name = '合同管理'
-        verbose_name_plural = '合同管理'
+        verbose_name = '03合同管理'
+        verbose_name_plural = '03合同管理'
 
     def file_link(self):
         if self.contract_file:
@@ -108,10 +108,12 @@ class Contract(models.Model):
     def __str__(self):
         return '【%s】-【%s】' % (self.contract_number, self.name)
 
+
 class Contract_execute(models.Model):
     contract = models.ManyToManyField(Contract, verbose_name="对应预存款合同")
     all_amount = models.DecimalField('总款额', max_digits=12, decimal_places=2)
     contract_number = models.CharField('执行合同号', max_length=30, unique=True)
+    contacts = models.CharField('客户', max_length=15, blank=True, null=True)
     contact_note = models.TextField('执行合同备注', blank=True)
     saler = models.ForeignKey(User,
                               verbose_name='业务员', on_delete=models.SET_NULL, null=True)
@@ -119,12 +121,13 @@ class Contract_execute(models.Model):
     contract_file = models.FileField('附件',
                                      upload_to='uploads/Contract_execute/%Y/%m',
                                      blank=True)
+
     def __str__(self):
         return self.contract_number
 
     class Meta:
-        verbose_name = '执行合同管理'
-        verbose_name_plural = '执行合同管理'
+        verbose_name = '04执行合同管理'
+        verbose_name_plural = '04执行合同管理'
 
 
 class Invoice(models.Model):
@@ -158,8 +161,8 @@ class Invoice(models.Model):
     submit = models.BooleanField('提交开票',default=False)
 
     class Meta:
-        verbose_name = '开票申请'
-        verbose_name_plural = '开票申请'
+        verbose_name = '02开票申请'
+        verbose_name_plural = '02开票申请'
 
     def __str__(self):
         return '%.2f' % self.amount
@@ -188,8 +191,61 @@ class BzContract(models.Model):
     file_link.allow_tags = True
 
     class Meta:
-        verbose_name = '报账合同管理'
-        verbose_name_plural = '报账合同管理'
+        verbose_name = '05报账合同管理'
+        verbose_name_plural = '05报账合同管理'
 
     def __str__(self):
         return '【%s】-【%s】' % (self.contract_number, self.name)
+
+
+class OutSourceContract(models.Model):
+    # to_contract = models.ForeignKey(
+    #     to=Contract, verbose_name="对应流程合同", blank=True, null=True,
+    #     on_delete=models.SET_NULL)
+    # to_contract_execute = models.ForeignKey(
+    #     to=Contract_execute, verbose_name="对应执行合同", blank=True, null=True,
+    #     on_delete=models.SET_NULL)
+    contract_type = models.CharField(
+        verbose_name="合同类型", max_length=50, blank=True, null=True)
+    contract_num = models.CharField(
+        verbose_name="合同号", max_length=50, blank=True, null=True)
+    contract_name = models.CharField(
+        verbose_name="合同名称", max_length=50, blank=True, null=True)
+    type = models.CharField(
+        verbose_name="类型", max_length=50, blank=True, null=True)
+    contract_contacts = models.CharField(
+        verbose_name="合同联系人", max_length=50, blank=True, null=True)
+    contract_contacts_phone = models.CharField(
+        verbose_name="合同联系人电话", max_length=50, blank=True, null=True)
+    contract_contacts_email = models.EmailField(
+        verbose_name="合同联系人邮箱", blank=True, null=True)
+    price = models.DecimalField(
+        verbose_name='单价', max_digits=7, decimal_places=2, blank=True,
+        null=True)
+    price_total = models.DecimalField(
+        verbose_name='总价', max_digits=7, decimal_places=2, blank=True,
+        null=True)
+    send_num = models.CharField(
+        verbose_name="快递单号", max_length=50, blank=True, null=True)
+    date = models.CharField(
+        verbose_name="合同日期", max_length=50, blank=True, null=True)
+    contract_file = models.FileField(
+        verbose_name="合同附件", upload_to='uploads/WbContract/file/%Y/%m',
+        blank=True, null=True)
+    contract_scan = models.FileField(
+        verbose_name="合同扫描件", upload_to='uploads/WbContract/scan/%Y/%m',
+        blank=True, null=True
+    )
+    note = models.TextField(
+        verbose_name="备注", blank=True, null=True
+    )
+    submit = models.BooleanField(
+        verbose_name="提交", default=False
+    )
+
+    class Meta:
+        verbose_name = '06外包合同管理'
+        verbose_name_plural = '06外包合同管理'
+
+    def __str__(self):
+        return '【%s】-【%s】' % (self.contract_num, self.contract_name)
