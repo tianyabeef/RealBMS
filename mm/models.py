@@ -35,6 +35,7 @@ class Contract(models.Model):
         (5, '其它'),
         (6, '无'),
         (7, '代谢组'),
+        (8, '试剂')
     )
     CONTRACT_TYPE = (
         (1, '流程合同'),
