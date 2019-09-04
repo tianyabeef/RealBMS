@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.template import Library
 from django.utils.html import format_html
 
 register = Library()
 
 
-@register.assignment_tag(takes_context=True)
+# @register.assignment_tag(takes_context=True)
 def notifications_unread(context):
     user = user_context(context)
     if not user:
