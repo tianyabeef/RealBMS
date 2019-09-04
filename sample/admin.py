@@ -174,7 +174,7 @@ class SampleInfoResource(resources.ModelResource):
 
     def get_export_headers(self):
         return ["id", "概要信息编号", "样品名", "实际收到样品名", "物种(没有写无)"
-            , "样品类型(没有写无)", "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求", "物种"]
+            , "样品类型(没有写无)", "管数", "是否需要提取(0-不需要，1-需要)", "备注", "数据量要求"]
 
     def get_diff_headers(self):
         return ["id", "概要信息编号", "样品名", "实际收到样品名", "物种(没有写无)", "样品类型(没有写无)",
@@ -255,6 +255,7 @@ class SampleInfoResource(resources.ModelResource):
         queryset_result = SampleInfo.objects.filter(id=None)
         for i in queryset:
             queryset_result |= SampleInfo.objects.filter(sampleinfoform=i)
+            print(queryset_result)
         return super().export(queryset=queryset_result, *args, **kwargs)
 
 
