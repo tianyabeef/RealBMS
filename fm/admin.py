@@ -178,7 +178,7 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
                     'contract_type', 'invoice_period','invoice_issuingUnit', 'invoice_title', 'invoice_amount', 'income_date',
                     'bill_receivable', 'invoice_code', 'date', 'tracking_number', 'send_date','file_link')
     list_display_links = ('invoice_title', 'invoice_amount')
-    search_fields = ('invoice__contract__contract_number','invoice__title__title','invoice_code','^invoice__amount','invoice__issuingUnit')
+    search_fields = ('invoice__contract__contract_number','invoice__title__title','invoice_code','^invoice__amount','invoice__issuingUnit', 'invoice__contract__salesman__username')
     list_per_page = 50
     inlines = [
         BillInline,
@@ -394,13 +394,25 @@ class InvoiceAdmin(ExportActionModelAdmin, NotificationMixin):
         qs = super().get_queryset(request)
         if request.user.is_superuser or haved_perm:
             return qs
-        return qs.filter(invoice__contract__salesman=request.user)
+        if request.user.id == 11:
+            qs_sale1 = User.objects.filter ( id=58 ) #王其轩
+            qs_sale2 = User.objects.filter ( id=475 ) #魏绍虎
+            qs_sale3 = User.objects.filter ( id=465 )  # 李瑛
+            qs_sale4 = User.objects.filter ( id=45 )  # 王迎政华北
+            qs_sale5 = User.objects.filter ( id=424 )  # 王迎政浙江
+            return qs.filter ( invoice__contract__salesman__in=[request.user,qs_sale1[0],qs_sale2[0],qs_sale3[0],qs_sale4[0],qs_sale5[0]] )
+        if request.user.id == 47:
+            qs_sale1 = User.objects.filter ( id=12 )  # 王佩
+            qs_sale2 = User.objects.filter ( id=59 )  # 常坤
+            qs_sale3 = User.objects.filter ( id=506 )  # 周秋红
+            return qs.filter ( invoice__contract__salesman__in=[request.user, qs_sale1[0], qs_sale2[0], qs_sale3[0]] )
+        return qs.filter ( invoice__contract__salesman=request.user )
 
     def get_list_filter(self, request):
         #销售总监，admin，有删除权限的人可以看到salelistFilter
         haved_perm = False
         for group in request.user.groups.all():
-            if (group.id == 7) or (group.id == 5) or (group.id == 14) or (group.id == 4) or (group.id==12)  or (group.id == 15):#销售总监、财务总监,财务部、市场部、市场总监、市场部项目组
+            if (group.id == 7) or (group.id == 5) or (group.id == 14) or (group.id == 4) or (group.id==12)  or (group.id == 15) or (request.user.id == 47) or (request.user.id == 11):#销售总监、财务总监,财务部、市场部、市场总监、市场部项目组,刘强，战飞翔
                 haved_perm=True
         if request.user.is_superuser or haved_perm:
             return [
