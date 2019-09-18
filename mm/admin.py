@@ -689,13 +689,25 @@ class ContractAdmin(ExportActionModelAdmin, NotificationMixin):
         # 只允许管理员,拥有该模型新增权限的人员，销售总监才能查看所有#TODO 给财务开通查询所有合同的权限，暂时先用
         haved_perm = False
         for group in request.user.groups.all():
-            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15:  # 市场部总监，项目管理，销售总监
+            if group.id == 7 or group.id == 2 or group.id == 12 or group.id == 15 or group.id == 11:  # 销售总监,项目管理，市场部总监，市场产品组
                 haved_perm = True
         qs = super(ContractAdmin, self).get_queryset(request)
 
         if request.user.is_superuser or request.user.has_perm(
                 'mm.add_contract') or haved_perm or request.user.id == 40 or request.user.id == 6:
             return qs
+        if request.user.id == 11:
+            qs_sale1 = User.objects.filter ( id=58 ) #王其轩
+            qs_sale2 = User.objects.filter ( id=475 ) #魏绍虎
+            qs_sale3 = User.objects.filter ( id=465 )  # 李瑛
+            qs_sale4 = User.objects.filter ( id=45 )  # 王迎政华北
+            qs_sale5 = User.objects.filter ( id=424 )  # 王迎政浙江
+            return qs.filter ( salesman__in=[request.user,qs_sale1[0],qs_sale2[0],qs_sale3[0],qs_sale4[0],qs_sale5[0]] )
+        if request.user.id == 47:
+            qs_sale1 = User.objects.filter ( id=12 )  # 王佩
+            qs_sale2 = User.objects.filter ( id=59 )  # 常坤
+            qs_sale3 = User.objects.filter ( id=506 )  # 周秋红
+            return qs.filter ( salesman__in=[request.user, qs_sale1[0], qs_sale2[0], qs_sale3[0]] )
         return qs.filter(salesman=request.user)
 
     def get_list_filter(self, request):
