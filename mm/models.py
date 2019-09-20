@@ -147,6 +147,7 @@ class Invoice(models.Model):
         ('sz', '金锐生物'),
         ('qd', '青岛锐翌'),
         ('hr', '杭州锐翌'),
+        ('wx', '无锡锐翌')
     )
     contract = models.ForeignKey(
         Contract,
