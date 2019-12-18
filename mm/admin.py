@@ -892,7 +892,7 @@ class BzContractAdmin(admin.ModelAdmin):
     list_per_page = 50
     filter_horizontal = ["contract", ]
     autocomplete_fields = ('salesman',)
-
+    search_fields = ["contract_number", "name"]
 
 
     def get_queryset(self, request):
